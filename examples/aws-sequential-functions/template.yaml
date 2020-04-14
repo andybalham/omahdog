@@ -11,19 +11,32 @@ Globals:
     Timeout: 3
 
 Resources:
+
+  ExchangeTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub aws-sequential-functions-exchange-topic
+      DisplayName: Topic for request & response messages
+  
   AddThreeNumbersFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
+      FunctionName: add-three-numbers-function
       CodeUri: dist/
       Handler: AddThreeNumbersFunction.handler
       Runtime: nodejs12.x
+      Events:
+        NotificationTopic:
+          Type: SNS
+          Properties:
+            Topic: !Ref ExchangeTopic
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   AddThreeNumbersFunction:
-    Description: "Adds three numbers together"
+    Description: "Function to add three numbers together"
     Value: !GetAtt AddThreeNumbersFunction.Arn
   AddThreeNumbersFunctionIamRole:
     Description: "Implicit IAM Role created for AddThreeNumbersFunction"
