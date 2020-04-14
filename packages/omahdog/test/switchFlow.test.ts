@@ -22,16 +22,16 @@ enum Rating {
 }
 
 class SwitchTestFlowRequest {
-    value!: number;
+    value: number;
 }
 
 class SwitchTestFlowResponse {
-    rating!: Rating;
+    rating: Rating;
 }
 
 class SwitchTestFlowState {
-    value!: number;
-    rating!: Rating;
+    value: number;
+    rating: Rating;
 }
 
 export class SwitchTestFlowHandler extends FlowRequestHandler<SwitchTestFlowRequest, SwitchTestFlowResponse, SwitchTestFlowState> {

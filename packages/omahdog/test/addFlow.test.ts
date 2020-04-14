@@ -6,11 +6,11 @@ import { FlowContext } from '../src/FlowContext';
 import { FlowDefinition } from '../src/FlowDefinition';
 
 class SumActivityRequest {
-    values!: number[];
+    values: number[];
 }
 
 class SumActivityResponse {
-    total!: number;
+    total: number;
 }
 
 class SumActivityHandler implements IActivityRequestHandler<SumActivityRequest, SumActivityResponse> {
@@ -21,20 +21,20 @@ class SumActivityHandler implements IActivityRequestHandler<SumActivityRequest, 
 }
 
 class SumFlowRequest {
-    a!: number;
-    b!: number;
-    c!: number;
+    a: number;
+    b: number;
+    c: number;
 }
 
 class SumFlowResponse {
-    total!: number;
+    total: number;
 }
 
 class SumFlowState {
-    a!: number;
-    b!: number;
-    c!: number;
-    total!: number;
+    a: number;
+    b: number;
+    c: number;
+    total: number;
 }
 
 export class SumFlowHandler extends FlowRequestHandler<SumFlowRequest, SumFlowResponse, SumFlowState> {

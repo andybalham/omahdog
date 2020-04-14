@@ -99,11 +99,11 @@ describe('Handlers', () => {
 });
 
 class SumActivityRequest {
-    values: number[] = [];
+    values: number[];
 }
 
 class SumActivityResponse {
-    total!: number;
+    total: number;
 }
 
 class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityRequest, SumActivityResponse> {
@@ -114,7 +114,7 @@ class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityReque
 }
 
 class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
-    requestJson!: string;
+    requestJson: string;
     public handle(flowContext: FlowContext, request: any): any {
         flowContext.asyncRequestId = uuid.v4();
         this.requestJson = JSON.stringify(request);
@@ -123,14 +123,14 @@ class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
 }
 
 class ChildFlowRequest {
-    value1!: number; value2!: number;
+    value1: number; value2: number;
 }
 class ChildFlowResponse {
-    total!: number;
+    total: number;
 }
 class ChildFlowState {
-    total!: number;
-    value1!: number; value2!: number;
+    total: number;
+    value1: number; value2: number;
 }
 
 class InMemoryFlowInstanceRepository implements IFlowInstanceRepository {
@@ -174,14 +174,14 @@ class ChildFlowHandler extends FlowRequestHandler<ChildFlowRequest, ChildFlowRes
 }
 
 class ParentFlowRequest {
-    a!: number; b!: number; c!: number; d!: number;
+    a: number; b: number; c: number; d: number;
 }
 class ParentFlowResponse {
-    total!: number;
+    total: number;
 }
 class ParentFlowState {
-    a!: number; b!: number; c!: number; d!: number;
-    total!: number;
+    a: number; b: number; c: number; d: number;
+    total: number;
 }
 
 class ParentFlowHandler extends FlowRequestHandler<ParentFlowRequest, ParentFlowResponse, ParentFlowState> {

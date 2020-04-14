@@ -221,14 +221,14 @@ export class DipCreationHandler extends FlowRequestHandler<DipCreationRequest, D
 }
 
 class DipCreationRequest {
-    caseId!: string;
-    lender!: string;
+    caseId: string;
+    lender: string;
     options: any;
-    timestamp!: Date;
+    timestamp: Date;
 }
 
 class DipCreationResponse {
-    result!: DipCreationResult;
+    result: DipCreationResult;
 }
 
 enum DipCreationResult {
@@ -238,14 +238,14 @@ enum DipCreationResult {
 }
 
 class DipCreationState {
-    caseId!: string;
-    lender!: string;
+    caseId: string;
+    lender: string;
     options: any;
-    timestamp!: Date;
-    productAndFeeValidationResult!: ProductAndFeeValidationResult;
-    mortgageClubValidationResult!: MortgageClubValidationResult;
-    validationStatus!: DipValidationStatus;
-    overallResult!: DipCreationResult;
+    timestamp: Date;
+    productAndFeeValidationResult: ProductAndFeeValidationResult;
+    mortgageClubValidationResult: MortgageClubValidationResult;
+    validationStatus: DipValidationStatus;
+    overallResult: DipCreationResult;
 }
 
 enum DipValidationStatus {
@@ -255,14 +255,14 @@ enum DipValidationStatus {
 }
 
 class DipValidateProductAndFeeRequest {
-    caseId!: string;
-    lender!: string;
+    caseId: string;
+    lender: string;
     options: any;
-    timestamp!: Date;
+    timestamp: Date;
 }
 
 class DipValidateProductAndFeeResponse {
-    validationResult!: ProductAndFeeValidationResult;
+    validationResult: ProductAndFeeValidationResult;
 }
 
 class DipValidateProductAndFeeHandler implements IActivityRequestHandler<DipValidateProductAndFeeRequest, DipValidateProductAndFeeResponse> {
@@ -281,14 +281,14 @@ enum ProductAndFeeValidationResult {
 }
 
 class DipValidateMortgageClubRequest {
-    caseId!: string;
-    lender!: string;
+    caseId: string;
+    lender: string;
     options: any;
-    timestamp!: Date;
+    timestamp: Date;
 }
 
 class DipValidateMortgageClubResponse {
-    validationResult!: MortgageClubValidationResult;
+    validationResult: MortgageClubValidationResult;
 }
 
 class DipValidateMortgageClubHandler implements IActivityRequestHandler<DipValidateMortgageClubRequest, DipValidateMortgageClubResponse> {
@@ -306,8 +306,8 @@ enum MortgageClubValidationResult {
 }
 
 class UpdateCaseStatusRequest {
-    caseId!: string;
-    caseStatus!: DipCaseStatus;
+    caseId: string;
+    caseStatus: DipCaseStatus;
 }
 
 class UpdateCaseStatusHandler implements IActivityRequestHandler<UpdateCaseStatusRequest, EmptyResponse> {
@@ -317,15 +317,15 @@ class UpdateCaseStatusHandler implements IActivityRequestHandler<UpdateCaseStatu
 }
 
 class UpdateValidationStatusRequest {
-    caseId!: string;
-    validationStatus!: DipValidationStatus;
+    caseId: string;
+    validationStatus: DipValidationStatus;
 }
 
 class SendCaseStatusUpdatedEventRequest {
-    caseId!: string;
-    caseStatus!: DipCaseStatus | DipValidationStatus;
-    updateAt!: Date;
-    lender!: string;
+    caseId: string;
+    caseStatus: DipCaseStatus | DipValidationStatus;
+    updateAt: Date;
+    lender: string;
 }
 
 class SendCaseStatusUpdatedEventHandler implements IActivityRequestHandler<SendCaseStatusUpdatedEventRequest, EmptyResponse> {
@@ -339,10 +339,10 @@ enum DipCaseStatus {
 }
 
 class DipCreateCaseRequest {
-    caseId!: string;
-    lender!: string;
+    caseId: string;
+    lender: string;
     options: any;
-    timestamp!: Date;
+    timestamp: Date;
 }
 
 class DipCreateCaseHandler implements IActivityRequestHandler<DipCreateCaseRequest, EmptyResponse> {

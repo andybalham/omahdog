@@ -3,11 +3,11 @@ import { IActivityRequestHandler, FlowHandlers } from '../src/FlowHandlers';
 import { FlowContext } from '../src/FlowContext';
 
 class ExampleActivityRequest {
-    input!: number;
+    input: number;
 }
 
 class ExampleActivityResponse {
-    output!: number;
+    output: number;
 }
 
 class ExampleHandler implements IActivityRequestHandler<ExampleActivityRequest, ExampleActivityResponse> {
