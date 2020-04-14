@@ -2,9 +2,9 @@ import { expect } from 'chai';
 import { FlowContext } from '../src/omahdog/FlowContext';
 import { FlowHandlers } from '../src/omahdog/FlowHandlers';
 import { SumNumbersRequest, SumNumbersResponse } from '../src/exchanges/SumNumbersExchange';
-import { SumNumbersHandler } from '../src/activities/SumNumbersActivity';
+import { SumNumbersHandler } from '../src/handlers/SumNumbersHandler';
 import { AddThreeNumbersRequest } from '../src/exchanges/AddThreeNumbersExchange';
-import { AddThreeNumbersHandler } from '../src/activities/AddThreeNumbersActivity';
+import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
 
 describe('AddThreeNumbersActivity tests', () => {
 
