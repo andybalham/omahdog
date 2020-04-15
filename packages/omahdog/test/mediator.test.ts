@@ -11,14 +11,14 @@ class ExampleActivityResponse {
 }
 
 class ExampleHandler implements IActivityRequestHandler<ExampleActivityRequest, ExampleActivityResponse> {
-    public handle(_flowContext: FlowContext, request: ExampleActivityRequest): ExampleActivityResponse {
+    async handle(_flowContext: FlowContext, request: ExampleActivityRequest): Promise<ExampleActivityResponse> {
         return { output: request.input };
     }
 }
 
 describe('Handlers', () => {
 
-    it('Handlers can send request to handler', () => {
+    it('Handlers can send request to handler', async () => {
 
         const handlers = new FlowHandlers();
         handlers.register(ExampleActivityRequest, ExampleActivityResponse, new ExampleHandler());
@@ -27,7 +27,7 @@ describe('Handlers', () => {
         request.input = 616;
 
         const response =
-            handlers.sendRequest(new FlowContext(), ExampleActivityRequest, request) as ExampleActivityResponse;
+            await handlers.sendRequest(new FlowContext(), ExampleActivityRequest, request) as ExampleActivityResponse;
 
         expect(response).to.be.not.null;
         expect(response.output).to.be.equal(request.input);

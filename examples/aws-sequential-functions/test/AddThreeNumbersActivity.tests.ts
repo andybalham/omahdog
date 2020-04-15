@@ -8,7 +8,7 @@ import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
 
 describe('AddThreeNumbersActivity tests', () => {
 
-    it('returns the total of the inputs', () => {
+    it('returns the total of the inputs', async () => {
 
         const flowContext = new FlowContext();
         flowContext.handlers = new FlowHandlers()
@@ -19,7 +19,7 @@ describe('AddThreeNumbersActivity tests', () => {
         request.b = 210;
         request.c = 206;
 
-        const response = new AddThreeNumbersHandler().handle(flowContext, request);
+        const response = await new AddThreeNumbersHandler().handle(flowContext, request);
 
         expect(flowContext.instanceId).to.be.not.undefined;
         expect(response?.total).to.be.equal(616);

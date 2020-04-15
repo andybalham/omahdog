@@ -1,11 +1,11 @@
 import { FlowContext } from './FlowContext';
 
 export interface IActivityRequestHandler<TReq, TRes> {
-    handle(flowContext: FlowContext, request: TReq): TRes | undefined;
+    handle(flowContext: FlowContext, request: TReq): Promise<TRes | undefined>;
 }
 
 export interface IFlowHandlers {
-    sendRequest<TReq, TRes>(flowContext: FlowContext, RequestType: new () => TReq, request: TReq): TRes;
+    sendRequest<TReq, TRes>(flowContext: FlowContext, RequestType: new () => TReq, request: TReq): Promise<TRes>;
 }
 
 export class FlowHandlers implements IFlowHandlers {
@@ -22,7 +22,7 @@ export class FlowHandlers implements IFlowHandlers {
         return this;
     }
 
-    public sendRequest<TReq, TRes>(flowContext: FlowContext, RequestType: new () => TReq, request: TReq): TRes {
+    public async sendRequest<TReq, TRes>(flowContext: FlowContext, RequestType: new () => TReq, request: TReq): Promise<TRes> {
 
         const handler = this.handlerMap[RequestType.name];
 
@@ -30,7 +30,7 @@ export class FlowHandlers implements IFlowHandlers {
             throw `No handler found for request: ${RequestType.name}`;
         }
 
-        const response = handler.handle(flowContext, request);
+        const response = await handler.handle(flowContext, request);
 
         return response;
     }

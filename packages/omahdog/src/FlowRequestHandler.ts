@@ -141,25 +141,31 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
         appendLine('```');
     }
 
-    handle(flowContext: FlowContext, request?: TReq): TRes | undefined {
+    async handle(flowContext: FlowContext, request?: TReq): Promise<TRes | undefined> {
 
         let wasResume: boolean;
         let isRoot: boolean;
 
         if (flowContext.isResume) {
+
             wasResume = flowContext.isResume;
+            
             if (!flowContext.resumeStackFrames) throw new Error('flowContext.resumeStackFrames is undefined');
-            isRoot = (flowContext.resumeStackFrames.length === flowContext.resumeStackFrameCount);
+            isRoot = (flowContext.resumeStackFrames.length === flowContext.initialResumeStackFrameCount);
             const resumeStackFrame = flowContext.resumeStackFrames.pop();
+            
             if (!resumeStackFrame) throw new Error('resumeStackFrame is undefined');
             flowContext.stackFrames.push(resumeStackFrame);
+
         } else {
+
             wasResume = false;
             isRoot = (flowContext.stackFrames.length === 0);
             flowContext.stackFrames.push(new FlowInstanceStackFrame(this.flowName, new this.StateType()));
+            
         }
 
-        const response = this.performFlow(flowContext, this.flowDefinition, request);
+        const response = await this.performFlow(flowContext, this.flowDefinition, request);
 
         const hasResponse = response !== undefined;
 
@@ -168,12 +174,12 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
             flowContext.stackFrames.pop();
 
             if (isRoot && wasResume) {
-                flowContext.deleteInstance();
+                await flowContext.deleteInstance();
             }
 
         } else if (isRoot) {
 
-            flowContext.saveInstance();
+            await flowContext.saveInstance();
         }
 
         return response;
@@ -184,7 +190,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
     protected debugPostActivityResponse(_stepName?: string, _response?: any, _state?: any): void { }
     protected debugPostStepState(_stepName?: string, _state?: any): void { }
 
-    private performFlow(flowContext: FlowContext, flowDefinition: FlowDefinition<TReq, TRes, TState>, request?: TReq): TRes | undefined {
+    private async performFlow(flowContext: FlowContext, flowDefinition: FlowDefinition<TReq, TRes, TState>, request?: TReq): Promise<TRes | undefined> {
 
         let stepIndex: number | undefined;
 
@@ -218,11 +224,11 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
                     if ((flowContext.resumeStackFrames.length === 0) && (step.name === flowContext.currentStackFrame.stepName)) {
                         stepIndex = this.resumeActivity(flowContext, stepIndex, step);                        
                     } else {
-                        stepIndex = this.performActivity(flowContext, stepIndex, step);                        
+                        stepIndex = await this.performActivity(flowContext, stepIndex, step);                        
                     }
                 }
                 else {
-                    stepIndex = this.performActivity(flowContext, stepIndex, step);
+                    stepIndex = await this.performActivity(flowContext, stepIndex, step);
                 }
                 break;
 
@@ -334,7 +340,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
         return nextStepIndex;
     }
 
-    private performActivity(flowContext: FlowContext, stepIndex: number, step: any): number | undefined {
+    private async performActivity(flowContext: FlowContext, stepIndex: number, step: any): Promise<number | undefined> {
 
         let stepResponse;
 
@@ -353,7 +359,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
 
             stepResponse =
                 mockResponse === undefined
-                    ? flowContext.handlers.sendRequest(flowContext, step.RequestType, stepRequest)
+                    ? await flowContext.handlers.sendRequest(flowContext, step.RequestType, stepRequest)
                     : mockResponse;
 
             if (stepResponse === undefined) {

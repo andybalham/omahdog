@@ -9,7 +9,7 @@ import uuid = require('uuid');
 
 describe('Handlers', () => {
 
-    it('returns the total of the inputs when activity invoked synchronously', () => {
+    it('returns the total of the inputs when activity invoked synchronously', async () => {
 
         const flowContext = new FlowContext();
         flowContext.handlers = new FlowHandlers()
@@ -22,13 +22,13 @@ describe('Handlers', () => {
         request.c = 206;
         request.d = 50;
 
-        const response = new ParentFlowHandler().handle(flowContext, request);
+        const response = await new ParentFlowHandler().handle(flowContext, request);
 
         expect(flowContext.instanceId).to.be.not.undefined;
         expect(response?.total).to.be.equal(666);
     });
 
-    it('returns the total of the inputs when activity invoked asynchronously', () => {
+    it('returns the total of the inputs when activity invoked asynchronously', async () => {
 
         const flowInstanceRepository = new InMemoryFlowInstanceRepository();
         const asyncActivityHandler = new AsyncActivityHandler();
@@ -46,23 +46,25 @@ describe('Handlers', () => {
         request.c = 206;
         request.d = 50;
 
-        const response01 = new ParentFlowHandler().handle(flowContext, request);
+        const response01 = await new ParentFlowHandler().handle(flowContext, request);
 
         expect(response01).to.be.undefined;
         expect(flowInstanceRepository.retrieve(flowContext.instanceId)).to.not.be.undefined;
         expect(flowContext.asyncRequestId).to.not.be.undefined;
 
         const instanceId = flowContext.instanceId;
+        let stackFrames;
 
         // Send back asynchronous response 01
 
         const asyncResponse01 =
-            new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        flowContext = new FlowContext(flowInstanceRepository, instanceId, asyncResponse01);
+        stackFrames = await flowInstanceRepository.retrieve(instanceId);        
+        flowContext = new FlowContext(flowInstanceRepository, instanceId, stackFrames, asyncResponse01);
         flowContext.handlers = asyncHandlers;
 
-        const response02 = new ParentFlowHandler().handle(flowContext);
+        const response02 = await new ParentFlowHandler().handle(flowContext);
 
         expect(response02).to.be.undefined;
         expect(flowInstanceRepository.retrieve(instanceId)).to.not.be.undefined;
@@ -71,12 +73,13 @@ describe('Handlers', () => {
         // Send back asynchronous response 02
 
         const asyncResponse02 =
-            new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+        await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        flowContext = new FlowContext(flowInstanceRepository, instanceId, asyncResponse02);
+        stackFrames = await flowInstanceRepository.retrieve(instanceId);        
+        flowContext = new FlowContext(flowInstanceRepository, instanceId, stackFrames, asyncResponse02);
         flowContext.handlers = asyncHandlers;
 
-        const response03 = new ParentFlowHandler().handle(flowContext);
+        const response03 = await new ParentFlowHandler().handle(flowContext);
 
         expect(response03).to.be.undefined;
         expect(flowInstanceRepository.retrieve(instanceId)).to.not.be.undefined;
@@ -85,15 +88,16 @@ describe('Handlers', () => {
         // Send back asynchronous response 03
 
         const asyncResponse03 =
-            new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+        await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        flowContext = new FlowContext(flowInstanceRepository, instanceId, asyncResponse03);
+        stackFrames = await flowInstanceRepository.retrieve(instanceId);        
+        flowContext = new FlowContext(flowInstanceRepository, instanceId, stackFrames, asyncResponse03);
         flowContext.handlers = asyncHandlers;
 
-        const response04 = new ParentFlowHandler().handle(flowContext);
+        const response04 = await new ParentFlowHandler().handle(flowContext);
 
         expect(response04?.total).to.be.equal(666);
-        expect(flowInstanceRepository.retrieve(instanceId)).to.be.undefined;
+        expect(await flowInstanceRepository.retrieve(instanceId)).to.be.undefined;
         expect(flowContext.asyncRequestId).to.be.undefined;
     });
 });
@@ -107,7 +111,7 @@ class SumActivityResponse {
 }
 
 class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityRequest, SumActivityResponse> {
-    public handle(_flowContext: FlowContext, request: SumActivityRequest): SumActivityResponse {
+    async handle(_flowContext: FlowContext, request: SumActivityRequest): Promise<SumActivityResponse> {
         const total = request.values.reduce((a, b) => a + b, 0);
         return { total: total };
     }
@@ -115,7 +119,7 @@ class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityReque
 
 class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     requestJson: string;
-    public handle(flowContext: FlowContext, request: any): any {
+    async handle(flowContext: FlowContext, request: any): Promise<any> {
         flowContext.asyncRequestId = uuid.v4();
         this.requestJson = JSON.stringify(request);
         return undefined;
@@ -137,16 +141,16 @@ class InMemoryFlowInstanceRepository implements IFlowInstanceRepository {
 
     private readonly _flowInstances = new Map<string, string>();
 
-    upsert(instanceId: string, stackFrames: FlowInstanceStackFrame[]): void {
+    async upsert(instanceId: string, stackFrames: FlowInstanceStackFrame[]): Promise<void> {
         this._flowInstances.set(instanceId, JSON.stringify(stackFrames));
     }
 
-    retrieve(instanceId: string): FlowInstanceStackFrame[] {
+    async retrieve(instanceId: string): Promise<FlowInstanceStackFrame[]> {
         const flowInstanceJson = this._flowInstances.get(instanceId);
         return (flowInstanceJson !== undefined) ? JSON.parse(flowInstanceJson) : undefined;
     }
 
-    delete(instanceId: string): void {
+    async delete(instanceId: string): Promise<void> {
         this._flowInstances.delete(instanceId);
     }
 }

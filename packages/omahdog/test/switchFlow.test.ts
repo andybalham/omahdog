@@ -10,7 +10,7 @@ class NullActivityRequest { }
 class NullActivityResponse { }
 
 class NullActivityHandler implements IActivityRequestHandler<NullActivityRequest, NullActivityResponse> {
-    handle(_flowContext: FlowContext, _request: NullActivityRequest): NullActivityResponse {
+    async handle(_flowContext: FlowContext, _request: NullActivityRequest): Promise<NullActivityResponse> {
         return {};
     }
 }
@@ -78,7 +78,7 @@ describe('Switch test', () => {
         { value: 70, expectedRating: Rating.Good },
     ];
     theories.forEach(theory => {
-        it(`returns the expected rating ${JSON.stringify(theory)}`, () => {
+        it(`returns the expected rating ${JSON.stringify(theory)}`, async () => {
 
             const flowContext = new FlowContext();
             flowContext.handlers = new FlowHandlers()
@@ -87,7 +87,7 @@ describe('Switch test', () => {
             const request = new SwitchTestFlowRequest();
             request.value = theory.value;
             
-            const response = new SwitchTestFlowHandler().handle(flowContext, request);
+            const response = await new SwitchTestFlowHandler().handle(flowContext, request);
 
             expect(flowContext.instanceId).to.be.not.undefined;
             expect(response?.rating).to.be.equal(theory.expectedRating);

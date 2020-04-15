@@ -8,7 +8,7 @@ import { EmptyResponse } from '../src/FlowExchanges';
 
 describe('Handlers', () => {
 
-    it('can handle DipCreated scenario', () => {
+    it('can handle DipCreated scenario', async () => {
 
         const flowRequest = new DipCreationRequest();
         flowRequest.caseId = 'caseId';
@@ -59,12 +59,12 @@ describe('Handlers', () => {
                 })
         ;
 
-        const flowResponse = new DipCreationHandler().handle(flowContext, flowRequest);
+        const flowResponse = await new DipCreationHandler().handle(flowContext, flowRequest);
 
         expect(flowResponse?.result).to.equal(DipCreationResult.DipCreated);
     });
 
-    it('can be run with handlers', () => {
+    it('can be run with handlers', async () => {
 
         const flowContext = new FlowContext();
 
@@ -78,7 +78,7 @@ describe('Handlers', () => {
 
         const request = new DipCreationRequest();
 
-        const response = new DipCreationHandler().handle(flowContext, request);
+        const response = await new DipCreationHandler().handle(flowContext, request);
 
         expect(response?.result).to.equal(DipCreationResult.DipCreated);
     });
@@ -266,7 +266,7 @@ class DipValidateProductAndFeeResponse {
 }
 
 class DipValidateProductAndFeeHandler implements IActivityRequestHandler<DipValidateProductAndFeeRequest, DipValidateProductAndFeeResponse> {
-    handle(flowContext: FlowContext, request: DipValidateProductAndFeeRequest): DipValidateProductAndFeeResponse {
+    async handle(flowContext: FlowContext, request: DipValidateProductAndFeeRequest): Promise<DipValidateProductAndFeeResponse> {
         const response = new DipValidateProductAndFeeResponse();
         response.validationResult = ProductAndFeeValidationResult.Success;
         return response;
@@ -292,7 +292,7 @@ class DipValidateMortgageClubResponse {
 }
 
 class DipValidateMortgageClubHandler implements IActivityRequestHandler<DipValidateMortgageClubRequest, DipValidateMortgageClubResponse> {
-    handle(flowContext: FlowContext, request: DipValidateMortgageClubRequest): DipValidateMortgageClubResponse {
+    async handle(flowContext: FlowContext, request: DipValidateMortgageClubRequest): Promise<DipValidateMortgageClubResponse> {
         const response = new DipValidateMortgageClubResponse();
         response.validationResult = MortgageClubValidationResult.Success;
         return response;
@@ -311,7 +311,7 @@ class UpdateCaseStatusRequest {
 }
 
 class UpdateCaseStatusHandler implements IActivityRequestHandler<UpdateCaseStatusRequest, EmptyResponse> {
-    handle(flowContext: FlowContext, request: UpdateCaseStatusRequest): EmptyResponse {
+    async handle(flowContext: FlowContext, request: UpdateCaseStatusRequest): Promise<EmptyResponse> {
         return {};
     }
 }
@@ -329,7 +329,7 @@ class SendCaseStatusUpdatedEventRequest {
 }
 
 class SendCaseStatusUpdatedEventHandler implements IActivityRequestHandler<SendCaseStatusUpdatedEventRequest, EmptyResponse> {
-    handle(flowContext: FlowContext, request: SendCaseStatusUpdatedEventRequest): EmptyResponse {
+    async handle(flowContext: FlowContext, request: SendCaseStatusUpdatedEventRequest): Promise<EmptyResponse> {
         return {};
     }
 }
@@ -346,7 +346,7 @@ class DipCreateCaseRequest {
 }
 
 class DipCreateCaseHandler implements IActivityRequestHandler<DipCreateCaseRequest, EmptyResponse> {
-    handle(flowContext: FlowContext, request: DipCreateCaseRequest): EmptyResponse {
+    async handle(flowContext: FlowContext, request: DipCreateCaseRequest): Promise<EmptyResponse> {
         return {};
     }
 }

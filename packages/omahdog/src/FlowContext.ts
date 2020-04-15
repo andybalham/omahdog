@@ -13,13 +13,15 @@ export class FlowContext {
     asyncRequestId?: string;
 
     readonly resumeStackFrames?: FlowInstanceStackFrame[];
-    readonly resumeStackFrameCount?: number;
+    readonly initialResumeStackFrameCount?: number;
     asyncResponse: any;
     
     readonly mocks: FlowMocks;
 
-    constructor(instanceRespository?: IFlowInstanceRepository, instanceId?: string, asyncResponse?: any) {
+    constructor(instanceRespository?: IFlowInstanceRepository, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
 
+        // TODO 15Apr20: Is there a way of asynchronously retrieving the stack frames?
+        
         this.handlers = new FlowHandlers();
         this.mocks = new FlowMocks();
 
@@ -32,12 +34,11 @@ export class FlowContext {
 
         } else {
 
-            const stackFrames = this.getInstanceRepository().retrieve(instanceId);
-
             this.instanceId = instanceId;
             this.asyncResponse = asyncResponse;
-            this.resumeStackFrames = stackFrames.reverse();
-            this.resumeStackFrameCount = this.resumeStackFrames.length;
+            this.resumeStackFrames = stackFrames?.reverse();
+            this.initialResumeStackFrameCount = this.resumeStackFrames?.length;
+
         }
     }
 
@@ -54,12 +55,12 @@ export class FlowContext {
         return this.asyncResponse !== undefined;
     }
 
-    saveInstance(): void {
-        this.getInstanceRepository().upsert(this.instanceId, this.stackFrames);
+    async saveInstance(): Promise<void> {
+        await this.getInstanceRepository().upsert(this.instanceId, this.stackFrames);
     }
 
-    deleteInstance(): void {
-        this.getInstanceRepository().delete(this.instanceId);
+    async deleteInstance(): Promise<void> {
+        await this.getInstanceRepository().delete(this.instanceId);
     }
 
     getMockResponse(stepName: any, request: any): any {

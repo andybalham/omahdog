@@ -14,7 +14,7 @@ class SumActivityResponse {
 }
 
 class SumActivityHandler implements IActivityRequestHandler<SumActivityRequest, SumActivityResponse> {
-    public handle(_flowContext: FlowContext, request: SumActivityRequest): SumActivityResponse {
+    public async handle(_flowContext: FlowContext, request: SumActivityRequest): Promise<SumActivityResponse> {
         const total = request.values.reduce((a, b) => a + b, 0);
         return { total: total };
     }
@@ -80,7 +80,7 @@ export class SumFlowHandler extends FlowRequestHandler<SumFlowRequest, SumFlowRe
 
 describe('Handlers', () => {
 
-    it('returns the total of the inputs', () => {
+    it('returns the total of the inputs', async () => {
 
         const flowContext = new FlowContext();
         flowContext.handlers = new FlowHandlers()
@@ -91,7 +91,7 @@ describe('Handlers', () => {
         request.b = 210;
         request.c = 206;
 
-        const response = new SumFlowHandler().handle(flowContext, request);
+        const response = await new SumFlowHandler().handle(flowContext, request);
 
         expect(flowContext.instanceId).to.be.not.undefined;
         expect(response?.total).to.be.equal(616);
