@@ -1,37 +1,44 @@
 import { SNSEvent } from 'aws-lambda';
 import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
 import { FlowContext } from './omahdog/FlowContext';
-import { FlowHandlers } from './omahdog/FlowHandlers';
+import { FlowHandlers, IActivityRequestHandler } from './omahdog/FlowHandlers';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SNSFlowMessage } from './omahdog-aws';
-import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 
-// class SumNumbersSNSHandler implements IActivityRequestHandler<SumNumbersRequest, SumNumbersResponse> {
-    
-//     async handle(flowContext: FlowContext, request: SumNumbersRequest, deps: any): Promise<SumNumbersResponse | undefined> {
+class SNSHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-//         const params = {
-//             Message: JSON.stringify({
-//                 context: context,
-//                 body: request
-//             }),
-//             TopicArn: process.env.REQUEST_RESPONSE_TOPIC_ARN,
-//             MessageAttributes: {
-//                 MessageType: { DataType: 'String', StringValue: `${request.TYPE_NAME}:Request` }
-//             }
-//         };
+    private readonly _RequestType: new() => TReq;
+    private readonly _deps: any;
+
+    constructor(RequestType: new() => TReq, deps: any) {
+        this._RequestType = RequestType;
+        this._deps = deps;
+    }
+
+    async handle(flowContext: FlowContext, request: TReq): Promise<TRes | undefined> {
+
+        const params = {
+            Message: JSON.stringify({
+                context: flowContext,
+                body: request
+            }),
+            TopicArn: process.env.REQUEST_RESPONSE_TOPIC_ARN,
+            MessageAttributes: {
+                MessageType: { DataType: 'String', StringValue: `${this._RequestType.name}:Request` }
+            }
+        };
         
-//         const publishResponse = await deps.publish(params);
+        const publishResponse = await this._deps.publish(params);
     
-//         console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
+        console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
 
-//         return undefined;
-//     }
-// }
+        return undefined;
+    }
+}
 
 const handlers = new FlowHandlers()
-    .register(SumNumbersRequest, SumNumbersResponse, new SumNumbersHandler());
+    .register(SumNumbersRequest, SumNumbersResponse, new SNSHandler<SumNumbersRequest, SumNumbersResponse>(SumNumbersRequest, {}));
     
 export const handler = async (event: SNSEvent): Promise<void> => {
 
