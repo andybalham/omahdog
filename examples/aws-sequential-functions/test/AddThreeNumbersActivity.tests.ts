@@ -19,6 +19,8 @@ describe('AddThreeNumbersActivity tests', () => {
         request.b = 210;
         request.c = 206;
 
+        console.log(JSON.stringify(request));
+
         const response = await new AddThreeNumbersHandler().handle(flowContext, request);
 
         expect(flowContext.instanceId).to.be.not.undefined;

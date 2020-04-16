@@ -12,10 +12,10 @@ Globals:
 
 Resources:
 
-  ExchangeTopic:
+  FlowExchangeTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub aws-sequential-functions-exchange-topic
+      TopicName: !Sub aws-sequential-functions-flow-exchange-topic
       DisplayName: Topic for request & response messages
   
   AddThreeNumbersFunction:
@@ -25,11 +25,24 @@ Resources:
       CodeUri: dist/
       Handler: AddThreeNumbersFunction.handler
       Runtime: nodejs12.x
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt FlowExchangeTopic.TopicName
+        # - DynamoDBCrudPolicy:
+        #     TableName: !Ref FlowInstanceTable
+      Environment:
+        Variables:
+          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+          # FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
       Events:
         NotificationTopic:
           Type: SNS
           Properties:
-            Topic: !Ref ExchangeTopic
+            Topic: !Ref FlowExchangeTopic
+            FilterPolicy:
+              MessageType:
+                - AddThreeNumbers:Request
+                # - AddThreeNumbers:Response
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

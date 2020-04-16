@@ -5,7 +5,7 @@ import { SNSFlowMessage } from '../src/omahdog-aws';
 
 describe('handler tests', () => {
 
-    it('adds up numbers', async () => {
+    it.skip('adds up numbers', async () => {
 
         const request: AddThreeNumbersRequest = {
             a: 202, b: 202, c: 212
@@ -52,7 +52,7 @@ describe('handler tests', () => {
         };
         
         console.log(JSON.stringify(snsEvent));
-
+        
         await handler(snsEvent);
     });
 });

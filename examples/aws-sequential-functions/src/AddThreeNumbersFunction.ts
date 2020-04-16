@@ -1,56 +1,67 @@
-import { SNSEvent } from 'aws-lambda';
-import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
+import AWS from 'aws-sdk';
+import { SNSEvent, APIGatewayEvent } from 'aws-lambda';
+
 import { FlowContext } from './omahdog/FlowContext';
-import { FlowHandlers, IActivityRequestHandler } from './omahdog/FlowHandlers';
+import { FlowHandlers } from './omahdog/FlowHandlers';
+import { SNSActivityRequestHandler } from './omahdog-aws/SNSActivityRequestHandler';
+import { getEventRequest } from './omahdog-aws/AWSUtils';
+
+import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
-import { SNSFlowMessage } from './omahdog-aws';
+import { IFlowInstanceRepository } from './omahdog/FlowInstanceRepository';
 
-class SNSHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
-
-    private readonly _RequestType: new() => TReq;
-    private readonly _deps: any;
-
-    constructor(RequestType: new() => TReq, deps: any) {
-        this._RequestType = RequestType;
-        this._deps = deps;
-    }
-
-    async handle(flowContext: FlowContext, request: TReq): Promise<TRes | undefined> {
-
-        const params = {
-            Message: JSON.stringify({
-                context: flowContext,
-                body: request
-            }),
-            TopicArn: process.env.REQUEST_RESPONSE_TOPIC_ARN,
-            MessageAttributes: {
-                MessageType: { DataType: 'String', StringValue: `${this._RequestType.name}:Request` }
-            }
-        };
-        
-        const publishResponse = await this._deps.publish(params);
-    
-        console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
-
-        return undefined;
-    }
-}
+const sns = new AWS.SNS();
 
 const handlers = new FlowHandlers()
-    .register(SumNumbersRequest, SumNumbersResponse, new SNSHandler<SumNumbersRequest, SumNumbersResponse>(SumNumbersRequest, {}));
+    .register(SumNumbersRequest, SumNumbersResponse, 
+        new SNSActivityRequestHandler<SumNumbersRequest, SumNumbersResponse>(
+            SumNumbersRequest, sns, process.env.FLOW_EXCHANGE_TOPIC_ARN));
+
+class InMemoryInstanceRepository implements IFlowInstanceRepository {
+
+    private readonly _mapRepository = new Map<string, import('./omahdog/FlowContext').FlowInstanceStackFrame[]>();
+
+    upsert(instanceId: string, stackFrames: import('./omahdog/FlowContext').FlowInstanceStackFrame[]): Promise<void> {
+        this._mapRepository.set(instanceId, stackFrames);
+        return Promise.resolve();
+    }
     
-export const handler = async (event: SNSEvent): Promise<void> => {
+    retrieve(instanceId: string): Promise<import('./omahdog/FlowContext').FlowInstanceStackFrame[]> {
+        throw new Error('Method not implemented.');
+    }
+    
+    delete(instanceId: string): Promise<void> {
+        throw new Error('Method not implemented.');
+    }
+}   
 
-    const snsMessage = event.Records[0].Sns;    
-    // TODO 14Apr20: Check snsMessage.MessageAttributes
-    const message = JSON.parse(snsMessage.Message) as SNSFlowMessage;    
-    const request = message.body as AddThreeNumbersRequest;
+const instanceRepository = new InMemoryInstanceRepository();
 
-    const flowContext = new FlowContext();
+export const handler = async (event: SNSEvent | APIGatewayEvent): Promise<void> => {
+
+    console.log(`event: ${JSON.stringify(event)}`);
+
+    // TODO 16Apr20: Need to recognise when this is a response
+    const request = getEventRequest<AddThreeNumbersRequest>(event);
+
+    console.log(`request: ${JSON.stringify(request)}`);
+
+    const flowContext = new FlowContext(instanceRepository);
     flowContext.handlers = handlers;
 
     const response = await new AddThreeNumbersHandler().handle(flowContext, request);
 
     console.log(`response: ${JSON.stringify(response)}`);
+
+    if ('Records' in event) {
+        
+        // TODO 16Apr20: Send back a response via the appropriate topic (response could be undefined)
+
+    } else if ('httpMethod' in event) {
+        
+        // TODO 16Apr20: Send back a response via HTTP (response could be undefined)
+
+    }
 };
+
