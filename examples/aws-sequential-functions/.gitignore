@@ -1,4 +1,4 @@
 .aws-sam
 
 src/omahdog/
-src/omahdog-aws/
+# src/omahdog-aws/
