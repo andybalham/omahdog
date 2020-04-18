@@ -63,6 +63,8 @@ describe('Handlers', () => {
         flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse01);
         flowContext.handlers = asyncHandlers;
 
+        expect(flowInstance.resumptionCount).to.equal(0);
+        
         const response02 = await new ParentFlowHandler().handle(flowContext);
 
         expect((response02 as AsyncResponse).asyncRequestId).to.not.be.undefined;
@@ -76,6 +78,8 @@ describe('Handlers', () => {
         flowInstance = await flowInstanceRepository.retrieve(instanceId);        
         flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse02);
         flowContext.handlers = asyncHandlers;
+
+        expect(flowInstance.resumptionCount).to.equal(1);
 
         const response03 = await new ParentFlowHandler().handle(flowContext);
 

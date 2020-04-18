@@ -3,7 +3,7 @@ import { FlowContext } from '../src/omahdog/FlowContext';
 import { FlowHandlers } from '../src/omahdog/FlowHandlers';
 import { SumNumbersRequest, SumNumbersResponse } from '../src/exchanges/SumNumbersExchange';
 import { SumNumbersHandler } from '../src/handlers/SumNumbersHandler';
-import { AddThreeNumbersRequest } from '../src/exchanges/AddThreeNumbersExchange';
+import { AddThreeNumbersRequest, AddThreeNumbersResponse } from '../src/exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
 
 describe('AddThreeNumbersActivity tests', () => {
@@ -24,6 +24,6 @@ describe('AddThreeNumbersActivity tests', () => {
         const response = await new AddThreeNumbersHandler().handle(flowContext, request);
 
         expect(flowContext.instanceId).to.be.not.undefined;
-        expect(response?.total).to.be.equal(616);
+        expect((response as AddThreeNumbersResponse).total).to.be.equal(616);
     });
 });

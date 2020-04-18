@@ -13,6 +13,7 @@ export class FlowContext {
 
     readonly resumeStackFrames?: FlowInstanceStackFrame[];
     readonly initialResumeStackFrameCount?: number;
+    readonly resumptionCount: number;
     asyncResponse: any;
     
     readonly mocks: FlowMocks;
@@ -30,6 +31,7 @@ export class FlowContext {
         if (flowInstance === undefined) {
 
             this.instanceId = uuid.v4();
+            this.resumptionCount = 0;
 
         } else {
 
@@ -37,6 +39,7 @@ export class FlowContext {
             this.asyncResponse = asyncResponse;
             this.resumeStackFrames = flowInstance.stackFrames?.reverse();
             this.initialResumeStackFrameCount = this.resumeStackFrames?.length;
+            this.resumptionCount = flowInstance.resumptionCount + 1;
 
         }
     }
@@ -55,7 +58,7 @@ export class FlowContext {
     }
 
     async saveInstance(asyncRequestId: string): Promise<void> {
-        await this.getInstanceRepository().upsert(new FlowInstance(this.instanceId, this.stackFrames, asyncRequestId));
+        await this.getInstanceRepository().upsert(new FlowInstance(this.instanceId, this.stackFrames, asyncRequestId, this.resumptionCount));
     }
 
     async deleteInstance(): Promise<void> {

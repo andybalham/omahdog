@@ -4,15 +4,19 @@ import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, Dec
 import { IActivityRequestHandler, AsyncResponse } from './FlowHandlers';
 import { FlowContext, FlowInstanceStackFrame } from './FlowContext';
 
-export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivityRequestHandler<TReq, TRes> {
-
+export abstract class FlowRequestHandlerBase {
     abstract flowName: string;
+}
+
+export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequestHandlerBase implements IActivityRequestHandler<TReq, TRes> {
 
     private readonly ResponseType: new () => TRes;
     private readonly StateType: new () => TState;
     private readonly flowDefinition: FlowDefinition<TReq, TRes, TState>;
 
     constructor(ResponseType: new () => TRes, StateType: new () => TState) {
+
+        super();
 
         this.ResponseType = ResponseType;
         this.StateType = StateType;

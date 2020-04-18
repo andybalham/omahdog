@@ -11,10 +11,12 @@ export class FlowInstance {
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
     readonly asyncRequestId: string;
+    readonly resumptionCount: number;
 
-    constructor(instanceId: string, stackFrames: FlowInstanceStackFrame[], asyncRequestId: string) {
+    constructor(instanceId: string, stackFrames: FlowInstanceStackFrame[], asyncRequestId: string, resumptionCount: number) {
         this.instanceId = instanceId;
         this.stackFrames = stackFrames;
         this.asyncRequestId = asyncRequestId;
+        this.resumptionCount = resumptionCount;
     }
 }

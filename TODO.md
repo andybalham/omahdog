@@ -9,6 +9,11 @@
   * Give NullResponse and SuspendResponse properties to identify them
   * SuspendResponse could hold the request id, e.g. `SuspendResponse.requestId` and pass it back up the chain
 
+* Q. How can we ensure that handlers are in place for all requests?
+  * I.e. can we do a sort of test traversal of all paths to see?
+
+* Look into use of DynamoDb vs. S3 for storing flow instances
+  * [S3 or DynamoDB?](https://serverless.pub/s3-or-dynamodb/)
 * [middy](https://middy.js.org/)
   * How can we use middy to parse the different events to allow for Lambdas to be called:
     * Directly

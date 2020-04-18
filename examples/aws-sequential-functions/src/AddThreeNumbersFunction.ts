@@ -2,33 +2,33 @@ import AWS, { HttpResponse } from 'aws-sdk';
 import { SNSEvent, APIGatewayEvent } from 'aws-lambda';
 
 import { FlowContext } from './omahdog/FlowContext';
-import { FlowHandlers } from './omahdog/FlowHandlers';
+import { FlowHandlers, AsyncResponse } from './omahdog/FlowHandlers';
 import { SNSActivityRequestHandler } from './omahdog-aws/SNSActivityRequestHandler';
 import { getEventRequest, getReturnValue } from './omahdog-aws/AWSUtils';
 
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
-import { IFlowInstanceRepository } from './omahdog/FlowInstanceRepository';
+import { IFlowInstanceRepository, FlowInstance } from './omahdog/FlowInstanceRepository';
 
 const sns = new AWS.SNS();
 
 const handlers = new FlowHandlers()
     .register(SumNumbersRequest, SumNumbersResponse, 
         new SNSActivityRequestHandler<SumNumbersRequest, SumNumbersResponse>(
-            SumNumbersRequest, sns, process.env.FLOW_EXCHANGE_TOPIC_ARN));
+            AddThreeNumbersHandler, SumNumbersRequest, sns, process.env.FLOW_EXCHANGE_TOPIC_ARN));
 
 class InMemoryInstanceRepository implements IFlowInstanceRepository {
 
-    private readonly _mapRepository = new Map<string, import('./omahdog/FlowContext').FlowInstanceStackFrame[]>();
+    private readonly _mapRepository = new Map<string, FlowInstance>();
 
-    upsert(instanceId: string, stackFrames: import('./omahdog/FlowContext').FlowInstanceStackFrame[]): Promise<void> {
+    upsert(flowInstance: FlowInstance): Promise<void> {
         // TODO 16Apr20: How can we store the request id? It is on the flowContext. Should we pass it in here?
-        this._mapRepository.set(instanceId, stackFrames);
+        this._mapRepository.set(flowInstance.instanceId, flowInstance);
         return Promise.resolve();
     }
     
-    retrieve(instanceId: string): Promise<import('./omahdog/FlowContext').FlowInstanceStackFrame[]> {
+    retrieve(instanceId: string): Promise<FlowInstance> {
         throw new Error('Method not implemented.');
     }
     
@@ -39,7 +39,8 @@ class InMemoryInstanceRepository implements IFlowInstanceRepository {
 
 const instanceRepository = new InMemoryInstanceRepository();
 
-export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGatewayEvent ): Promise<AddThreeNumbersResponse | void | HttpResponse> => {
+export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGatewayEvent ): 
+        Promise<AddThreeNumbersResponse | AsyncResponse | void | HttpResponse> => {
 
     // TODO 17Apr20: Allow for event to be the request itself
     

@@ -1,6 +1,7 @@
 import { SNSEvent, APIGatewayEvent, SNSMessage } from 'aws-lambda';
 import { SNSFlowMessage } from '../omahdog-aws';
 import { HttpResponse } from 'aws-sdk';
+import { AsyncResponse } from '../omahdog/FlowHandlers';
 
 export function getEventRequest<T>(event: T | SNSEvent | APIGatewayEvent): T {
 
@@ -28,12 +29,13 @@ export function getEventRequest<T>(event: T | SNSEvent | APIGatewayEvent): T {
 }
 
 
-export function getReturnValue<TReq, Tres>(event: TReq | SNSEvent | APIGatewayEvent, httpStatusCode: number, response: Tres | undefined): Tres | void | HttpResponse {
+export function getReturnValue<TReq, TRes>(event: TReq | SNSEvent | APIGatewayEvent, httpStatusCode: number, response: TRes | AsyncResponse): 
+        TRes | AsyncResponse | void | HttpResponse {
 
-    let returnValue: Tres | void | HttpResponse;
+    let returnValue: TRes | void | HttpResponse;
 
     if ('Records' in event) {
-        returnValue = undefined;
+        return;
     }
     else if ('httpMethod' in event) {
         const httpResponse = new HttpResponse();
@@ -42,7 +44,7 @@ export function getReturnValue<TReq, Tres>(event: TReq | SNSEvent | APIGatewayEv
         returnValue = httpResponse;
     }
     else {
-        returnValue = response;
+        return response;
     }
 
     return returnValue;
