@@ -2,9 +2,9 @@ import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
 import { FlowHandlers, IActivityRequestHandler, AsyncResponse } from '../src/FlowHandlers';
-import { FlowContext, FlowInstanceStackFrame } from '../src/FlowContext';
+import { FlowContext } from '../src/FlowContext';
 import { expect } from 'chai';
-import { IFlowInstanceRepository } from '../src/FlowInstanceRepository';
+import { IFlowInstanceRepository, FlowInstance } from '../src/FlowInstanceRepository';
 import uuid = require('uuid');
 
 describe('Handlers', () => {
@@ -52,15 +52,15 @@ describe('Handlers', () => {
         expect(flowInstanceRepository.retrieve(flowContext.instanceId)).to.not.be.undefined;
 
         const instanceId = flowContext.instanceId;
-        let stackFrames;
+        let flowInstance: FlowInstance;
 
         // Send back asynchronous response 01
 
         const asyncResponse01 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        stackFrames = await flowInstanceRepository.retrieve(instanceId);        
-        flowContext = new FlowContext(flowInstanceRepository, instanceId, stackFrames, asyncResponse01);
+        flowInstance = await flowInstanceRepository.retrieve(instanceId);        
+        flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse01);
         flowContext.handlers = asyncHandlers;
 
         const response02 = await new ParentFlowHandler().handle(flowContext);
@@ -73,8 +73,8 @@ describe('Handlers', () => {
         const asyncResponse02 =
         await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        stackFrames = await flowInstanceRepository.retrieve(instanceId);        
-        flowContext = new FlowContext(flowInstanceRepository, instanceId, stackFrames, asyncResponse02);
+        flowInstance = await flowInstanceRepository.retrieve(instanceId);        
+        flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse02);
         flowContext.handlers = asyncHandlers;
 
         const response03 = await new ParentFlowHandler().handle(flowContext);
@@ -87,8 +87,8 @@ describe('Handlers', () => {
         const asyncResponse03 =
         await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        stackFrames = await flowInstanceRepository.retrieve(instanceId);        
-        flowContext = new FlowContext(flowInstanceRepository, instanceId, stackFrames, asyncResponse03);
+        flowInstance = await flowInstanceRepository.retrieve(instanceId);        
+        flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse03);
         flowContext.handlers = asyncHandlers;
 
         const response04 = await new ParentFlowHandler().handle(flowContext);
@@ -136,11 +136,11 @@ class InMemoryFlowInstanceRepository implements IFlowInstanceRepository {
 
     private readonly _flowInstances = new Map<string, string>();
 
-    async upsert(instanceId: string, stackFrames: FlowInstanceStackFrame[]): Promise<void> {
-        this._flowInstances.set(instanceId, JSON.stringify(stackFrames));
+    async upsert(flowInstance: FlowInstance): Promise<void> {
+        this._flowInstances.set(flowInstance.instanceId, JSON.stringify(flowInstance));
     }
 
-    async retrieve(instanceId: string): Promise<FlowInstanceStackFrame[]> {
+    async retrieve(instanceId: string): Promise<FlowInstance> {
         const flowInstanceJson = this._flowInstances.get(instanceId);
         return (flowInstanceJson !== undefined) ? JSON.parse(flowInstanceJson) : undefined;
     }

@@ -1,6 +1,6 @@
 import uuid = require('uuid');
 import { FlowHandlers, IFlowHandlers } from './FlowHandlers';
-import { IFlowInstanceRepository } from './FlowInstanceRepository';
+import { IFlowInstanceRepository, FlowInstance } from './FlowInstanceRepository';
 import { FlowMocks } from './FlowMocks';
 
 export class FlowContext {
@@ -17,7 +17,7 @@ export class FlowContext {
     
     readonly mocks: FlowMocks;
 
-    constructor(instanceRepository?: IFlowInstanceRepository, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
+    constructor(instanceRepository?: IFlowInstanceRepository, flowInstance?: FlowInstance, asyncResponse?: any) {
 
         // TODO 15Apr20: Is there a way of asynchronously retrieving the stack frames?
         
@@ -27,15 +27,15 @@ export class FlowContext {
         this.instanceRepository = instanceRepository;
         this.stackFrames = [];
 
-        if (instanceId === undefined) {
+        if (flowInstance === undefined) {
 
             this.instanceId = uuid.v4();
 
         } else {
 
-            this.instanceId = instanceId;
+            this.instanceId = flowInstance.instanceId;
             this.asyncResponse = asyncResponse;
-            this.resumeStackFrames = stackFrames?.reverse();
+            this.resumeStackFrames = flowInstance.stackFrames?.reverse();
             this.initialResumeStackFrameCount = this.resumeStackFrames?.length;
 
         }
@@ -54,8 +54,8 @@ export class FlowContext {
         return this.asyncResponse !== undefined;
     }
 
-    async saveInstance(): Promise<void> {
-        await this.getInstanceRepository().upsert(this.instanceId, this.stackFrames);
+    async saveInstance(asyncRequestId: string): Promise<void> {
+        await this.getInstanceRepository().upsert(new FlowInstance(this.instanceId, this.stackFrames, asyncRequestId));
     }
 
     async deleteInstance(): Promise<void> {

@@ -90,7 +90,7 @@ describe('Switch test', () => {
             const response = await new SwitchTestFlowHandler().handle(flowContext, request);
 
             expect(flowContext.instanceId).to.be.not.undefined;
-            expect(response?.rating).to.be.equal(theory.expectedRating);
+            expect((response as SwitchTestFlowResponse).rating).to.be.equal(theory.expectedRating);
         });
     });
 });

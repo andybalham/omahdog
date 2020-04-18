@@ -177,7 +177,8 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
 
         } else if (isRoot) {
 
-            await flowContext.saveInstance();
+            await flowContext.saveInstance((response as AsyncResponse).asyncRequestId);
+
         }
 
         return response;
@@ -203,8 +204,6 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
         }
 
         while ((typeof stepIndex === 'number') && (stepIndex < flowDefinition.steps.length)) {
-
-            // TODO 18Apr20: Change the responses below to be instructions, not just an index. E.g. Goto('StepName')
 
             const step = flowDefinition.steps[stepIndex as number];
 
