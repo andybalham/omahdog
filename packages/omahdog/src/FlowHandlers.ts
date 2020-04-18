@@ -1,11 +1,18 @@
 import { FlowContext } from './FlowContext';
 
 export interface IActivityRequestHandler<TReq, TRes> {
-    handle(flowContext: FlowContext, request: TReq): Promise<TRes | undefined>;
+    handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse>;
+}
+
+export class AsyncResponse {
+    readonly asyncRequestId: string;
+    constructor(asyncRequestId: string) {
+        this.asyncRequestId = asyncRequestId;        
+    }
 }
 
 export interface IFlowHandlers {
-    sendRequest<TReq, TRes>(flowContext: FlowContext, RequestType: new () => TReq, request: TReq): Promise<TRes>;
+    sendRequest<TReq, TRes>(flowContext: FlowContext, RequestType: new () => TReq, request: TReq): Promise<TRes | AsyncResponse>;
 }
 
 export class FlowHandlers implements IFlowHandlers {

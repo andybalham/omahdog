@@ -7,10 +7,9 @@ export class FlowContext {
 
     handlers: IFlowHandlers;
 
-    readonly instanceRespository?: IFlowInstanceRepository;
+    readonly instanceRepository?: IFlowInstanceRepository;
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
-    asyncRequestId?: string;
 
     readonly resumeStackFrames?: FlowInstanceStackFrame[];
     readonly initialResumeStackFrameCount?: number;
@@ -18,14 +17,14 @@ export class FlowContext {
     
     readonly mocks: FlowMocks;
 
-    constructor(instanceRespository?: IFlowInstanceRepository, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
+    constructor(instanceRepository?: IFlowInstanceRepository, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
 
         // TODO 15Apr20: Is there a way of asynchronously retrieving the stack frames?
         
         this.handlers = new FlowHandlers();
         this.mocks = new FlowMocks();
 
-        this.instanceRespository = instanceRespository;
+        this.instanceRepository = instanceRepository;
         this.stackFrames = [];
 
         if (instanceId === undefined) {
@@ -43,8 +42,8 @@ export class FlowContext {
     }
 
     private getInstanceRepository(): IFlowInstanceRepository {
-        if (this.instanceRespository === undefined) throw new Error('this.instanceRespository is undefined');
-        return this.instanceRespository;
+        if (this.instanceRepository === undefined) throw new Error('this.instanceRepository is undefined');
+        return this.instanceRepository;
     }
 
     get currentStackFrame(): FlowInstanceStackFrame {

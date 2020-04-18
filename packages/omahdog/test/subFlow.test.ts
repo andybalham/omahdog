@@ -1,7 +1,7 @@
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
-import { FlowHandlers, IActivityRequestHandler } from '../src/FlowHandlers';
+import { FlowHandlers, IActivityRequestHandler, AsyncResponse } from '../src/FlowHandlers';
 import { FlowContext, FlowInstanceStackFrame } from '../src/FlowContext';
 import { expect } from 'chai';
 import { IFlowInstanceRepository } from '../src/FlowInstanceRepository';
@@ -25,7 +25,7 @@ describe('Handlers', () => {
         const response = await new ParentFlowHandler().handle(flowContext, request);
 
         expect(flowContext.instanceId).to.be.not.undefined;
-        expect(response?.total).to.be.equal(666);
+        expect((response as ParentFlowResponse).total).to.be.equal(666);
     });
 
     it('returns the total of the inputs when activity invoked asynchronously', async () => {
@@ -48,9 +48,8 @@ describe('Handlers', () => {
 
         const response01 = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect(response01).to.be.undefined;
+        expect((response01 as AsyncResponse).asyncRequestId).to.not.be.undefined;
         expect(flowInstanceRepository.retrieve(flowContext.instanceId)).to.not.be.undefined;
-        expect(flowContext.asyncRequestId).to.not.be.undefined;
 
         const instanceId = flowContext.instanceId;
         let stackFrames;
@@ -66,9 +65,8 @@ describe('Handlers', () => {
 
         const response02 = await new ParentFlowHandler().handle(flowContext);
 
-        expect(response02).to.be.undefined;
+        expect((response02 as AsyncResponse).asyncRequestId).to.not.be.undefined;
         expect(flowInstanceRepository.retrieve(instanceId)).to.not.be.undefined;
-        expect(flowContext.asyncRequestId).to.not.be.undefined;
 
         // Send back asynchronous response 02
 
@@ -81,9 +79,8 @@ describe('Handlers', () => {
 
         const response03 = await new ParentFlowHandler().handle(flowContext);
 
-        expect(response03).to.be.undefined;
+        expect((response03 as AsyncResponse).asyncRequestId).to.not.be.undefined;
         expect(flowInstanceRepository.retrieve(instanceId)).to.not.be.undefined;
-        expect(flowContext.asyncRequestId).to.not.be.undefined;
 
         // Send back asynchronous response 03
 
@@ -96,9 +93,8 @@ describe('Handlers', () => {
 
         const response04 = await new ParentFlowHandler().handle(flowContext);
 
-        expect(response04?.total).to.be.equal(666);
+        expect((response04 as ParentFlowResponse).total).to.be.equal(666);
         expect(await flowInstanceRepository.retrieve(instanceId)).to.be.undefined;
-        expect(flowContext.asyncRequestId).to.be.undefined;
     });
 });
 
@@ -120,9 +116,8 @@ class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityReque
 class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     requestJson: string;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
-        flowContext.asyncRequestId = uuid.v4();
         this.requestJson = JSON.stringify(request);
-        return undefined;
+        return new AsyncResponse(uuid.v4());
     }
 }
 

@@ -93,7 +93,7 @@ describe('Handlers', () => {
 
         const response = await new SumFlowHandler().handle(flowContext, request);
 
-        expect(flowContext.instanceId).to.be.not.undefined;
-        expect(response?.total).to.be.equal(616);
+        expect(flowContext.instanceId).to.be.not.undefined;        
+        expect((response as SumActivityResponse).total).to.be.equal(616);
     });
 });

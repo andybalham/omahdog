@@ -1,7 +1,7 @@
 import fs = require('fs');
 import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
-import { IActivityRequestHandler } from './FlowHandlers';
+import { IActivityRequestHandler, AsyncResponse } from './FlowHandlers';
 import { FlowContext, FlowInstanceStackFrame } from './FlowContext';
 
 export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivityRequestHandler<TReq, TRes> {
@@ -141,7 +141,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
         appendLine('```');
     }
 
-    async handle(flowContext: FlowContext, request?: TReq): Promise<TRes | undefined> {
+    async handle(flowContext: FlowContext, request?: TReq): Promise<TRes | AsyncResponse> {
 
         let wasResume: boolean;
         let isRoot: boolean;
@@ -167,9 +167,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
 
         const response = await this.performFlow(flowContext, this.flowDefinition, request);
 
-        const hasResponse = response !== undefined;
-
-        if (hasResponse) {
+        if (!isAsyncResponse(response)) {
 
             flowContext.stackFrames.pop();
 
@@ -190,9 +188,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
     protected debugPostActivityResponse(_stepName?: string, _response?: any, _state?: any): void { }
     protected debugPostStepState(_stepName?: string, _state?: any): void { }
 
-    private async performFlow(flowContext: FlowContext, flowDefinition: FlowDefinition<TReq, TRes, TState>, request?: TReq): Promise<TRes | undefined> {
+    private async performFlow(flowContext: FlowContext, flowDefinition: FlowDefinition<TReq, TRes, TState>, request?: TReq): Promise<TRes | AsyncResponse> {
 
-        let stepIndex: number | undefined;
+        let stepIndex: number | AsyncResponse;
 
         if (flowContext.isResume) {
             if (!flowContext?.currentStackFrame?.stepName) throw new Error('flowContext.currentStackFrame.stepName is undefined');
@@ -204,9 +202,11 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
             stepIndex = 0;
         }
 
-        while ((stepIndex !== undefined) && (stepIndex < flowDefinition.steps.length)) {
+        while ((typeof stepIndex === 'number') && (stepIndex < flowDefinition.steps.length)) {
 
-            const step = flowDefinition.steps[stepIndex];
+            // TODO 18Apr20: Change the responses below to be instructions, not just an index. E.g. Goto('StepName')
+
+            const step = flowDefinition.steps[stepIndex as number];
 
             flowContext.currentStackFrame.stepName = step.name;
 
@@ -222,18 +222,18 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
                     if (!flowContext.resumeStackFrames) throw new Error('flowContext.resumeStackFrames is undefined');
                     
                     if ((flowContext.resumeStackFrames.length === 0) && (step.name === flowContext.currentStackFrame.stepName)) {
-                        stepIndex = this.resumeActivity(flowContext, stepIndex, step);                        
+                        stepIndex = this.resumeActivity(flowContext, stepIndex as number, step);                        
                     } else {
-                        stepIndex = await this.performActivity(flowContext, stepIndex, step);                        
+                        stepIndex = await this.performActivity(flowContext, stepIndex as number, step);                        
                     }
                 }
                 else {
-                    stepIndex = await this.performActivity(flowContext, stepIndex, step);
+                    stepIndex = await this.performActivity(flowContext, stepIndex as number, step);
                 }
                 break;
 
             case FlowStepType.Decision:
-                stepIndex = this.evaluateDecision(stepIndex, step, flowContext.currentStackFrame.state, flowDefinition);
+                stepIndex = this.evaluateDecision(stepIndex as number, step, flowContext.currentStackFrame.state, flowDefinition);
                 break;
 
             case FlowStepType.End:
@@ -241,7 +241,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
                 break;
 
             case FlowStepType.Label:
-                stepIndex = this.skipLabel(stepIndex, step);
+                stepIndex = this.skipLabel(stepIndex as number, step);
                 break;
 
             case FlowStepType.Goto:
@@ -255,13 +255,14 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
             this.debugPostStepState(step.name, flowContext.currentStackFrame.state);
         }
 
-        if (stepIndex === undefined) {
-            return undefined;
+        if (typeof stepIndex !== 'number') {
+            return stepIndex as AsyncResponse;
         }
 
         const response = new this.ResponseType();
         if (!flowDefinition.bindResponse) throw new Error('flowDefinition.bindResponse is undefined');
         flowDefinition.bindResponse(response, flowContext.currentStackFrame.state);
+
         return response;
     }
 
@@ -340,7 +341,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
         return nextStepIndex;
     }
 
-    private async performActivity(flowContext: FlowContext, stepIndex: number, step: any): Promise<number | undefined> {
+    private async performActivity(flowContext: FlowContext, stepIndex: number, step: any): Promise<number | AsyncResponse> {
 
         let stepResponse;
 
@@ -362,8 +363,8 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
                     ? await flowContext.handlers.sendRequest(flowContext, step.RequestType, stepRequest)
                     : mockResponse;
 
-            if (stepResponse === undefined) {
-                return undefined;
+            if (isAsyncResponse(stepResponse)) {
+                return stepResponse;
             }
         }
 
@@ -386,5 +387,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> implements IActivit
 
         return stepIndex + 1;
     }
+}
+
+function isAsyncResponse(value: any): boolean {
+    return 'asyncRequestId' in value;
 }
 

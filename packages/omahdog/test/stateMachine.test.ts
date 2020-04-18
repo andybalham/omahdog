@@ -61,7 +61,7 @@ describe('Handlers', () => {
 
         const flowResponse = await new DipCreationHandler().handle(flowContext, flowRequest);
 
-        expect(flowResponse?.result).to.equal(DipCreationResult.DipCreated);
+        expect((flowResponse as DipCreationResponse).result).to.equal(DipCreationResult.DipCreated);
     });
 
     it('can be run with handlers', async () => {
@@ -80,7 +80,7 @@ describe('Handlers', () => {
 
         const response = await new DipCreationHandler().handle(flowContext, request);
 
-        expect(response?.result).to.equal(DipCreationResult.DipCreated);
+        expect((response as DipCreationResponse).result).to.equal(DipCreationResult.DipCreated);
     });
 });
 
