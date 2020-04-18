@@ -1,12 +1,12 @@
-import AWS from 'aws-sdk';
+import AWS, { HttpResponse } from 'aws-sdk';
 import { SNSEvent, APIGatewayEvent } from 'aws-lambda';
 
 import { FlowContext } from './omahdog/FlowContext';
 import { FlowHandlers } from './omahdog/FlowHandlers';
 import { SNSActivityRequestHandler } from './omahdog-aws/SNSActivityRequestHandler';
-import { getEventRequest, isSNSRequest } from './omahdog-aws/AWSUtils';
+import { getEventRequest, getReturnValue } from './omahdog-aws/AWSUtils';
 
-import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
+import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { IFlowInstanceRepository } from './omahdog/FlowInstanceRepository';
@@ -39,7 +39,7 @@ class InMemoryInstanceRepository implements IFlowInstanceRepository {
 
 const instanceRepository = new InMemoryInstanceRepository();
 
-export const handler = async (event: SNSEvent | APIGatewayEvent): Promise<void> => {
+export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGatewayEvent ): Promise<AddThreeNumbersResponse | void | HttpResponse> => {
 
     // TODO 17Apr20: Allow for event to be the request itself
     
@@ -48,14 +48,14 @@ export const handler = async (event: SNSEvent | APIGatewayEvent): Promise<void> 
     // TODO 16Apr20: Need to recognise when there is a response
     // We need to obtain the instanceId, asyncResponse01
 
-    if ('Records' in event) {
+    // if ('Records' in event) {
         
-        const snsMessage = event.Records[0].Sns;
+    //     const snsMessage = event.Records[0].Sns;
 
-        const isRequest = isSNSRequest(snsMessage);
+    //     const isRequest = isSNSRequest(snsMessage);
 
-        // TODO 16Apr20: We will assume that it is always be a request from API Gateway.
-    }
+    //     // TODO 16Apr20: We will assume that it is always be a request from API Gateway.
+    // }
 
     const request = getEventRequest<AddThreeNumbersRequest>(event);
 
@@ -68,14 +68,10 @@ export const handler = async (event: SNSEvent | APIGatewayEvent): Promise<void> 
 
     console.log(`response: ${JSON.stringify(response)}`);
 
-    if ('Records' in event) {
-        
-        // TODO 16Apr20: Send back a response via the appropriate topic (response could be undefined)
+    const returnValue = getReturnValue(event, 200, response);
 
-    } else if ('httpMethod' in event) {
-        
-        // TODO 16Apr20: Send back a response via HTTP (response could be undefined)
+    console.log(`returnValue: ${JSON.stringify(returnValue)}`);
 
-    }
+    return returnValue;
 };
 
