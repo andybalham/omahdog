@@ -3,13 +3,14 @@ import { SNSEvent, APIGatewayEvent } from 'aws-lambda';
 
 import { FlowContext } from './omahdog/FlowContext';
 import { FlowHandlers, AsyncResponse } from './omahdog/FlowHandlers';
-import { SNSActivityRequestHandler } from './omahdog-aws/SNSActivityRequestHandler';
-import { getEventRequest, getReturnValue } from './omahdog-aws/AWSUtils';
+import { SNSActivityRequestHandler, AsyncResponseMessage } from './omahdog-aws/SNSActivityRequestHandler';
+import { getEventContent } from './omahdog-aws/AWSUtils';
 
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { IFlowInstanceRepository, FlowInstance } from './omahdog/FlowInstanceRepository';
+import { PublishInput } from 'aws-sdk/clients/sns';
 
 const sns = new AWS.SNS();
 
@@ -23,7 +24,6 @@ class InMemoryInstanceRepository implements IFlowInstanceRepository {
     private readonly _mapRepository = new Map<string, FlowInstance>();
 
     create(flowInstance: FlowInstance): Promise<void> {
-        // TODO 16Apr20: How can we store the request id? It is on the flowContext. Should we pass it in here?
         this._mapRepository.set(flowInstance.asyncRequestId, flowInstance);
         return Promise.resolve();
     }
@@ -42,37 +42,98 @@ const instanceRepository = new InMemoryInstanceRepository();
 export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGatewayEvent ): 
         Promise<AddThreeNumbersResponse | AsyncResponse | void | HttpResponse> => {
 
-    // TODO 17Apr20: Allow for event to be the request itself
-    
     console.log(`event: ${JSON.stringify(event)}`);
 
-    // TODO 16Apr20: Need to recognise when there is a response
-    // We need to obtain the instanceId, asyncResponse01
+    const eventContent = getEventContent<AddThreeNumbersRequest>(event);
 
-    // if ('Records' in event) {
+    console.log(`eventContent: ${JSON.stringify(eventContent)}`);
+
+    let flowContext: FlowContext;
+    let request: AddThreeNumbersRequest | undefined;
+
+    if ('request' in eventContent) {
         
-    //     const snsMessage = event.Records[0].Sns;
+        // Async request
+        flowContext = new FlowContext(instanceRepository);
+        request = (eventContent.request as AddThreeNumbersRequest);
 
-    //     const isRequest = isSNSRequest(snsMessage);
+    }
+    else if ('response' in eventContent) {
 
-    //     // TODO 16Apr20: We will assume that it is always be a request from API Gateway.
-    // }
+        // Resume
+        
+        const flowInstance = await instanceRepository.retrieve(eventContent.context.requestId);
 
-    const request = getEventRequest<AddThreeNumbersRequest>(event);
+        if (flowInstance === undefined) throw new Error(`No flowInstance found for requestId: ${eventContent.context.requestId}`);
+        
+        flowContext = new FlowContext(instanceRepository, flowInstance, eventContent.response);
+        request = undefined;
 
-    console.log(`request: ${JSON.stringify(request)}`);
+    } else {
 
-    const flowContext = new FlowContext(instanceRepository);
+        // Request
+        flowContext = new FlowContext(instanceRepository);
+        request = (eventContent as AddThreeNumbersRequest);
+
+    }
+
     flowContext.handlers = handlers;
-
+    
     const response = await new AddThreeNumbersHandler().handle(flowContext, request);
+    
+    // TODO 19Apr20: If we have an async response, we need to store the callback details
+    // TODO 19Apr20: This means that even direct calls need be made as though they are async
+    // TODO 19Apr20: We need to throw an error if we have an async response, but no callback details
 
     console.log(`response: ${JSON.stringify(response)}`);
 
-    const returnValue = getReturnValue(event, 200, response);
+    if ('request' in eventContent) {
+        
+        // Was an async request
 
-    console.log(`returnValue: ${JSON.stringify(returnValue)}`);
+        const message: AsyncResponseMessage = 
+            {
+                context: {
+                    requestId: eventContent.context.requestId,
+                    flowInstanceId: eventContent.context.flowInstanceId,                    
+                },
+                response: response
+            };
 
-    return returnValue;
+        const params: PublishInput = {
+            Message: JSON.stringify(message),
+            TopicArn: 'TODO', // TODO 19Apr20: How do we get the topic ARN here
+            MessageAttributes: {
+                MessageType: { DataType: 'String', StringValue: `${eventContent.context.flowTypeName}:Response` }
+            }
+        };
+        
+        const publishResponse = await sns.publish(params).promise();
+    
+        console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
+
+        return;
+    }
+    else {
+
+        // Was a request or a resume
+
+        if ('Records' in event) {
+            // SNS
+            return;
+        }
+        else if ('httpMethod' in event) {
+            // HTTP
+            const httpResponse = new HttpResponse();
+            httpResponse.statusCode = 200; // TODO 19Apr20: Allow for alternative HTTP status codes, this may depend on the response itself
+            httpResponse.body = JSON.stringify(response);
+            return httpResponse;
+        }
+        else {
+            // Direct
+            return response;
+        }
+            
+    }
 };
 

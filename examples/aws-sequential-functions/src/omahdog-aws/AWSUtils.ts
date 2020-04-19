@@ -1,31 +1,29 @@
 import { SNSEvent, APIGatewayEvent, SNSMessage } from 'aws-lambda';
-import { SNSFlowMessage } from '../omahdog-aws';
 import { HttpResponse } from 'aws-sdk';
 import { AsyncResponse } from '../omahdog/FlowHandlers';
+import { AsyncRequestMessage, AsyncResponseMessage } from './SNSActivityRequestHandler';
 
-export function getEventRequest<T>(event: T | SNSEvent | APIGatewayEvent): T {
+export function getEventContent<TReq>(event: TReq | SNSEvent | APIGatewayEvent): TReq | AsyncRequestMessage | AsyncResponseMessage {
 
-    let request;
+    let content;
 
     if ('Records' in event) {
 
         const snsMessage = event.Records[0].Sns;
-        // TODO 14Apr20: Check snsMessage.MessageAttributes to see if this is a resume
-        const snsFlowMessage = JSON.parse(snsMessage.Message) as SNSFlowMessage;    
-        request = snsFlowMessage.body;
+        content = JSON.parse(snsMessage.Message);
 
     } else if ('httpMethod' in event) {
 
         if (event.body === null) throw new Error('APIGatewayEvent.body was null');
-        request = JSON.parse(event.body);
+        content = JSON.parse(event.body);
 
     } else {
 
-        request = event;
+        content = event;
 
     }
 
-    return request;
+    return content;
 }
 
 

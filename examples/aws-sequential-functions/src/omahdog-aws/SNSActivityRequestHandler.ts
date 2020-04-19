@@ -2,6 +2,7 @@ import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers'
 import { FlowContext } from '../omahdog/FlowContext';
 import AWS from 'aws-sdk';
 import { FlowRequestHandlerBase } from '../omahdog/FlowRequestHandler';
+import { PublishInput } from 'aws-sdk/clients/sns';
 
 export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
@@ -20,19 +21,20 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
-        // TODO 18Apr20: Package the following up in a class
-        
         const asyncResponse = new AsyncResponse();
-
-        const params = {
-            Message: JSON.stringify({
+        
+        const message: AsyncRequestMessage = 
+            {
                 context: {
-                    asyncRequestId: asyncResponse.asyncRequestId,
-                    flowTypeName: this._FlowType.name,
+                    requestId: asyncResponse.requestId,
                     flowInstanceId: flowContext.instanceId,
+                    flowTypeName: this._FlowType.name
                 },
                 request: request
-            }),
+            };
+
+        const params: PublishInput = {
+            Message: JSON.stringify(message),
             TopicArn: this._topicArn,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: `${this._RequestType.name}:Handler` }
@@ -45,4 +47,25 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
 
         return asyncResponse;
     }
+}
+
+export class AsyncRequestMessage {
+    readonly context: AsyncRequestContext;
+    readonly request: any;
+}
+
+export class AsyncRequestContext {
+    readonly requestId: string;
+    readonly flowTypeName: string;
+    readonly flowInstanceId: string;
+}
+
+export class AsyncResponseMessage {
+    readonly context: AsyncResponseContext;
+    readonly response: any;
+}
+
+export class AsyncResponseContext {
+    readonly requestId: string;
+    readonly flowInstanceId: string;
 }

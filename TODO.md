@@ -1,5 +1,7 @@
 # TODO
 
+* __When a function resumes, it needs to know if it should send a response message when it gets to the end__
+
 * Allow for 'fire-and-forget' requests
   * We will need to change the response to be either:
     * An actual response
