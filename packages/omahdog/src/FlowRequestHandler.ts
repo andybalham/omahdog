@@ -5,6 +5,7 @@ import { IActivityRequestHandler, AsyncResponse } from './FlowHandlers';
 import { FlowContext, FlowInstanceStackFrame } from './FlowContext';
 
 export abstract class FlowRequestHandlerBase {
+    // TODO 19Apr20: Replace the following with the name of the handler
     abstract flowName: string;
 }
 
@@ -175,14 +176,14 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
             flowContext.stackFrames.pop();
 
-            if (isRoot && wasResume) {
-                await flowContext.deleteInstance();
-            }
-
         } else if (isRoot) {
 
             await flowContext.saveInstance((response as AsyncResponse).asyncRequestId);
 
+        }
+
+        if (isRoot && wasResume) {
+            await flowContext.deleteInstance(flowContext.asyncRequestId);
         }
 
         return response;

@@ -27,16 +27,16 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
         requestId
         */
 
-        const requestId = 'TODO';
-
         // TODO 18Apr20: Package the following up in a class
         
+        const asyncResponse = new AsyncResponse();
+
         const params = {
             Message: JSON.stringify({
                 context: {
                     flowName: this._FlowType.name,
                     flowInstanceId: flowContext.instanceId,
-                    requestId: requestId
+                    requestId: asyncResponse.asyncRequestId
                 },
                 request: request
             }),
@@ -50,6 +50,6 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
     
         console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
 
-        return new AsyncResponse(requestId);
+        return asyncResponse;
     }
 }

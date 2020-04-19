@@ -1,22 +1,22 @@
 import { FlowInstanceStackFrame } from './FlowContext';
 
 export interface IFlowInstanceRepository {
-    upsert(flowInstance: FlowInstance): Promise<void>;
-    retrieve(instanceId: string): Promise<FlowInstance>;
-    delete(instanceId: string): Promise<void>;
+    create(flowInstance: FlowInstance): Promise<void>;
+    retrieve(asyncRequestId: string): Promise<FlowInstance>;
+    delete(asyncRequestId: string): Promise<void>;
 }
 
 export class FlowInstance {
     
+    readonly asyncRequestId: string;
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
-    readonly asyncRequestId: string;
-    readonly resumptionCount: number;
+    readonly resumeCount: number;
 
-    constructor(instanceId: string, stackFrames: FlowInstanceStackFrame[], asyncRequestId: string, resumptionCount: number) {
+    constructor(asyncRequestId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[], resumeCount: number) {
+        this.asyncRequestId = asyncRequestId;
         this.instanceId = instanceId;
         this.stackFrames = stackFrames;
-        this.asyncRequestId = asyncRequestId;
-        this.resumptionCount = resumptionCount;
+        this.resumeCount = resumeCount;
     }
 }

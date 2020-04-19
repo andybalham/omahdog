@@ -1,3 +1,4 @@
+import uuid = require('uuid');
 import { FlowContext } from './FlowContext';
 
 export interface IActivityRequestHandler<TReq, TRes> {
@@ -6,8 +7,8 @@ export interface IActivityRequestHandler<TReq, TRes> {
 
 export class AsyncResponse {
     readonly asyncRequestId: string;
-    constructor(asyncRequestId: string) {
-        this.asyncRequestId = asyncRequestId;        
+    constructor() {
+        this.asyncRequestId = uuid.v4();        
     }
 }
 

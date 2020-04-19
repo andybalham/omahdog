@@ -5,7 +5,6 @@ import { FlowHandlers, IActivityRequestHandler, AsyncResponse } from '../src/Flo
 import { FlowContext } from '../src/FlowContext';
 import { expect } from 'chai';
 import { IFlowInstanceRepository, FlowInstance } from '../src/FlowInstanceRepository';
-import uuid = require('uuid');
 
 describe('Handlers', () => {
 
@@ -48,57 +47,59 @@ describe('Handlers', () => {
 
         const response01 = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect((response01 as AsyncResponse).asyncRequestId).to.not.be.undefined;
-        expect(flowInstanceRepository.retrieve(flowContext.instanceId)).to.not.be.undefined;
+        let asyncRequestId = (response01 as AsyncResponse).asyncRequestId;
+        expect(asyncRequestId).to.not.be.undefined;
+        expect(await flowInstanceRepository.retrieve(asyncRequestId)).to.not.be.undefined;
 
-        const instanceId = flowContext.instanceId;
         let flowInstance: FlowInstance;
-
+        
         // Send back asynchronous response 01
-
+        
         const asyncResponse01 =
-            await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
-
-        flowInstance = await flowInstanceRepository.retrieve(instanceId);        
+        await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+        
+        flowInstance = await flowInstanceRepository.retrieve(asyncRequestId);        
         flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse01);
         flowContext.handlers = asyncHandlers;
 
-        expect(flowInstance.resumptionCount).to.equal(0);
+        expect(flowInstance.resumeCount).to.equal(0);
         
         const response02 = await new ParentFlowHandler().handle(flowContext);
 
-        expect((response02 as AsyncResponse).asyncRequestId).to.not.be.undefined;
-        expect(flowInstanceRepository.retrieve(instanceId)).to.not.be.undefined;
+        asyncRequestId = (response02 as AsyncResponse).asyncRequestId;
+        expect(asyncRequestId).to.not.be.undefined;
+        expect(await flowInstanceRepository.retrieve(asyncRequestId)).to.not.be.undefined;
 
         // Send back asynchronous response 02
 
         const asyncResponse02 =
         await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        flowInstance = await flowInstanceRepository.retrieve(instanceId);        
+        flowInstance = await flowInstanceRepository.retrieve(asyncRequestId);
         flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse02);
         flowContext.handlers = asyncHandlers;
 
-        expect(flowInstance.resumptionCount).to.equal(1);
+        expect(flowInstance.resumeCount).to.equal(1);
 
         const response03 = await new ParentFlowHandler().handle(flowContext);
 
-        expect((response03 as AsyncResponse).asyncRequestId).to.not.be.undefined;
-        expect(flowInstanceRepository.retrieve(instanceId)).to.not.be.undefined;
+        asyncRequestId = (response03 as AsyncResponse).asyncRequestId;
+        expect(asyncRequestId).to.not.be.undefined;
+        expect(await flowInstanceRepository.retrieve(asyncRequestId)).to.not.be.undefined;
 
         // Send back asynchronous response 03
 
         const asyncResponse03 =
-        await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
 
-        flowInstance = await flowInstanceRepository.retrieve(instanceId);        
+        flowInstance = await flowInstanceRepository.retrieve(asyncRequestId);        
         flowContext = new FlowContext(flowInstanceRepository, flowInstance, asyncResponse03);
         flowContext.handlers = asyncHandlers;
 
         const response04 = await new ParentFlowHandler().handle(flowContext);
 
         expect((response04 as ParentFlowResponse).total).to.be.equal(666);
-        expect(await flowInstanceRepository.retrieve(instanceId)).to.be.undefined;
+        expect(await flowInstanceRepository.retrieve(asyncRequestId)).to.be.undefined;
     });
 });
 
@@ -121,7 +122,7 @@ class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     requestJson: string;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
         this.requestJson = JSON.stringify(request);
-        return new AsyncResponse(uuid.v4());
+        return new AsyncResponse();
     }
 }
 
@@ -140,17 +141,17 @@ class InMemoryFlowInstanceRepository implements IFlowInstanceRepository {
 
     private readonly _flowInstances = new Map<string, string>();
 
-    async upsert(flowInstance: FlowInstance): Promise<void> {
-        this._flowInstances.set(flowInstance.instanceId, JSON.stringify(flowInstance));
+    async create(flowInstance: FlowInstance): Promise<void> {
+        this._flowInstances.set(flowInstance.asyncRequestId, JSON.stringify(flowInstance));
     }
 
-    async retrieve(instanceId: string): Promise<FlowInstance> {
-        const flowInstanceJson = this._flowInstances.get(instanceId);
+    async retrieve(asyncRequestId: string): Promise<FlowInstance> {
+        const flowInstanceJson = this._flowInstances.get(asyncRequestId);
         return (flowInstanceJson !== undefined) ? JSON.parse(flowInstanceJson) : undefined;
     }
 
-    async delete(instanceId: string): Promise<void> {
-        this._flowInstances.delete(instanceId);
+    async delete(asyncRequestId: string): Promise<void> {
+        this._flowInstances.delete(asyncRequestId);
     }
 }
 

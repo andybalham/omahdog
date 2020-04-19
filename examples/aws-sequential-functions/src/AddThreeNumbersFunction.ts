@@ -22,17 +22,17 @@ class InMemoryInstanceRepository implements IFlowInstanceRepository {
 
     private readonly _mapRepository = new Map<string, FlowInstance>();
 
-    upsert(flowInstance: FlowInstance): Promise<void> {
+    create(flowInstance: FlowInstance): Promise<void> {
         // TODO 16Apr20: How can we store the request id? It is on the flowContext. Should we pass it in here?
-        this._mapRepository.set(flowInstance.instanceId, flowInstance);
+        this._mapRepository.set(flowInstance.asyncRequestId, flowInstance);
         return Promise.resolve();
     }
     
-    retrieve(instanceId: string): Promise<FlowInstance> {
+    retrieve(asyncRequestId: string): Promise<FlowInstance> {
         throw new Error('Method not implemented.');
     }
     
-    delete(instanceId: string): Promise<void> {
+    delete(asyncRequestId: string): Promise<void> {
         throw new Error('Method not implemented.');
     }
 }   

@@ -13,7 +13,8 @@ export class FlowContext {
 
     readonly resumeStackFrames?: FlowInstanceStackFrame[];
     readonly initialResumeStackFrameCount?: number;
-    readonly resumptionCount: number;
+    readonly resumeCount: number;
+    readonly asyncRequestId: string;
     asyncResponse: any;
     
     readonly mocks: FlowMocks;
@@ -31,15 +32,16 @@ export class FlowContext {
         if (flowInstance === undefined) {
 
             this.instanceId = uuid.v4();
-            this.resumptionCount = 0;
+            this.resumeCount = 0;
 
         } else {
 
             this.instanceId = flowInstance.instanceId;
+            this.asyncRequestId = flowInstance.asyncRequestId;
             this.asyncResponse = asyncResponse;
             this.resumeStackFrames = flowInstance.stackFrames?.reverse();
             this.initialResumeStackFrameCount = this.resumeStackFrames?.length;
-            this.resumptionCount = flowInstance.resumptionCount + 1;
+            this.resumeCount = flowInstance.resumeCount + 1;
 
         }
     }
@@ -58,11 +60,12 @@ export class FlowContext {
     }
 
     async saveInstance(asyncRequestId: string): Promise<void> {
-        await this.getInstanceRepository().upsert(new FlowInstance(this.instanceId, this.stackFrames, asyncRequestId, this.resumptionCount));
+        await this.getInstanceRepository().create(
+            new FlowInstance(asyncRequestId, this.instanceId, this.stackFrames, this.resumeCount));
     }
 
-    async deleteInstance(): Promise<void> {
-        await this.getInstanceRepository().delete(this.instanceId);
+    async deleteInstance(asyncRequestId: string): Promise<void> {
+        await this.getInstanceRepository().delete(asyncRequestId);
     }
 
     getMockResponse(stepName: any, request: any): any {

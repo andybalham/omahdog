@@ -12,6 +12,8 @@
 * Q. How can we ensure that handlers are in place for all requests?
   * I.e. can we do a sort of test traversal of all paths to see?
 
+* Generate SAM template from an 'application' class
+* Use object references when storing the flow instance
 * Look into use of DynamoDb vs. S3 for storing flow instances
   * [S3 or DynamoDB?](https://serverless.pub/s3-or-dynamodb/)
 * [middy](https://middy.js.org/)
