@@ -5,8 +5,10 @@ import { IActivityRequestHandler, AsyncResponse } from './FlowHandlers';
 import { FlowContext, FlowInstanceStackFrame } from './FlowContext';
 
 export abstract class FlowRequestHandlerBase {
-    // TODO 19Apr20: Replace the following with the name of the handler
-    abstract flowName: string;
+    readonly typeName: string;
+    constructor(typeName: string) {
+        this.typeName = typeName;
+    }
 }
 
 export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequestHandlerBase implements IActivityRequestHandler<TReq, TRes> {
@@ -15,9 +17,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
     private readonly StateType: new () => TState;
     private readonly flowDefinition: FlowDefinition<TReq, TRes, TState>;
 
-    constructor(ResponseType: new () => TRes, StateType: new () => TState) {
+    constructor(HandlerType: new () => FlowRequestHandler<TReq, TRes, TState>, ResponseType: new () => TRes, StateType: new () => TState) {
 
-        super();
+        super(HandlerType.name);
 
         this.ResponseType = ResponseType;
         this.StateType = StateType;
@@ -32,7 +34,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
         function append(text: string): void { fs.appendFileSync(fileName, text); }
         function appendLine(text: string): void { append(`${text}\n`); }
 
-        appendLine(`# ${this.flowName}`);
+        appendLine(`# ${this.typeName}`);
         appendLine('');
         appendLine('```mermaid');
         appendLine('graph TB');
@@ -166,7 +168,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
             wasResume = false;
             isRoot = (flowContext.stackFrames.length === 0);
-            flowContext.stackFrames.push(new FlowInstanceStackFrame(this.flowName, new this.StateType()));
+            flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.StateType()));
             
         }
 

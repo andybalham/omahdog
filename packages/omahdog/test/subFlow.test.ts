@@ -157,10 +157,8 @@ class InMemoryFlowInstanceRepository implements IFlowInstanceRepository {
 
 class ChildFlowHandler extends FlowRequestHandler<ChildFlowRequest, ChildFlowResponse, ChildFlowState> {
 
-    flowName = ChildFlowHandler.name;
-
     constructor() {
-        super(ChildFlowResponse, ChildFlowState);
+        super(ChildFlowHandler, ChildFlowResponse, ChildFlowState);
     }
 
     buildFlow(flowBuilder: FlowBuilder<ChildFlowRequest, ChildFlowResponse, ChildFlowState>): FlowDefinition<ChildFlowRequest, ChildFlowResponse, ChildFlowState> {
@@ -190,10 +188,8 @@ class ParentFlowState {
 
 class ParentFlowHandler extends FlowRequestHandler<ParentFlowRequest, ParentFlowResponse, ParentFlowState> {
 
-    flowName = ParentFlowHandler.name;
-
     constructor() {
-        super(ParentFlowResponse, ParentFlowState);
+        super(ParentFlowHandler, ParentFlowResponse, ParentFlowState);
     }
 
     protected debugPreActivityRequest(_stepName: string, _request: any, _state: any): void { }

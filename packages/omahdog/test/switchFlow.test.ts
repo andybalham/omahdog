@@ -36,10 +36,8 @@ class SwitchTestFlowState {
 
 export class SwitchTestFlowHandler extends FlowRequestHandler<SwitchTestFlowRequest, SwitchTestFlowResponse, SwitchTestFlowState> {
 
-    flowName = SwitchTestFlowHandler.name;
-
     constructor() {
-        super(SwitchTestFlowResponse, SwitchTestFlowState);
+        super(SwitchTestFlowHandler, SwitchTestFlowResponse, SwitchTestFlowState);
     }
 
     buildFlow(flowDefinition: FlowBuilder<SwitchTestFlowRequest, SwitchTestFlowResponse, SwitchTestFlowState>): FlowDefinition<SwitchTestFlowRequest, SwitchTestFlowResponse, SwitchTestFlowState> {

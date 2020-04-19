@@ -20,13 +20,6 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
-        // TODO 18Apr20: What else do we need to send?
-        /*
-        root flow name so we can be called back. Q. How do we know the root name?
-        flowInstanceId
-        requestId
-        */
-
         // TODO 18Apr20: Package the following up in a class
         
         const asyncResponse = new AsyncResponse();
@@ -34,15 +27,15 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
         const params = {
             Message: JSON.stringify({
                 context: {
-                    flowName: this._FlowType.name,
+                    asyncRequestId: asyncResponse.asyncRequestId,
+                    flowTypeName: this._FlowType.name,
                     flowInstanceId: flowContext.instanceId,
-                    requestId: asyncResponse.asyncRequestId
                 },
                 request: request
             }),
             TopicArn: this._topicArn,
             MessageAttributes: {
-                MessageType: { DataType: 'String', StringValue: `${this._RequestType.name}:Request` }
+                MessageType: { DataType: 'String', StringValue: `${this._RequestType.name}:Handler` }
             }
         };
         

@@ -86,10 +86,8 @@ describe('Handlers', () => {
 
 export class DipCreationHandler extends FlowRequestHandler<DipCreationRequest, DipCreationResponse, DipCreationState> {
 
-    flowName = DipCreationHandler.name;
-
     constructor() {
-        super(DipCreationResponse, DipCreationState);
+        super(DipCreationHandler, DipCreationResponse, DipCreationState);
     }
 
     buildFlow(flowBuilder: FlowBuilder<DipCreationRequest, DipCreationResponse, DipCreationState>):

@@ -39,10 +39,8 @@ class SumFlowState {
 
 export class SumFlowHandler extends FlowRequestHandler<SumFlowRequest, SumFlowResponse, SumFlowState> {
 
-    flowName = SumFlowHandler.name;
-
     constructor() {
-        super(SumFlowResponse, SumFlowState);
+        super(SumFlowHandler, SumFlowResponse, SumFlowState);
     }
 
     buildFlow(flowBuilder: FlowBuilder<SumFlowRequest, SumFlowResponse, SumFlowState>): FlowDefinition<SumFlowRequest, SumFlowResponse, SumFlowState> {

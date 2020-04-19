@@ -6,10 +6,8 @@ import { SumNumbersRequest, SumNumbersResponse } from '../exchanges/SumNumbersEx
 
 export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState> {
 
-    flowName = AddThreeNumbersHandler.name;
-
     constructor() {
-        super(AddThreeNumbersResponse, AddThreeNumbersState);
+        super(AddThreeNumbersHandler, AddThreeNumbersResponse, AddThreeNumbersState);
     }
 
     buildFlow(flowBuilder: FlowBuilder<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState>): 
