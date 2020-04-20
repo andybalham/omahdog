@@ -54,7 +54,7 @@ export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGate
     if ('request' in eventContent) {
         
         // Async request
-        flowContext = new FlowContext(instanceRepository);
+        flowContext = new FlowContext();
         request = (eventContent.request as AddThreeNumbersRequest);
 
     }
@@ -66,13 +66,13 @@ export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGate
 
         if (flowInstance === undefined) throw new Error(`No flowInstance found for requestId: ${eventContent.context.requestId}`);
         
-        flowContext = new FlowContext(instanceRepository, flowInstance, eventContent.response);
+        flowContext = new FlowContext(flowInstance, eventContent.response);
         request = undefined;
 
     } else {
 
         // Request
-        flowContext = new FlowContext(instanceRepository);
+        flowContext = new FlowContext();
         request = (eventContent as AddThreeNumbersRequest);
 
     }
@@ -80,7 +80,7 @@ export const handler = async (event: AddThreeNumbersRequest | SNSEvent | APIGate
     flowContext.handlers = handlers;
     
     const response = await new AddThreeNumbersHandler().handle(flowContext, request);
-    
+
     // TODO 19Apr20: If we have an async response, we need to store the callback details
     // TODO 19Apr20: This means that even direct calls need be made as though they are async
     // TODO 19Apr20: We need to throw an error if we have an async response, but no callback details

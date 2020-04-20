@@ -150,15 +150,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
     async handle(flowContext: FlowContext, request?: TReq): Promise<TRes | AsyncResponse> {
 
-        let wasResume: boolean;
-        let isRoot: boolean;
-
         if (flowContext.isResume) {
 
-            wasResume = flowContext.isResume;
-            
             if (!flowContext.resumeStackFrames) throw new Error('flowContext.resumeStackFrames is undefined');
-            isRoot = (flowContext.resumeStackFrames.length === flowContext.initialResumeStackFrameCount);
             const resumeStackFrame = flowContext.resumeStackFrames.pop();
             
             if (!resumeStackFrame) throw new Error('resumeStackFrame is undefined');
@@ -166,8 +160,6 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
         } else {
 
-            wasResume = false;
-            isRoot = (flowContext.stackFrames.length === 0);
             flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.StateType()));
             
         }
@@ -175,17 +167,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
         const response = await this.performFlow(flowContext, this.flowDefinition, request);
 
         if (!isAsyncResponse(response)) {
-
             flowContext.stackFrames.pop();
-
-        } else if (isRoot) {
-
-            await flowContext.saveInstance((response as AsyncResponse).asyncRequestId);
-
-        }
-
-        if (isRoot && wasResume) {
-            await flowContext.deleteInstance(flowContext.asyncRequestId);
         }
 
         return response;
@@ -398,4 +380,3 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 function isAsyncResponse(value: any): boolean {
     return 'asyncRequestId' in value;
 }
-

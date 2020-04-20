@@ -26,7 +26,7 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
         const message: AsyncRequestMessage = 
             {
                 context: {
-                    requestId: asyncResponse.requestId,
+                    requestId: asyncResponse.asyncRequestId,
                     flowInstanceId: flowContext.instanceId,
                     flowTypeName: this._FlowType.name
                 },
