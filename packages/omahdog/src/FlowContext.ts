@@ -15,22 +15,27 @@ export class FlowContext {
     
     readonly mocks: FlowMocks;
 
-    constructor(flowInstance?: FlowInstance, asyncResponse?: any) {
+    constructor(flowInstanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
 
         this.handlers = new FlowHandlers();
         this.mocks = new FlowMocks();
 
         this.stackFrames = [];
 
-        if (flowInstance === undefined) {
+        if (flowInstanceId === undefined) {
 
             this.instanceId = uuid.v4();
 
+        } else if (asyncResponse === undefined) {
+
+            this.instanceId = flowInstanceId;
+
         } else {
 
-            this.instanceId = flowInstance.instanceId;
+            this.instanceId = flowInstanceId;
+            this.resumeStackFrames = stackFrames?.reverse();
             this.asyncResponse = asyncResponse;
-            this.resumeStackFrames = flowInstance.stackFrames?.reverse();
+            
             this.initialResumeStackFrameCount = this.resumeStackFrames?.length;
 
         }

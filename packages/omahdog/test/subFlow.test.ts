@@ -56,10 +56,10 @@ describe('Handlers', () => {
         const response01 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = new FlowContext(flowInstance, response01);
+        flowContext = new FlowContext(flowInstance.instanceId, flowInstance.stackFrames, response01);
         flowContext.handlers = asyncHandlers;
         
-        const asyncResponse02 = await new ParentFlowHandler().handle(flowContext, request);
+        const asyncResponse02 = await new ParentFlowHandler().handle(flowContext);
 
         expect('AsyncResponse' in asyncResponse02).to.be.true;
         flowInstance = (asyncResponse02 as AsyncResponse).getFlowInstance();
@@ -69,10 +69,10 @@ describe('Handlers', () => {
         const response02 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = new FlowContext(flowInstance, response02);
+        flowContext = new FlowContext(flowInstance.instanceId, flowInstance.stackFrames, response02);
         flowContext.handlers = asyncHandlers;
         
-        const asyncResponse03 = await new ParentFlowHandler().handle(flowContext, request);
+        const asyncResponse03 = await new ParentFlowHandler().handle(flowContext);
 
         expect('AsyncResponse' in asyncResponse03).to.be.true;
         flowInstance = (asyncResponse03 as AsyncResponse).getFlowInstance();
@@ -82,10 +82,10 @@ describe('Handlers', () => {
         const response03 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = new FlowContext(flowInstance, response03);
+        flowContext = new FlowContext(flowInstance.instanceId, flowInstance.stackFrames, response03);
         flowContext.handlers = asyncHandlers;
         
-        const response04 = await new ParentFlowHandler().handle(flowContext, request);
+        const response04 = await new ParentFlowHandler().handle(flowContext);
 
         expect((response04 as ParentFlowResponse).total).to.equal(666);
     });

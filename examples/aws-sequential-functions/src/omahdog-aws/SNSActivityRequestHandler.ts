@@ -1,6 +1,7 @@
+import AWS from 'aws-sdk';
+import uuid = require('uuid');
 import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
-import AWS from 'aws-sdk';
 import { FlowRequestHandlerBase } from '../omahdog/FlowRequestHandler';
 import { PublishInput } from 'aws-sdk/clients/sns';
 
@@ -21,12 +22,12 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
-        const asyncResponse = new AsyncResponse();
+        const requestId = uuid.v4();
         
         const message: AsyncRequestMessage = 
             {
                 context: {
-                    requestId: asyncResponse.asyncRequestId,
+                    requestId: requestId,
                     flowInstanceId: flowContext.instanceId,
                     flowTypeName: this._FlowType.name
                 },
@@ -45,27 +46,22 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
     
         console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
 
-        return asyncResponse;
+        return flowContext.getAsyncResponse(requestId);
     }
 }
 
 export class AsyncRequestMessage {
-    readonly context: AsyncRequestContext;
+    readonly context: AsyncExchangeContext;
     readonly request: any;
 }
 
-export class AsyncRequestContext {
-    readonly requestId: string;
-    readonly flowTypeName: string;
-    readonly flowInstanceId: string;
-}
-
 export class AsyncResponseMessage {
-    readonly context: AsyncResponseContext;
+    readonly context: AsyncExchangeContext;
     readonly response: any;
 }
 
-export class AsyncResponseContext {
+export class AsyncExchangeContext {
     readonly requestId: string;
+    readonly flowTypeName: string;
     readonly flowInstanceId: string;
 }

@@ -34,10 +34,9 @@ export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRe
                 (req, state) => { req.values = [state.total, state.c]; },
                 (res, state) => { state.total = res.total; })
 
-            .finalise(AddThreeNumbersResponse,
-                (res, state) => {
-                    res.total = state.total;
-                });
+            .finalise((res, state) => {
+                res.total = state.total;
+            });
     }
 }
 
