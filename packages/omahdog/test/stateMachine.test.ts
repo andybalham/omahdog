@@ -212,7 +212,7 @@ export class DipCreationHandler extends FlowRequestHandler<DipCreationRequest, D
 
         // Finalise
 
-            .finalise(DipCreationResponse, (res, state) => {
+            .finalise((res, state) => {
                 res.result = state.overallResult;
             });
     }

@@ -1,3 +1,4 @@
+import uuid = require('uuid');
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
@@ -47,40 +48,40 @@ describe('Handlers', () => {
         
         const asyncResponse01 = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect((asyncResponse01 as AsyncResponse).asyncRequestId).to.not.be.undefined;
+        expect('AsyncResponse' in asyncResponse01).to.be.true;
+        flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
 
         // Feed in response01
 
         const response01 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowInstance = new FlowInstance(flowContext.instanceId, flowContext.stackFrames);
         flowContext = new FlowContext(flowInstance, response01);
         flowContext.handlers = asyncHandlers;
         
         const asyncResponse02 = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect((asyncResponse02 as AsyncResponse).asyncRequestId).to.not.be.undefined;
+        expect('AsyncResponse' in asyncResponse02).to.be.true;
+        flowInstance = (asyncResponse02 as AsyncResponse).getFlowInstance();
 
         // Feed in response02
 
         const response02 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowInstance = new FlowInstance(flowContext.instanceId, flowContext.stackFrames);
         flowContext = new FlowContext(flowInstance, response02);
         flowContext.handlers = asyncHandlers;
         
         const asyncResponse03 = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect((asyncResponse03 as AsyncResponse).asyncRequestId).to.not.be.undefined;
+        expect('AsyncResponse' in asyncResponse03).to.be.true;
+        flowInstance = (asyncResponse03 as AsyncResponse).getFlowInstance();
 
         // Feed in response03
 
         const response03 =
             await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowInstance = new FlowInstance(flowContext.instanceId, flowContext.stackFrames);
         flowContext = new FlowContext(flowInstance, response03);
         flowContext.handlers = asyncHandlers;
         
@@ -108,8 +109,9 @@ class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityReque
 class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     requestJson: string;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
+        const requestId = uuid.v4();
         this.requestJson = JSON.stringify(request);
-        return new AsyncResponse();
+        return flowContext.getAsyncResponse(requestId);
     }
 }
 
@@ -138,7 +140,7 @@ class ChildFlowHandler extends FlowRequestHandler<ChildFlowRequest, ChildFlowRes
             .perform('Sum value 1 and 2', SumActivityRequest, SumActivityResponse,
                 (req, state) => { req.values = [state.value1, state.value2]; },
                 (res, state) => { state.total = res.total; })
-            .finalise(ChildFlowResponse, (res, state) => {
+            .finalise((res, state) => {
                 res.total = state.total;
             });
     }
@@ -178,7 +180,7 @@ class ParentFlowHandler extends FlowRequestHandler<ParentFlowRequest, ParentFlow
             .perform('Add d and total', ChildFlowRequest, ChildFlowResponse,
                 (req, state) => { req.value1 = state.d; req.value2 = state.total; },
                 (res, state) => { state.total = res.total; })
-            .finalise(ParentFlowResponse, (res, state) => {
+            .finalise((res, state) => {
                 res.total = state.total;
             });
     }

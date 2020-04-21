@@ -11,6 +11,17 @@
   * Give NullResponse and SuspendResponse properties to identify them
   * SuspendResponse could hold the request id, e.g. `SuspendResponse.requestId` and pass it back up the chain
 
+* Look at interfaces for functions (https://www.typescriptlang.org/docs/handbook/interfaces.html#function-types)
+```
+export interface ObjectBinder<TObj, TState> {
+    (obj: TObj, state: TState): void;
+}
+
+export interface StateBinder<TObj, TState> {
+    (obj: TObj, state: TState): void;
+}
+```
+
 * Q. How can we ensure that handlers are in place for all requests?
   * I.e. can we do a sort of test traversal of all paths to see?
 

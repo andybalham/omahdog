@@ -69,10 +69,9 @@ export class SumFlowHandler extends FlowRequestHandler<SumFlowRequest, SumFlowRe
             
             .goto('Sum_total_and_c')
 
-            .finalise(SumFlowResponse,
-                (res, state) => {
-                    res.total = state.total;
-                });
+            .finalise((res, state) => {
+                res.total = state.total;
+            });
     }
 }
 

@@ -62,8 +62,7 @@ export class SwitchTestFlowHandler extends FlowRequestHandler<SwitchTestFlowRequ
             .label('End')
             .end()
 
-            .finalise(SwitchTestFlowResponse,
-                (res, state) => { res.rating = state.rating; });
+            .finalise((res, state) => { res.rating = state.rating; });
     }
 }
 

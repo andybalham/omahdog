@@ -166,7 +166,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
         const response = await this.performFlow(flowContext, this.flowDefinition, request);
 
-        if (!isAsyncResponse(response)) {
+        if (!('AsyncResponse' in response)) {
             flowContext.stackFrames.pop();
         }
 
@@ -351,7 +351,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
                     ? await flowContext.handlers.sendRequest(flowContext, step.RequestType, stepRequest)
                     : mockResponse;
 
-            if (isAsyncResponse(stepResponse)) {
+            if ('AsyncResponse' in stepResponse) {
                 return stepResponse;
             }
         }
@@ -375,8 +375,4 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
         return stepIndex + 1;
     }
-}
-
-function isAsyncResponse(value: any): boolean {
-    return 'asyncRequestId' in value;
 }

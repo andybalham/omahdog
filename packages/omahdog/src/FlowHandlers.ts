@@ -1,14 +1,25 @@
-import uuid = require('uuid');
-import { FlowContext } from './FlowContext';
+import { FlowContext, FlowInstanceStackFrame, FlowInstance } from './FlowContext';
 
 export interface IActivityRequestHandler<TReq, TRes> {
     handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse>;
 }
 
 export class AsyncResponse {
-    readonly asyncRequestId: string;
-    constructor() {
-        this.asyncRequestId = uuid.v4();        
+    
+    readonly AsyncResponse: boolean = true;
+
+    readonly instanceId: string;
+    readonly stackFrames: FlowInstanceStackFrame[];
+    readonly requestId: string;
+
+    constructor(instanceId: string, stackFrames: FlowInstanceStackFrame[], requestId: string) {
+        this.instanceId = instanceId;
+        this.stackFrames = stackFrames;
+        this.requestId = requestId;
+    }
+
+    getFlowInstance(): FlowInstance {
+        return new FlowInstance(this.instanceId, this.stackFrames);
     }
 }
 

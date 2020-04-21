@@ -1,5 +1,5 @@
 import uuid = require('uuid');
-import { FlowHandlers, IFlowHandlers } from './FlowHandlers';
+import { FlowHandlers, IFlowHandlers, AsyncResponse } from './FlowHandlers';
 import { FlowMocks } from './FlowMocks';
 
 export class FlowContext {
@@ -55,6 +55,10 @@ export class FlowContext {
         const mockResponse = this.mocks.getResponse(stepName, request);
         
         return mockResponse;
+    }
+
+    getAsyncResponse(requestId: string): AsyncResponse {
+        return new AsyncResponse(this.instanceId, this.stackFrames, requestId);
     }
 }
 

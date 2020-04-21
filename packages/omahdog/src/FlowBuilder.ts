@@ -6,14 +6,12 @@ export class FlowBuilder<TFlowReq, TFlowRes, TState> {
 
     // TODO 07Mar20: Can we force initialise() to be first?
 
-    // TODO 05Apr20: Add a step to allow the state to be updated, e.g. setState(stepName: string, setState: (state: TState) => void)
-
     initialise(initialiseState: (request: TFlowReq, state: TState) => void): FlowBuilder<TFlowReq, TFlowRes, TState> {
         this.flowDefinition.initialiseState = initialiseState;
         return this;
     }
 
-    finalise(ResponseType: new () => TFlowRes, bindResponse: (response: TFlowRes, state: TState) => void): FlowDefinition<TFlowReq, TFlowRes, TState> {
+    finalise(bindResponse: (response: TFlowRes, state: TState) => void): FlowDefinition<TFlowReq, TFlowRes, TState> {
         this.flowDefinition.bindResponse = bindResponse;
         return this.flowDefinition;
     }
