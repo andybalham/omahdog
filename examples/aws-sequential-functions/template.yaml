@@ -1,11 +1,15 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  aws-sequential-functions
+  Sequential Functions
 
-  SAM Template for aws-sequential-functions
+  SAM Template for sequential functions example
   
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Parameters:
+  Application:
+    Type: String
+    Default: SequentialFunctions
+        
 Globals:
   Function:
     Timeout: 3
@@ -15,25 +19,43 @@ Resources:
   FlowExchangeTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub aws-sequential-functions-flow-exchange-topic
+      TopicName: !Sub ${Application}-FlowExchangeTopic
       DisplayName: Topic for request & response messages
+
+  FlowInstanceTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${Application}-FlowInstanceTable
+  
+  WireTapFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-WireTapFunction
+      CodeUri: dist/
+      Handler: WireTapFunction.handler
+      Runtime: nodejs12.x
+      Events:
+        NotificationTopic:
+          Type: SNS
+          Properties:
+            Topic: !Ref FlowExchangeTopic
   
   AddThreeNumbersFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function
     Properties:
-      FunctionName: AddThreeNumbersFunction
+      FunctionName: !Sub ${Application}-AddThreeNumbersFunction
       CodeUri: dist/
       Handler: AddThreeNumbersFunction.handler
       Runtime: nodejs12.x
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
-        # - DynamoDBCrudPolicy:
-        #     TableName: !Ref FlowInstanceTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FlowInstanceTable
       Environment:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          # FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
       Events:
         NotificationTopic:
           Type: SNS
@@ -45,21 +67,21 @@ Resources:
                 - AddThreeNumbersHandler:Response
   
   SumNumbersFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function
     Properties:
-      FunctionName: SumNumbersFunction
+      FunctionName: !Sub ${Application}-SumNumbersFunction
       CodeUri: dist/
       Handler: SumNumbersFunction.handler
       Runtime: nodejs12.x
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
-        # - DynamoDBCrudPolicy:
-        #     TableName: !Ref FlowInstanceTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FlowInstanceTable
       Environment:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          # FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
       Events:
         NotificationTopic:
           Type: SNS
@@ -74,6 +96,9 @@ Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  WireTapFunction:
+    Description: "Function to log all messages published to a topic"
+    Value: !GetAtt WireTapFunction.Arn
   AddThreeNumbersFunction:
     Description: "Function to add three numbers together"
     Value: !GetAtt AddThreeNumbersFunction.Arn

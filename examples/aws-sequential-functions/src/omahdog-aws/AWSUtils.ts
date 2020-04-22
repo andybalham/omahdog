@@ -1,3 +1,4 @@
+import AWS from 'aws-sdk';
 import { SNSEvent } from 'aws-lambda';
 import { AsyncRequestMessage, AsyncResponseMessage, AsyncExchangeContext } from './SNSActivityRequestHandler';
 import { AsyncResponse, FlowHandlers } from '../omahdog/FlowHandlers';
@@ -13,12 +14,16 @@ export async function flowHandler<TRes>(
     const snsMessage = event.Records[0].Sns;
     const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
 
+    console.log(`message: ${JSON.stringify(message)}`);
+
     let response: TRes | AsyncResponse;
     let callingContext: AsyncExchangeContext;
+    let resumeCount: number;
 
     if ('request' in message) {
         
         callingContext = message.context;
+        resumeCount = 0;
 
         const flowContext = new FlowContext(message.context.flowInstanceId);
         flowContext.handlers = subHandlers;
@@ -27,30 +32,36 @@ export async function flowHandler<TRes>(
 
     } else {
 
-        // TODO 21Apr20: Check the resume count
+        const functionInstance = await functionInstanceRepository.retrieve(message.context.requestId);
 
-        const functionInstance = functionInstanceRepository.retrieve(message.context.requestId);
-
-        if (functionInstance === undefined) throw new Error('instance was undefined');
+        if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
         callingContext = functionInstance.callingContext;
+        resumeCount = functionInstance.resumeCount + 1;
+        
+        if (resumeCount > 100) throw new Error(`resumeCount exceeded threshold: ${resumeCount}`);
 
         const flowContext = new FlowContext(callingContext.flowInstanceId, functionInstance.flowInstance.stackFrames, message.response);
         flowContext.handlers = subHandlers;
 
-        response = await new handler.handle(flowContext);
+        response = await handler.handle(flowContext);
     }
 
     if ('AsyncResponse' in response) {
 
-        functionInstanceRepository.store({
+        const functionInstance: FunctionInstance = {
             callingContext: callingContext,
-            flowInstance: response.getFlowInstance()
-        });
+            flowInstance: response.getFlowInstance(),
+            resumeCount: resumeCount
+        };
+
+        console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
+
+        await functionInstanceRepository.store(response.requestId, functionInstance);
 
     } else {
 
-        const message: AsyncResponseMessage = 
+        const responseMessage: AsyncResponseMessage = 
             {
                 context: {
                     requestId: callingContext.requestId,
@@ -60,8 +71,10 @@ export async function flowHandler<TRes>(
                 response: response
             };
 
+        console.log(`responseMessage: ${JSON.stringify(responseMessage)}`);
+
         const params: PublishInput = {
-            Message: JSON.stringify(message),
+            Message: JSON.stringify(responseMessage),
             TopicArn: flowExchangeTopic,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: `${callingContext.flowTypeName}:Response` }
@@ -75,37 +88,95 @@ export async function flowHandler<TRes>(
     }
 
     if ('response' in message) {
-        functionInstanceRepository.delete(message.context.requestId);
+        await functionInstanceRepository.delete(message.context.requestId);
     }
 }
 
 export class FunctionInstance {
     readonly callingContext: AsyncExchangeContext;
     readonly flowInstance: FlowInstance;
+    readonly resumeCount: number;
 }
 
 export interface IFunctionInstanceRepository {
 
-    store(instance: FunctionInstance): void;
+    store(requestId: string, instance: FunctionInstance): Promise<void>;
     
-    retrieve(requestId: string): FunctionInstance | undefined;
+    retrieve(requestId: string): Promise<FunctionInstance | undefined>;
     
-    delete(requestId: string): void;
+    delete(requestId: string): Promise<void>;
 }   
 
-export class InMemoryInstanceRepository implements IFunctionInstanceRepository {
+const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-    private readonly _mapRepository = new Map<string, FunctionInstance>();
+export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
+    
+    private readonly _tableName?: string;
 
-    store(instance: FunctionInstance): void {
-        this._mapRepository.set(instance.callingContext.requestId, instance);
+    constructor(tableName?: string) {
+        this._tableName = tableName;        
+    }
+
+    async store(requestId: string, instance: FunctionInstance): Promise<void> {
+        
+        if (this._tableName === undefined) throw new Error('this._tableName is undefined');
+
+        // TODO 22Apr20: How can we make the following more strongly-typed?
+        const params: any = {
+            TableName: this._tableName,
+            Item: {
+                id: requestId,
+                callingContext: instance.callingContext,
+                flowInstanceJson: JSON.stringify(instance.flowInstance),
+                resumeCount: instance.resumeCount,
+                lastUpdated: new Date().toISOString()    
+            }
+        };
+
+        await dynamoDb.put(params).promise();
     }
     
-    retrieve(requestId: string): FunctionInstance | undefined {
-        return this._mapRepository.get(requestId);
+    async retrieve(requestId: string): Promise<FunctionInstance | undefined> {
+        
+        if (this._tableName === undefined) throw new Error('this._tableName is undefined');
+
+        const params = {
+            TableName: this._tableName,
+            Key: {
+                id: requestId
+            }
+        };
+
+        const dynamoDbResult: any = await dynamoDb.get(params).promise();
+
+        if (dynamoDbResult === undefined) {
+            return undefined;
+        }
+
+        const functionInstanceItem = dynamoDbResult.Item;
+
+        console.log(`functionInstanceItem: ${JSON.stringify(functionInstanceItem)}`);
+
+        const functionInstance: FunctionInstance = {
+            callingContext: functionInstanceItem.callingContext,
+            flowInstance: JSON.parse(functionInstanceItem.flowInstanceJson),
+            resumeCount: functionInstanceItem.resumeCount
+        };
+
+        return functionInstance;
     }
     
-    delete(requestId: string): void {
-        this._mapRepository.delete(requestId);
+    async delete(requestId: string): Promise<void> {
+        
+        if (this._tableName === undefined) throw new Error('this._tableName is undefined');
+
+        const params = {
+            TableName: this._tableName,
+            Key: {
+                id: requestId
+            }
+        };
+
+        await dynamoDb.delete(params).promise();
     }
 }   

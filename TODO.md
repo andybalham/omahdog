@@ -22,6 +22,7 @@ export interface StateBinder<TObj, TState> {
 }
 ```
 
+* Look into 'Document This' extension
 * Q. How can we ensure that handlers are in place for all requests?
   * I.e. can we do a sort of test traversal of all paths to see?
 

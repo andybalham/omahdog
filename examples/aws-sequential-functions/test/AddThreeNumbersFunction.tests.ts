@@ -1,18 +1,22 @@
-import { handler } from '../src/AddThreeNumbersFunction';
 import { AddThreeNumbersRequest } from '../src/exchanges/AddThreeNumbersExchange';
 import { SNSEvent } from 'aws-lambda';
-import { SNSFlowMessage } from '../src/omahdog-aws';
+import { AsyncRequestMessage } from '../src/omahdog-aws/SNSActivityRequestHandler';
 
 describe('handler tests', () => {
 
-    it.skip('adds up numbers', async () => {
+    it('adds up numbers', async () => {
 
         const request: AddThreeNumbersRequest = {
             a: 202, b: 202, c: 212
         };
 
-        const snsFlowMessage: SNSFlowMessage = {
-            body: request
+        const snsFlowMessage: AsyncRequestMessage = {
+            context: {
+                flowInstanceId: 'flowInstanceId',
+                flowTypeName: 'flowTypeName',
+                requestId: 'requestId'
+            },
+            request: request
         };
 
         const snsFlowMessageJson = JSON.stringify(snsFlowMessage);
@@ -37,14 +41,6 @@ describe('handler tests', () => {
                         'SigningCertUrl': 'EXAMPLE',
                         'UnsubscribeUrl': 'EXAMPLE',
                         'MessageAttributes': {
-                            'Test': {
-                                'Type': 'String',
-                                'Value': 'TestString'
-                            },
-                            'TestBinary': {
-                                'Type': 'Binary',
-                                'Value': 'TestBinary'
-                            }
                         }
                     }
                 }
@@ -53,6 +49,6 @@ describe('handler tests', () => {
         
         console.log(JSON.stringify(snsEvent));
         
-        await handler(snsEvent);
+        // await handler(snsEvent);
     });
 });

@@ -5,7 +5,7 @@ import { FlowHandlers } from './omahdog/FlowHandlers';
 import { SNSActivityRequestHandler } from './omahdog-aws/SNSActivityRequestHandler';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
-import { InMemoryInstanceRepository, flowHandler } from './omahdog-aws/AWSUtils';
+import { DynamoDbFunctionInstanceRepository, flowHandler } from './omahdog-aws/AWSUtils';
 
 import { AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
@@ -19,7 +19,7 @@ const flowHandlers = new FlowHandlers()
         new SNSActivityRequestHandler<SumNumbersRequest, SumNumbersResponse>(
             AddThreeNumbersHandler, SumNumbersRequest, sns, flowExchangeTopic));
 
-const functionInstanceRepository = new InMemoryInstanceRepository();
+const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(process.env.FLOW_INSTANCE_TABLE_NAME);
 
 export const handler = async (event: SNSEvent): Promise<void> => {
     await flowHandler<AddThreeNumbersResponse>(
