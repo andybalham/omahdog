@@ -10,7 +10,7 @@ export async function flowHandler<TRes>(
     functionInstanceRepository: IFunctionInstanceRepository, sns: AWS.SNS): Promise<void> {
 
     // TODO 23Apr20: Store and retrieve the function instance using the instanceId
-    
+
     console.log(`event: ${JSON.stringify(event)}`);
 
     const snsMessage = event.Records[0].Sns;
@@ -34,7 +34,7 @@ export async function flowHandler<TRes>(
 
     } else {
 
-        const functionInstance = await functionInstanceRepository.retrieve(message.callingContext.requestId);
+        const functionInstance = await functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
 
         if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
@@ -62,7 +62,7 @@ export async function flowHandler<TRes>(
 
         console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
 
-        await functionInstanceRepository.store(response.requestId, functionInstance);
+        await functionInstanceRepository.store(response.instanceId, functionInstance);
 
     } else {
 
@@ -88,8 +88,8 @@ export async function flowHandler<TRes>(
 
     }
 
-    if ('response' in message) {
-        await functionInstanceRepository.delete(message.callingContext.requestId);
+    if (('response' in message) && (resumeCount > 0)) {
+        await functionInstanceRepository.delete(message.callingContext.flowInstanceId);
     }
 }
 
