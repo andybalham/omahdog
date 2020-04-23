@@ -77,7 +77,7 @@ describe('Switch test', () => {
     theories.forEach(theory => {
         it(`returns the expected rating ${JSON.stringify(theory)}`, async () => {
 
-            const flowContext = new FlowContext();
+            const flowContext = FlowContext.newContext();
             flowContext.handlers = new FlowHandlers()
                 .register(NullActivityRequest, NullActivityResponse, new NullActivityHandler());
 
@@ -86,7 +86,7 @@ describe('Switch test', () => {
             
             const response = await new SwitchTestFlowHandler().handle(flowContext, request);
 
-            expect(flowContext.instanceId).to.be.not.undefined;
+            expect(flowContext.correlationId).to.be.not.undefined;
             expect((response as SwitchTestFlowResponse).rating).to.be.equal(theory.expectedRating);
         });
     });

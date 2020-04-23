@@ -11,7 +11,7 @@ export const handler = async (event: SNSEvent): Promise<void> => {
 
         const logEntry = {
             MessageAttributes: snsMessage.MessageAttributes,
-            MessageContext: message.context,
+            MessageContext: message.callingContext,
             Request: message.request
         };
     
@@ -21,7 +21,7 @@ export const handler = async (event: SNSEvent): Promise<void> => {
 
         const logEntry = {
             MessageAttributes: snsMessage.MessageAttributes,
-            MessageContext: message.context,
+            MessageContext: message.callingContext,
             Response: message.response
         };
     

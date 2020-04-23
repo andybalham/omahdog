@@ -1,6 +1,6 @@
 import AWS from 'aws-sdk';
 import { SNSEvent } from 'aws-lambda';
-import { AsyncRequestMessage, AsyncResponseMessage, AsyncExchangeContext } from './SNSActivityRequestHandler';
+import { AsyncRequestMessage, AsyncResponseMessage, AsyncCallingContext } from './SNSActivityRequestHandler';
 import { AsyncResponse, FlowHandlers } from '../omahdog/FlowHandlers';
 import { FlowContext, FlowInstance } from '../omahdog/FlowContext';
 import { PublishInput } from 'aws-sdk/clients/sns';
@@ -9,6 +9,8 @@ export async function flowHandler<TRes>(
     event: SNSEvent, handler: any, subHandlers: FlowHandlers, flowExchangeTopic: string | undefined, 
     functionInstanceRepository: IFunctionInstanceRepository, sns: AWS.SNS): Promise<void> {
 
+    // TODO 23Apr20: Store and retrieve the function instance using the instanceId
+    
     console.log(`event: ${JSON.stringify(event)}`);
 
     const snsMessage = event.Records[0].Sns;
@@ -17,22 +19,22 @@ export async function flowHandler<TRes>(
     console.log(`message: ${JSON.stringify(message)}`);
 
     let response: TRes | AsyncResponse;
-    let callingContext: AsyncExchangeContext;
+    let callingContext: AsyncCallingContext;
     let resumeCount: number;
 
     if ('request' in message) {
         
-        callingContext = message.context;
+        callingContext = message.callingContext;
         resumeCount = 0;
 
-        const flowContext = new FlowContext(message.context.flowInstanceId);
+        const flowContext = FlowContext.newCorrelatedContext(message.callingContext.flowCorrelationId);
         flowContext.handlers = subHandlers;
 
         response = await handler.handle(flowContext, message.request);
 
     } else {
 
-        const functionInstance = await functionInstanceRepository.retrieve(message.context.requestId);
+        const functionInstance = await functionInstanceRepository.retrieve(message.callingContext.requestId);
 
         if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
@@ -41,7 +43,10 @@ export async function flowHandler<TRes>(
         
         if (resumeCount > 100) throw new Error(`resumeCount exceeded threshold: ${resumeCount}`);
 
-        const flowContext = new FlowContext(callingContext.flowInstanceId, functionInstance.flowInstance.stackFrames, message.response);
+        const flowInstance = functionInstance.flowInstance;
+
+        const flowContext = 
+            FlowContext.newResumeContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, message.response);
         flowContext.handlers = subHandlers;
 
         response = await handler.handle(flowContext);
@@ -63,11 +68,7 @@ export async function flowHandler<TRes>(
 
         const responseMessage: AsyncResponseMessage = 
             {
-                context: {
-                    requestId: callingContext.requestId,
-                    flowInstanceId: callingContext.flowInstanceId,
-                    flowTypeName: callingContext.flowTypeName
-                },
+                callingContext: callingContext,
                 response: response
             };
 
@@ -88,12 +89,12 @@ export async function flowHandler<TRes>(
     }
 
     if ('response' in message) {
-        await functionInstanceRepository.delete(message.context.requestId);
+        await functionInstanceRepository.delete(message.callingContext.requestId);
     }
 }
 
 export class FunctionInstance {
-    readonly callingContext: AsyncExchangeContext;
+    readonly callingContext: AsyncCallingContext;
     readonly flowInstance: FlowInstance;
     readonly resumeCount: number;
 }

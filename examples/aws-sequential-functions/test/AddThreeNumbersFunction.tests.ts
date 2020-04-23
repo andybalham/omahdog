@@ -11,7 +11,8 @@ describe('handler tests', () => {
         };
 
         const snsFlowMessage: AsyncRequestMessage = {
-            context: {
+            callingContext: {
+                flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
                 flowTypeName: 'flowTypeName',
                 requestId: 'requestId'

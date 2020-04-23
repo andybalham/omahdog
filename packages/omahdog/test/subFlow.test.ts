@@ -10,7 +10,7 @@ describe('Handlers', () => {
 
     it('returns the total of the inputs when activity invoked synchronously', async () => {
 
-        const flowContext = new FlowContext();
+        const flowContext = FlowContext.newContext();
         flowContext.handlers = new FlowHandlers()
             .register(SumActivityRequest, SumActivityResponse, new SyncSumActivityHandler())
             .register(ChildFlowRequest, ChildFlowResponse, new ChildFlowHandler());
@@ -23,7 +23,7 @@ describe('Handlers', () => {
 
         const response = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect(flowContext.instanceId).to.be.not.undefined;
+        expect(flowContext.correlationId).to.be.not.undefined;
         expect((response as ParentFlowResponse).total).to.be.equal(666);
     });
 
@@ -35,7 +35,7 @@ describe('Handlers', () => {
             .register(SumActivityRequest, SumActivityResponse, asyncActivityHandler)
             .register(ChildFlowRequest, ChildFlowResponse, new ChildFlowHandler());
 
-        let flowContext = new FlowContext();
+        let flowContext = FlowContext.newContext();
         flowContext.handlers = asyncHandlers;
 
         const request = new ParentFlowRequest();
@@ -54,9 +54,9 @@ describe('Handlers', () => {
         // Feed in response01
 
         const response01 =
-            await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = new FlowContext(flowInstance.instanceId, flowInstance.stackFrames, response01);
+        flowContext = FlowContext.newResumeContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, response01);
         flowContext.handlers = asyncHandlers;
         
         const asyncResponse02 = await new ParentFlowHandler().handle(flowContext);
@@ -67,9 +67,9 @@ describe('Handlers', () => {
         // Feed in response02
 
         const response02 =
-            await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = new FlowContext(flowInstance.instanceId, flowInstance.stackFrames, response02);
+        flowContext = FlowContext.newResumeContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, response02);
         flowContext.handlers = asyncHandlers;
         
         const asyncResponse03 = await new ParentFlowHandler().handle(flowContext);
@@ -80,9 +80,9 @@ describe('Handlers', () => {
         // Feed in response03
 
         const response03 =
-            await new SyncSumActivityHandler().handle(new FlowContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = new FlowContext(flowInstance.instanceId, flowInstance.stackFrames, response03);
+        flowContext = FlowContext.newResumeContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, response03);
         flowContext.handlers = asyncHandlers;
         
         const response04 = await new ParentFlowHandler().handle(flowContext);

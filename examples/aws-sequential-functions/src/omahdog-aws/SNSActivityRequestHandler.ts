@@ -26,9 +26,10 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
         
         const message: AsyncRequestMessage = 
             {
-                context: {
+                callingContext: {
                     requestId: requestId,
                     flowInstanceId: flowContext.instanceId,
+                    flowCorrelationId: flowContext.correlationId,
                     flowTypeName: this._FlowType.name
                 },
                 request: request
@@ -51,17 +52,18 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
 }
 
 export class AsyncRequestMessage {
-    readonly context: AsyncExchangeContext;
+    readonly callingContext: AsyncCallingContext;
     readonly request: any;
 }
 
 export class AsyncResponseMessage {
-    readonly context: AsyncExchangeContext;
+    readonly callingContext: AsyncCallingContext;
     readonly response: any;
 }
 
-export class AsyncExchangeContext {
+export class AsyncCallingContext {
     readonly requestId: string;
     readonly flowTypeName: string;
     readonly flowInstanceId: string;
+    readonly flowCorrelationId: string;
 }

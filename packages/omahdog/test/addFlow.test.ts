@@ -79,7 +79,7 @@ describe('Handlers', () => {
 
     it('returns the total of the inputs', async () => {
 
-        const flowContext = new FlowContext();
+        const flowContext = FlowContext.newContext();
         flowContext.handlers = new FlowHandlers()
             .register(SumActivityRequest, SumActivityResponse, new SumActivityHandler());
 
@@ -90,7 +90,7 @@ describe('Handlers', () => {
 
         const response = await new SumFlowHandler().handle(flowContext, request);
 
-        expect(flowContext.instanceId).to.be.not.undefined;        
+        expect(flowContext.correlationId).to.be.not.undefined;        
         expect((response as SumActivityResponse).total).to.be.equal(616);
     });
 });

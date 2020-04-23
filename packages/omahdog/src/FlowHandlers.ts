@@ -8,18 +8,20 @@ export class AsyncResponse {
     
     readonly AsyncResponse: boolean = true;
 
+    readonly correlationId: string;
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
     readonly requestId: string;
 
-    constructor(instanceId: string, stackFrames: FlowInstanceStackFrame[], requestId: string) {
+    constructor(correlationId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[], requestId: string) {
+        this.correlationId = correlationId;
         this.instanceId = instanceId;
         this.stackFrames = stackFrames;
         this.requestId = requestId;
     }
 
     getFlowInstance(): FlowInstance {
-        return new FlowInstance(this.instanceId, this.stackFrames);
+        return new FlowInstance(this.correlationId, this.instanceId, this.stackFrames);
     }
 }
 

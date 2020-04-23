@@ -16,7 +16,7 @@ describe('Handlers', () => {
         flowRequest.options = { debug: true };
         flowRequest.timestamp = new Date();
 
-        const flowContext = new FlowContext();
+        const flowContext = FlowContext.newContext();
 
         flowContext.mocks
             .add<DipValidateProductAndFeeRequest, DipValidateProductAndFeeResponse>(
@@ -66,7 +66,7 @@ describe('Handlers', () => {
 
     it('can be run with handlers', async () => {
 
-        const flowContext = new FlowContext();
+        const flowContext = FlowContext.newContext();
 
         flowContext.handlers = new FlowHandlers()
             .register(DipValidateProductAndFeeRequest, DipValidateProductAndFeeResponse, new DipValidateProductAndFeeHandler())

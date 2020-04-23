@@ -6,6 +6,7 @@ export class FlowContext {
 
     handlers: IFlowHandlers;
 
+    readonly correlationId: string;
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
 
@@ -15,24 +16,30 @@ export class FlowContext {
     
     readonly mocks: FlowMocks;
 
-    constructor(flowInstanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
+    static newContext(): FlowContext {
+        return new FlowContext();
+    }
+
+    static newCorrelatedContext(flowCorrelationId: string): FlowContext {
+        return new FlowContext(flowCorrelationId);
+    }
+
+    static newResumeContext(flowCorrelationId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[], asyncResponse: any): FlowContext {
+        return new FlowContext(flowCorrelationId, instanceId, stackFrames, asyncResponse);
+    }
+
+    private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
 
         this.handlers = new FlowHandlers();
         this.mocks = new FlowMocks();
 
+        this.correlationId = flowCorrelationId ?? uuid.v4();
+        this.instanceId = instanceId ?? uuid.v4();
+
         this.stackFrames = [];
 
-        if (flowInstanceId === undefined) {
+        if (asyncResponse !== undefined) {
 
-            this.instanceId = uuid.v4();
-
-        } else if (asyncResponse === undefined) {
-
-            this.instanceId = flowInstanceId;
-
-        } else {
-
-            this.instanceId = flowInstanceId;
             this.resumeStackFrames = stackFrames?.reverse();
             this.asyncResponse = asyncResponse;
             
@@ -63,16 +70,18 @@ export class FlowContext {
     }
 
     getAsyncResponse(requestId: string): AsyncResponse {
-        return new AsyncResponse(this.instanceId, this.stackFrames, requestId);
+        return new AsyncResponse(this.correlationId, this.instanceId, this.stackFrames, requestId);
     }
 }
 
 export class FlowInstance {
     
+    readonly correlationId: string;
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
 
-    constructor(instanceId: string, stackFrames: FlowInstanceStackFrame[]) {
+    constructor(correlationId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[]) {
+        this.correlationId = correlationId;
         this.instanceId = instanceId;
         this.stackFrames = stackFrames;
     }

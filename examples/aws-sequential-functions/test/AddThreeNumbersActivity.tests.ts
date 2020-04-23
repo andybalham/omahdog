@@ -10,7 +10,7 @@ describe('AddThreeNumbersActivity tests', () => {
 
     it('returns the total of the inputs', async () => {
 
-        const flowContext = new FlowContext();
+        const flowContext = FlowContext.newContext();
         flowContext.handlers = new FlowHandlers()
             .register(SumNumbersRequest, SumNumbersResponse, new SumNumbersHandler());
 
