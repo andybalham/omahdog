@@ -9,8 +9,6 @@ export async function flowHandler<TRes>(
     event: SNSEvent, handler: any, subHandlers: FlowHandlers, flowExchangeTopic: string | undefined, 
     functionInstanceRepository: IFunctionInstanceRepository, sns: AWS.SNS): Promise<void> {
 
-    // TODO 23Apr20: Store and retrieve the function instance using the instanceId
-
     console.log(`event: ${JSON.stringify(event)}`);
 
     const snsMessage = event.Records[0].Sns;
@@ -39,14 +37,13 @@ export async function flowHandler<TRes>(
         if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
         callingContext = functionInstance.callingContext;
-        resumeCount = functionInstance.resumeCount + 1;
         
+        resumeCount = functionInstance.resumeCount + 1;        
         if (resumeCount > 100) throw new Error(`resumeCount exceeded threshold: ${resumeCount}`);
 
         const flowInstance = functionInstance.flowInstance;
 
-        const flowContext = 
-            FlowContext.newResumeContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, message.response);
+        const flowContext = FlowContext.newResumeContext(flowInstance, message.response);
         flowContext.handlers = subHandlers;
 
         response = await handler.handle(flowContext);
@@ -57,12 +54,13 @@ export async function flowHandler<TRes>(
         const functionInstance: FunctionInstance = {
             callingContext: callingContext,
             flowInstance: response.getFlowInstance(),
+            requestId: response.requestId,
             resumeCount: resumeCount
         };
 
         console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
 
-        await functionInstanceRepository.store(response.instanceId, functionInstance);
+        await functionInstanceRepository.store(functionInstance);
 
     } else {
 
@@ -96,16 +94,17 @@ export async function flowHandler<TRes>(
 export class FunctionInstance {
     readonly callingContext: AsyncCallingContext;
     readonly flowInstance: FlowInstance;
+    readonly requestId: string;
     readonly resumeCount: number;
 }
 
 export interface IFunctionInstanceRepository {
 
-    store(requestId: string, instance: FunctionInstance): Promise<void>;
+    store(instance: FunctionInstance): Promise<void>;
     
-    retrieve(requestId: string): Promise<FunctionInstance | undefined>;
+    retrieve(instanceId: string): Promise<FunctionInstance | undefined>;
     
-    delete(requestId: string): Promise<void>;
+    delete(instanceId: string): Promise<void>;
 }   
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
@@ -118,7 +117,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         this._tableName = tableName;        
     }
 
-    async store(requestId: string, instance: FunctionInstance): Promise<void> {
+    async store(instance: FunctionInstance): Promise<void> {
         
         if (this._tableName === undefined) throw new Error('this._tableName is undefined');
 
@@ -126,9 +125,10 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         const params: any = {
             TableName: this._tableName,
             Item: {
-                id: requestId,
+                id: instance.flowInstance.instanceId,
                 callingContext: instance.callingContext,
                 flowInstanceJson: JSON.stringify(instance.flowInstance),
+                requestId: instance.requestId,
                 resumeCount: instance.resumeCount,
                 lastUpdated: new Date().toISOString()    
             }
@@ -137,14 +137,14 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         await dynamoDb.put(params).promise();
     }
     
-    async retrieve(requestId: string): Promise<FunctionInstance | undefined> {
+    async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
         
         if (this._tableName === undefined) throw new Error('this._tableName is undefined');
 
         const params = {
             TableName: this._tableName,
             Key: {
-                id: requestId
+                id: instanceId
             }
         };
 
@@ -161,20 +161,21 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         const functionInstance: FunctionInstance = {
             callingContext: functionInstanceItem.callingContext,
             flowInstance: JSON.parse(functionInstanceItem.flowInstanceJson),
+            requestId: functionInstanceItem.requestId,
             resumeCount: functionInstanceItem.resumeCount
         };
 
         return functionInstance;
     }
     
-    async delete(requestId: string): Promise<void> {
+    async delete(instanceId: string): Promise<void> {
         
         if (this._tableName === undefined) throw new Error('this._tableName is undefined');
 
         const params = {
             TableName: this._tableName,
             Key: {
-                id: requestId
+                id: instanceId
             }
         };
 

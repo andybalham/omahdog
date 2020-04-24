@@ -24,8 +24,8 @@ export class FlowContext {
         return new FlowContext(flowCorrelationId);
     }
 
-    static newResumeContext(flowCorrelationId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[], asyncResponse: any): FlowContext {
-        return new FlowContext(flowCorrelationId, instanceId, stackFrames, asyncResponse);
+    static newResumeContext(flowInstance: FlowInstance, asyncResponse: any): FlowContext {
+        return new FlowContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, asyncResponse);
     }
 
     private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
