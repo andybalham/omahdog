@@ -2,8 +2,7 @@ import uuid = require('uuid');
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
-import { FlowHandlers, IActivityRequestHandler, AsyncResponse } from '../src/FlowHandlers';
-import { FlowContext, FlowInstance } from '../src/FlowContext';
+import { FlowContext, FlowInstance, RequestRouter, IActivityRequestHandler, AsyncResponse, HandlerFactory } from '../src/FlowContext';
 import { expect } from 'chai';
 
 describe('Handlers', () => {
@@ -11,9 +10,12 @@ describe('Handlers', () => {
     it('returns the total of the inputs when activity invoked synchronously', async () => {
 
         const flowContext = FlowContext.newContext();
-        flowContext.handlers = new FlowHandlers()
-            .register(SumActivityRequest, SumActivityResponse, new SyncSumActivityHandler())
-            .register(ChildFlowRequest, ChildFlowResponse, new ChildFlowHandler());
+        flowContext.requestRouter
+            .register(SumActivityRequest, SumActivityResponse, SyncSumActivityHandler)
+            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
+        flowContext.handlerFactory
+            .register(SyncSumActivityHandler, () => new SyncSumActivityHandler)
+            .register(ChildFlowHandler, () => new ChildFlowHandler);
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -31,12 +33,16 @@ describe('Handlers', () => {
 
         const asyncActivityHandler = new AsyncActivityHandler();
 
-        const asyncHandlers = new FlowHandlers()
-            .register(SumActivityRequest, SumActivityResponse, asyncActivityHandler)
-            .register(ChildFlowRequest, ChildFlowResponse, new ChildFlowHandler());
+        const asyncMediator = new RequestRouter()
+            .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
+            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
+        const handlerFactory = new HandlerFactory()
+            .register(AsyncActivityHandler, () => asyncActivityHandler)
+            .register(ChildFlowHandler, () => new ChildFlowHandler);
 
         let flowContext = FlowContext.newContext();
-        flowContext.handlers = asyncHandlers;
+        flowContext.requestRouter = asyncMediator;
+        flowContext.handlerFactory = handlerFactory;
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -57,7 +63,8 @@ describe('Handlers', () => {
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
         flowContext = FlowContext.newResumeContext(flowInstance, response01);
-        flowContext.handlers = asyncHandlers;
+        flowContext.requestRouter = asyncMediator;
+        flowContext.handlerFactory = handlerFactory;
         
         const asyncResponse02 = await new ParentFlowHandler().handle(flowContext);
 
@@ -70,7 +77,8 @@ describe('Handlers', () => {
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
         flowContext = FlowContext.newResumeContext(flowInstance, response02);
-        flowContext.handlers = asyncHandlers;
+        flowContext.requestRouter = asyncMediator;
+        flowContext.handlerFactory = handlerFactory;
         
         const asyncResponse03 = await new ParentFlowHandler().handle(flowContext);
 
@@ -83,7 +91,8 @@ describe('Handlers', () => {
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
         flowContext = FlowContext.newResumeContext(flowInstance, response03);
-        flowContext.handlers = asyncHandlers;
+        flowContext.requestRouter = asyncMediator;
+        flowContext.handlerFactory = handlerFactory;
         
         const response04 = await new ParentFlowHandler().handle(flowContext);
 

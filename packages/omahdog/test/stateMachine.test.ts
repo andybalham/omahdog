@@ -1,9 +1,8 @@
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
-import { FlowContext } from '../src/FlowContext';
+import { FlowContext, IActivityRequestHandler } from '../src/FlowContext';
 import { expect } from 'chai';
-import { IActivityRequestHandler, FlowHandlers } from '../src/FlowHandlers';
 import { EmptyResponse } from '../src/FlowExchanges';
 
 describe('Handlers', () => {
@@ -68,12 +67,20 @@ describe('Handlers', () => {
 
         const flowContext = FlowContext.newContext();
 
-        flowContext.handlers = new FlowHandlers()
-            .register(DipValidateProductAndFeeRequest, DipValidateProductAndFeeResponse, new DipValidateProductAndFeeHandler())
-            .register(DipValidateMortgageClubRequest, DipValidateMortgageClubResponse, new DipValidateMortgageClubHandler())
-            .register(UpdateCaseStatusRequest, EmptyResponse, new UpdateCaseStatusHandler())
-            .register(SendCaseStatusUpdatedEventRequest, EmptyResponse, new SendCaseStatusUpdatedEventHandler())
-            .register(DipCreateCaseRequest, EmptyResponse, new DipCreateCaseHandler())
+        flowContext.requestRouter
+            .register(DipValidateProductAndFeeRequest, DipValidateProductAndFeeResponse, DipValidateProductAndFeeHandler)
+            .register(DipValidateMortgageClubRequest, DipValidateMortgageClubResponse, DipValidateMortgageClubHandler)
+            .register(UpdateCaseStatusRequest, EmptyResponse, UpdateCaseStatusHandler)
+            .register(SendCaseStatusUpdatedEventRequest, EmptyResponse, SendCaseStatusUpdatedEventHandler)
+            .register(DipCreateCaseRequest, EmptyResponse, DipCreateCaseHandler)
+        ;
+
+        flowContext.handlerFactory
+            .register(DipValidateProductAndFeeHandler, () => new DipValidateProductAndFeeHandler)
+            .register(DipValidateMortgageClubHandler, () => new DipValidateMortgageClubHandler)
+            .register(UpdateCaseStatusHandler, () => new UpdateCaseStatusHandler)
+            .register(SendCaseStatusUpdatedEventHandler, () => new SendCaseStatusUpdatedEventHandler)
+            .register(DipCreateCaseHandler, () => new DipCreateCaseHandler)
         ;
 
         const request = new DipCreationRequest();

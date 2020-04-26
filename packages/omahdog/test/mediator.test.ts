@@ -1,6 +1,5 @@
 import { expect } from 'chai';
-import { IActivityRequestHandler, FlowHandlers } from '../src/FlowHandlers';
-import { FlowContext } from '../src/FlowContext';
+import { FlowContext, IActivityRequestHandler, RequestRouter } from '../src/FlowContext';
 
 class ExampleActivityRequest {
     input: number;
@@ -20,14 +19,19 @@ describe('Handlers', () => {
 
     it('Handlers can send request to handler', async () => {
 
-        const handlers = new FlowHandlers();
-        handlers.register(ExampleActivityRequest, ExampleActivityResponse, new ExampleHandler());
+        const mediator = new RequestRouter();
+        mediator.register(ExampleActivityRequest, ExampleActivityResponse, ExampleHandler);
 
         const request = new ExampleActivityRequest();
         request.input = 616;
 
-        const response =
-            await handlers.sendRequest(FlowContext.newContext(), ExampleActivityRequest, request) as ExampleActivityResponse;
+        const context = FlowContext.newContext();
+        context.requestRouter
+            .register(ExampleActivityRequest, ExampleActivityResponse, ExampleHandler);
+        context.handlerFactory
+            .register(ExampleHandler, () => new ExampleHandler);
+
+        const response = await context.sendRequest(ExampleActivityRequest, request) as ExampleActivityResponse;
 
         expect(response).to.be.not.null;
         expect(response.output).to.be.equal(request.input);

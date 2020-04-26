@@ -1,8 +1,7 @@
 import { expect } from 'chai';
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
-import { IActivityRequestHandler, FlowHandlers } from '../src/FlowHandlers';
 import { FlowBuilder } from '../src/FlowBuilder';
-import { FlowContext } from '../src/FlowContext';
+import { FlowContext, IActivityRequestHandler } from '../src/FlowContext';
 import { FlowDefinition } from '../src/FlowDefinition';
 
 class SumActivityRequest {
@@ -80,8 +79,11 @@ describe('Handlers', () => {
     it('returns the total of the inputs', async () => {
 
         const flowContext = FlowContext.newContext();
-        flowContext.handlers = new FlowHandlers()
-            .register(SumActivityRequest, SumActivityResponse, new SumActivityHandler());
+        
+        flowContext.requestRouter
+            .register(SumActivityRequest, SumActivityResponse, SumActivityHandler);
+        flowContext.handlerFactory
+            .register(SumActivityHandler, () => new SumActivityHandler);
 
         const request = new SumFlowRequest();
         request.a = 200;

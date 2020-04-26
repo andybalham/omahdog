@@ -26,6 +26,11 @@ Resources:
     Type: AWS::Serverless::SimpleTable
     Properties:
       TableName: !Sub ${Application}-FlowInstanceTable
+
+  FlowResultTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${Application}-FlowResultTable
   
   WireTapFunction:
     Type: AWS::Serverless::Function
@@ -91,6 +96,35 @@ Resources:
               MessageType:
                 - SumNumbersRequest:Handler
                 - SumNumbersHandler:Response
+  
+  StoreTotalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub ${Application}-StoreTotalFunction
+      CodeUri: dist/
+      Handler: StoreTotalFunction.handler
+      Runtime: nodejs12.x
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt FlowExchangeTopic.TopicName
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FlowInstanceTable
+        # TODO: How to auto-generate this? The handler would have to expose that it needed such a table
+        - DynamoDBCrudPolicy:
+            TableName: !Ref FlowResultTable
+      Environment:
+        Variables:
+          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+      Events:
+        NotificationTopic:
+          Type: SNS
+          Properties:
+            Topic: !Ref FlowExchangeTopic
+            FilterPolicy:
+              MessageType:
+                - StoreTotalRequest:Handler
+                - StoreTotalHandler:Response
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

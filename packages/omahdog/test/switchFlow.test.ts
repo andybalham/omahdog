@@ -1,8 +1,7 @@
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
-import { IActivityRequestHandler, FlowHandlers } from '../src/FlowHandlers';
 import { expect } from 'chai';
-import { FlowContext } from '../src/FlowContext';
+import { FlowContext, IActivityRequestHandler } from '../src/FlowContext';
 import { FlowDefinition } from '../src/FlowDefinition';
 
 class NullActivityRequest { }
@@ -78,8 +77,10 @@ describe('Switch test', () => {
         it(`returns the expected rating ${JSON.stringify(theory)}`, async () => {
 
             const flowContext = FlowContext.newContext();
-            flowContext.handlers = new FlowHandlers()
-                .register(NullActivityRequest, NullActivityResponse, new NullActivityHandler());
+            flowContext.requestRouter
+                .register(NullActivityRequest, NullActivityResponse, NullActivityHandler);
+            flowContext.handlerFactory
+                .register(NullActivityHandler, () => new NullActivityHandler);
 
             const request = new SwitchTestFlowRequest();
             request.value = theory.value;

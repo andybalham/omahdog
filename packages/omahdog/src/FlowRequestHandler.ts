@@ -1,8 +1,7 @@
 import fs = require('fs');
 import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
-import { IActivityRequestHandler, AsyncResponse } from './FlowHandlers';
-import { FlowContext, FlowInstanceStackFrame } from './FlowContext';
+import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse } from './FlowContext';
 
 export abstract class FlowRequestHandlerBase {
     readonly typeName: string;
@@ -346,9 +345,11 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
             const mockResponse = flowContext.getMockResponse(step.name, stepRequest);
 
+            if (flowContext.requestRouter === undefined) throw new Error('flowContext.mediator is undefined');
+
             stepResponse =
                 mockResponse === undefined
-                    ? await flowContext.handlers.sendRequest(flowContext, step.RequestType, stepRequest)
+                    ? await flowContext.sendRequest(step.RequestType, stepRequest)
                     : mockResponse;
 
             if ('AsyncResponse' in stepResponse) {

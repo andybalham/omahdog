@@ -2,31 +2,31 @@ import AWS from 'aws-sdk';
 import { SNSEvent } from 'aws-lambda';
 import { PublishInput } from 'aws-sdk/clients/sns';
 
-import { AsyncResponse, FlowHandlers } from '../omahdog/FlowHandlers';
-import { FlowContext, FlowInstance } from '../omahdog/FlowContext';
+import { FlowContext, FlowInstance, AsyncResponse, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
+import { AsyncRequestMessage, AsyncResponseMessage, AsyncCallingContext } from './AWSUtils';
 
-import { AsyncRequestMessage, AsyncResponseMessage, AsyncCallingContext } from './SNSActivityRequestHandler';
+// TODO 25Apr20: Find out the lifetime of the following sort of constants. I.e. are they statics?
+const sns = new AWS.SNS();
 
-export class LambdaActivityRequestHandler {
+export class LambdaActivityRequestHandler<TReq> {
 
-    private readonly handler: any;
-    private readonly subHandlers: FlowHandlers;
-    private readonly flowExchangeTopic: string | undefined;
-    private readonly functionInstanceRepository: IFunctionInstanceRepository;
-    private readonly sns: AWS.SNS;
+    private readonly _RequestType: new () => TReq;
+    private readonly _requestRouter: RequestRouter;
+    private readonly _handlerFactory: HandlerFactory;
+    private readonly _flowExchangeTopic: string | undefined;
+    private readonly _functionInstanceRepository: IFunctionInstanceRepository;
 
-    constructor (handler: any, subHandlers: FlowHandlers, flowExchangeTopic: string | undefined, 
-        functionInstanceRepository: IFunctionInstanceRepository, sns: AWS.SNS) {
+    constructor(RequestType: new () => TReq, requestRouter: RequestRouter, handlerFactory: HandlerFactory, flowExchangeTopic: string | undefined, 
+        functionInstanceRepository: IFunctionInstanceRepository) {
 
-        this.handler = handler;
-        this.subHandlers = subHandlers;
-        this.flowExchangeTopic = flowExchangeTopic;
-        this.functionInstanceRepository = functionInstanceRepository;
-        this.sns = sns;
+        this._RequestType = RequestType;
+        this._requestRouter = requestRouter;
+        this._handlerFactory = handlerFactory;
+        this._flowExchangeTopic = flowExchangeTopic;
+        this._functionInstanceRepository = functionInstanceRepository;
     }
 
-    async handle<TRes>(
-        event: SNSEvent): Promise<void> {
+    async handle<TRes>(event: SNSEvent): Promise<void> {
     
         console.log(`event: ${JSON.stringify(event)}`);
     
@@ -39,21 +39,31 @@ export class LambdaActivityRequestHandler {
         let callingContext: AsyncCallingContext;
         let resumeCount: number;
     
+        const handlerType = this._requestRouter.getHandlerType(this._RequestType);
+        const handler = this._handlerFactory.newHandler(handlerType);
+
         if ('request' in message) {
             
             callingContext = message.callingContext;
             resumeCount = 0;
     
             const flowContext = FlowContext.newCorrelatedContext(message.callingContext.flowCorrelationId);
-            flowContext.handlers = this.subHandlers;
+            flowContext.requestRouter = this._requestRouter;
+            flowContext.handlerFactory = this._handlerFactory;
     
-            response = await this.handler.handle(flowContext, message.request);
+            response = await handler.handle(flowContext, message.request);
     
         } else {
     
-            const functionInstance = await this.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
+            const functionInstance = await this._functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
+
+            if (functionInstance.callingContext.requestId !== message.callingContext.requestId) {
+                // TODO 26Apr20: Do something more in this case where request is not as we expect
+                console.log(`The requestId does not match what was expected. Expected: ${functionInstance.callingContext.requestId}, Actual: ${message.callingContext.requestId}`);
+                return;
+            }
     
             callingContext = functionInstance.callingContext;
             
@@ -63,9 +73,10 @@ export class LambdaActivityRequestHandler {
             const flowInstance = functionInstance.flowInstance;
     
             const flowContext = FlowContext.newResumeContext(flowInstance, message.response);
-            flowContext.handlers = this.subHandlers;
-    
-            response = await this.handler.handle(flowContext);
+            flowContext.requestRouter = this._requestRouter;
+            flowContext.handlerFactory = this._handlerFactory;
+
+            response = await handler.handle(flowContext);
         }
     
         if ('AsyncResponse' in response) {
@@ -79,7 +90,7 @@ export class LambdaActivityRequestHandler {
     
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
-            await this.functionInstanceRepository.store(functionInstance);
+            await this._functionInstanceRepository.store(functionInstance);
     
         } else {
     
@@ -93,20 +104,22 @@ export class LambdaActivityRequestHandler {
     
             const params: PublishInput = {
                 Message: JSON.stringify(responseMessage),
-                TopicArn: this.flowExchangeTopic,
+                TopicArn: this._flowExchangeTopic,
                 MessageAttributes: {
                     MessageType: { DataType: 'String', StringValue: `${callingContext.flowTypeName}:Response` }
                 }
             };
             
-            const publishResponse = await this.sns.publish(params).promise();
+            const publishResponse = await sns.publish(params).promise();
         
             console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
     
         }
     
-        if (('response' in message) && (resumeCount > 0)) {
-            await this.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
+        if (!('AsyncResponse' in response) && (resumeCount > 0)) {
+            console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
+            // TODO 25Apr20: Reinstate the delete
+            // await this._functionInstanceRepository.delete(message.callingContext.flowInstanceId);
         }
     }
 }

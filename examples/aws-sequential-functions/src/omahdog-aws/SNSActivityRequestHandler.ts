@@ -2,26 +2,26 @@ import AWS from 'aws-sdk';
 import uuid = require('uuid');
 import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
-import { FlowRequestHandlerBase } from '../omahdog/FlowRequestHandler';
 import { PublishInput } from 'aws-sdk/clients/sns';
+import { AsyncRequestMessage } from './AWSUtils';
+
+const sns = new AWS.SNS();
 
 export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-    private readonly _FlowType: new () => FlowRequestHandlerBase;
     private readonly _RequestType: new() => TReq;
-    private readonly _sns: AWS.SNS;
-    private readonly _topicArn?: string; // TODO 16Apr20: Make this mandatory?
+    private readonly _topicArn?: string;
 
-    constructor(FlowType: new() => FlowRequestHandlerBase, RequestType: new() => TReq, sns: AWS.SNS, topicArn?: string) {
+    constructor(RequestType: new() => TReq, _ResponseType: new() => TRes, topicArn?: string) {
 
-        this._FlowType = FlowType;
         this._RequestType = RequestType;
-        this._sns = sns;
         this._topicArn = topicArn;
     }
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
+        if (this._topicArn === undefined) throw new Error('this._topicArn === undefined');
+        
         const requestId = uuid.v4();
         
         const message: AsyncRequestMessage = 
@@ -30,7 +30,7 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
                     requestId: requestId,
                     flowInstanceId: flowContext.instanceId,
                     flowCorrelationId: flowContext.correlationId,
-                    flowTypeName: this._FlowType.name
+                    flowTypeName: flowContext.rootStackFrame.flowTypeName
                 },
                 request: request
             };
@@ -43,27 +43,10 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
             }
         };
         
-        const publishResponse = await this._sns.publish(params).promise();
+        const publishResponse = await sns.publish(params).promise();
     
         console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
 
         return flowContext.getAsyncResponse(requestId);
     }
-}
-
-export class AsyncRequestMessage {
-    readonly callingContext: AsyncCallingContext;
-    readonly request: any;
-}
-
-export class AsyncResponseMessage {
-    readonly callingContext: AsyncCallingContext;
-    readonly response: any;
-}
-
-export class AsyncCallingContext {
-    readonly requestId: string;
-    readonly flowTypeName: string;
-    readonly flowInstanceId: string;
-    readonly flowCorrelationId: string;
 }
