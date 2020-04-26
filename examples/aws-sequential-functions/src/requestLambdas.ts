@@ -2,10 +2,12 @@ import { SNSEvent } from 'aws-lambda';
 import { LambdaActivityRequestHandler } from './omahdog-aws/LambdaActivityRequestHandler';
 import { requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository } from './requestLambdaCommon';
 
-import { AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
-import { SumNumbersResponse } from './exchanges/SumNumbersExchange';
+import { AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
+import { SumNumbersResponse } from './exchanges/SumNumbersExchange';
+import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { StoreTotalResponse } from './exchanges/StoreTotalExchange';
 
 const addThreeNumbersLambdaHandler = 
     new LambdaActivityRequestHandler(AddThreeNumbersHandler, requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository);
@@ -19,4 +21,11 @@ const sumNumbersLambdaHandler =
 
 export const sumNumbersHandler = async (event: SNSEvent): Promise<void> => {
     await sumNumbersLambdaHandler.handle<SumNumbersResponse>(event);
+};
+
+const storeTotalLambdaHandler = 
+    new LambdaActivityRequestHandler(StoreTotalHandler, requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository);
+
+export const storeTotalHandler = async (event: SNSEvent): Promise<void> => {
+    await storeTotalLambdaHandler.handle<StoreTotalResponse>(event);
 };

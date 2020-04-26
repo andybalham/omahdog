@@ -1,8 +1,5 @@
 # TODO
 
-* Mocking AWS services
-  * Add an activity to store the result in a DynamoDb table
-
 * Generate SAM template from an 'application' class
 
 * Look at minimising the use of `Type.name`
@@ -56,3 +53,8 @@ export interface StateBinder<TObj, TState> {
 * Dependency injection
 
 * Mocha test explorer extension
+
+# Done
+
+* Mocking AWS services
+  * [aws-sdk-mock](https://github.com/dwyl/aws-sdk-mock)

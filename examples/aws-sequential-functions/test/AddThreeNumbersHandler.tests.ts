@@ -4,8 +4,9 @@ import { SumNumbersRequest, SumNumbersResponse } from '../src/exchanges/SumNumbe
 import { SumNumbersHandler } from '../src/handlers/SumNumbersHandler';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from '../src/exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
+import { StoreTotalRequest, StoreTotalResponse } from '../src/exchanges/StoreTotalExchange';
 
-describe('AddThreeNumbersActivity tests', () => {
+describe('AddThreeNumbersHandler tests', () => {
 
     it('returns the total of the inputs', async () => {
 
@@ -14,11 +15,12 @@ describe('AddThreeNumbersActivity tests', () => {
             .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler);
         flowContext.handlerFactory
             .register(SumNumbersHandler, () => new SumNumbersHandler());
-        // flowContext.mocks
-        //     .add('Store_total', (req: StoreTotalRequest) => { 
-        //         console.log(`Store_total: ${JSON.stringify(req)}`); 
-        //         return new StoreTotalResponse();
-        //     });
+        flowContext.mocks
+            .add('Store_total', (req: StoreTotalRequest) => { 
+                console.log(`Store_total: ${JSON.stringify(req)}`); 
+                const response: StoreTotalResponse = { id: 'totalId' };
+                return response;
+            });
 
         const request = new AddThreeNumbersRequest();
         request.a = 200;

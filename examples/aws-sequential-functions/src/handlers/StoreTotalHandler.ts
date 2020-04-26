@@ -1,23 +1,26 @@
-import AWS from 'aws-sdk';
-import uuid from 'uuid';
 import { IActivityRequestHandler } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
-import { StoreTotalRequest as StoreTotalRequest, StoreTotalResponse as StoreTotalResponse } from '../exchanges/StoreTotalExchange';
+import { SNSActivityRequestHandler } from '../omahdog-aws/SNSActivityRequestHandler';
 
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
+
+import { DocumentClient } from 'aws-sdk/clients/dynamodb';
+import uuid = require('uuid');
 
 export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
 
-    // TODO 25Apr20: We need this class to expose something to say it requires a DynamoDb table
-    // TODO 25Apr20: It would be the same for any other service, should we inject a set of declared services?
+    private readonly _documentClient?: DocumentClient;
+    private readonly _tableName?: string;
 
-    private readonly _tableName: string;
-
-    constructor(tableName: string) {
+    constructor(documentClient?: DocumentClient, tableName?: string) {
+        this._documentClient = documentClient;
         this._tableName = tableName;
     }
 
     async handle(_flowContext: FlowContext, request: StoreTotalRequest): Promise<StoreTotalResponse> {
+
+        if (this._documentClient === undefined) throw new Error('this._documentClient === undefined');
+        if (this._tableName === undefined) throw new Error('this._tableName === undefined');
 
         const id = uuid.v4();
 
@@ -29,8 +32,12 @@ export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequ
             }
         };
 
-        await dynamoDb.put(params).promise();
+        await this._documentClient.put(params).promise();
 
         return { id: id };
     }
+}
+
+export class StoreTotalSNSHandler extends SNSActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
+    constructor(topicArn?: string) { super(StoreTotalRequest, StoreTotalResponse, topicArn); }
 }
