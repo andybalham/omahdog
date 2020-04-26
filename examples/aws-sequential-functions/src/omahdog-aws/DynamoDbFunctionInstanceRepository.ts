@@ -1,5 +1,5 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb';
-import { IFunctionInstanceRepository, FunctionInstance } from './LambdaActivityRequestHandler';
+import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 

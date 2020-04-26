@@ -1,18 +1,20 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Sequential Functions
+  Add Three Numbers
 
-  SAM Template for sequential functions example
+  SAM Template for the example of adding three numbers together
   
 Parameters:
   Application:
     Type: String
-    Default: SequentialFunctions
+    Default: Omahdog-AddThreeNumbers
         
 Globals:
   Function:
     Timeout: 3
+    CodeUri: dist/
+    Runtime: nodejs12.x
 
 Resources:
 
@@ -36,22 +38,18 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${Application}-WireTapFunction
-      CodeUri: dist/
-      Handler: WireTapFunction.handler
-      Runtime: nodejs12.x
+      Handler: wireTapLambda.handler
       Events:
         NotificationTopic:
           Type: SNS
           Properties:
             Topic: !Ref FlowExchangeTopic
   
-  AddThreeNumbersFunction:
+  AddThreeNumbersHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${Application}-AddThreeNumbersFunction
-      CodeUri: dist/
-      Handler: AddThreeNumbersFunction.handler
-      Runtime: nodejs12.x
+      FunctionName: !Sub ${Application}-AddThreeNumbersHandler
+      Handler: requestLambdas.addThreeNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -71,13 +69,11 @@ Resources:
                 - AddThreeNumbersRequest:Handler
                 - AddThreeNumbersHandler:Response
   
-  SumNumbersFunction:
+  SumNumbersHandlerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${Application}-SumNumbersFunction
-      CodeUri: dist/
-      Handler: SumNumbersFunction.handler
-      Runtime: nodejs12.x
+      FunctionName: !Sub ${Application}-SumNumbersHandler
+      Handler: requestLambdas.sumNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -101,9 +97,7 @@ Resources:
   #   Type: AWS::Serverless::Function
   #   Properties:
   #     FunctionName: !Sub ${Application}-StoreTotalFunction
-  #     CodeUri: dist/
   #     Handler: StoreTotalFunction.handler
-  #     Runtime: nodejs12.x
   #     Policies:
   #       - SNSPublishMessagePolicy:
   #           TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -133,9 +127,7 @@ Outputs:
   WireTapFunction:
     Description: "Function to log all messages published to a topic"
     Value: !GetAtt WireTapFunction.Arn
-  AddThreeNumbersFunction:
-    Description: "Function to add three numbers together"
-    Value: !GetAtt AddThreeNumbersFunction.Arn
-  AddThreeNumbersFunctionIamRole:
-    Description: "Implicit IAM Role created for AddThreeNumbersFunction"
-    Value: !GetAtt AddThreeNumbersFunctionRole.Arn
+  WireTapFunctionIamRole:
+    Description: "Implicit IAM Role created for WireTapFunction"
+    Value: !GetAtt WireTapFunction.Arn
+  # TODO: Do we need to output anything else?

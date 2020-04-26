@@ -1,6 +1,9 @@
 # TODO
 
-* __When a function resumes, it needs to know if it should send a response message when it gets to the end__
+* Mocking AWS services
+  * Add an activity to store the result in a DynamoDb table
+
+* Generate SAM template from an 'application' class
 
 * Look at minimising the use of `Type.name`
 
@@ -33,18 +36,23 @@ export interface StateBinder<TObj, TState> {
 * Q. How can we ensure that handlers are in place for all requests?
   * I.e. can we do a sort of test traversal of all paths to see?
 
-* Generate SAM template from an 'application' class
-* Use object references when storing the flow instance
+* Use object references when storing the flow stack frames, 
+
 * Look into use of DynamoDb vs. S3 for storing flow instances
   * [S3 or DynamoDB?](https://serverless.pub/s3-or-dynamodb/)
+
 * [middy](https://middy.js.org/)
   * How can we use middy to parse the different events to allow for Lambdas to be called:
     * Directly
     * From API gateway
     * Via SNS message
+
 * Logging
+
 * Correlation ids
+
 * AWS X-Ray
+
 * Dependency injection
-* Mocking AWS services
+
 * Mocha test explorer extension

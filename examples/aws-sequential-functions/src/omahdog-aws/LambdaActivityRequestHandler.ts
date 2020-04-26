@@ -1,12 +1,14 @@
 import { SNSEvent } from 'aws-lambda';
 import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 
-import { FlowContext, FlowInstance, AsyncResponse, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
+import { FlowContext, AsyncResponse, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
+import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
+import { AsyncCallingContext, AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
 
 // TODO 25Apr20: Find out the lifetime of the following sort of constants. I.e. are they statics?
 const sns = new SNS();
 
-export class LambdaActivityRequestHandler<TReq> {
+export class LambdaActivityRequestHandler {
 
     private readonly _HandlerType: new () => IActivityRequestHandlerBase;
     private readonly _requestRouter: RequestRouter;
@@ -120,35 +122,4 @@ export class LambdaActivityRequestHandler<TReq> {
         }
     }
 }
-
-export class AsyncCallingContext {
-    readonly requestId: string;
-    readonly flowTypeName: string;
-    readonly flowInstanceId: string;
-    readonly flowCorrelationId: string;
-}
-
-export class AsyncRequestMessage {
-    readonly callingContext: AsyncCallingContext;
-    readonly request: any;
-}
-
-export class AsyncResponseMessage {
-    readonly callingContext: AsyncCallingContext;
-    readonly response: any;
-}    
-export class FunctionInstance {
-    readonly callingContext: AsyncCallingContext;
-    readonly flowInstance: FlowInstance;
-    readonly requestId: string;
-    readonly resumeCount: number;
-}
-
-export interface IFunctionInstanceRepository {
-
-    store(instance: FunctionInstance): Promise<void>;
-    
-    retrieve(instanceId: string): Promise<FunctionInstance | undefined>;
-    
-    delete(instanceId: string): Promise<void>;
-}   
+ 

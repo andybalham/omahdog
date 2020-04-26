@@ -1,19 +1,14 @@
-import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/AWSUtils';
-import { SNSActivityRequestHandler } from './omahdog-aws/SNSActivityRequestHandler';
-import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
-import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
-import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { RequestRouter, HandlerFactory } from './omahdog/FlowContext';
+import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
+
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
+import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
+import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
+import { SumNumbersHandler, SumNumbersSNSHandler } from './handlers/SumNumbersHandler';
 
 export const flowExchangeTopic = process.env.FLOW_EXCHANGE_TOPIC_ARN;
 
 export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(process.env.FLOW_INSTANCE_TABLE_NAME);
-
-// TODO 25Apr20: Move this with the in-process handler?
-class SumNumbersSNSHandler extends SNSActivityRequestHandler<SumNumbersRequest, SumNumbersResponse> {
-    constructor(topicArn?: string) { super(SumNumbersRequest, SumNumbersResponse, topicArn); }
-}
 
 export const requestRouter = new RequestRouter()
     .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)

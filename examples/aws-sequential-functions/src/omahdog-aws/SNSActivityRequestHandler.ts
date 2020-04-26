@@ -3,7 +3,7 @@ import uuid = require('uuid');
 import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
 import { PublishInput } from 'aws-sdk/clients/sns';
-import { AsyncRequestMessage } from './LambdaActivityRequestHandler';
+import { AsyncRequestMessage } from './AsyncExchange';
 
 const sns = new SNS();
 
