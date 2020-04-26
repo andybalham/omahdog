@@ -1,11 +1,11 @@
-import AWS from 'aws-sdk';
+import SNS = require('aws-sdk/clients/sns');
 import uuid = require('uuid');
 import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
 import { PublishInput } from 'aws-sdk/clients/sns';
-import { AsyncRequestMessage } from './AWSUtils';
+import { AsyncRequestMessage } from './LambdaActivityRequestHandler';
 
-const sns = new AWS.SNS();
+const sns = new SNS();
 
 export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 

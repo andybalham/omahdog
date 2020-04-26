@@ -1,6 +1,6 @@
 import { AddThreeNumbersRequest } from '../src/exchanges/AddThreeNumbersExchange';
 import { SNSEvent } from 'aws-lambda';
-import { AsyncRequestMessage } from '../src/omahdog-aws/AWSUtils';
+import { AsyncRequestMessage } from '../src/omahdog-aws/LambdaActivityRequestHandler';
 
 describe('handler tests', () => {
 

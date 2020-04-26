@@ -1,5 +1,5 @@
 import { SNSEvent } from 'aws-lambda';
-import { AsyncRequestMessage, AsyncResponseMessage } from './omahdog-aws/AWSUtils';
+import { AsyncRequestMessage, AsyncResponseMessage } from './omahdog-aws/LambdaActivityRequestHandler';
 
 export const handler = async (event: SNSEvent): Promise<void> => {
 

@@ -1,23 +1,7 @@
-import AWS from 'aws-sdk';
-import { FlowInstance } from '../omahdog/FlowContext';
+import DynamoDB from 'aws-sdk/clients/dynamodb';
+import { IFunctionInstanceRepository, FunctionInstance } from './LambdaActivityRequestHandler';
 
-export class FunctionInstance {
-    readonly callingContext: AsyncCallingContext;
-    readonly flowInstance: FlowInstance;
-    readonly requestId: string;
-    readonly resumeCount: number;
-}
-
-export interface IFunctionInstanceRepository {
-
-    store(instance: FunctionInstance): Promise<void>;
-    
-    retrieve(instanceId: string): Promise<FunctionInstance | undefined>;
-    
-    delete(instanceId: string): Promise<void>;
-}   
-
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const dynamoDbClient = new DynamoDB.DocumentClient();
 
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
@@ -44,7 +28,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await dynamoDb.put(params).promise();
+        await dynamoDbClient.put(params).promise();
     }
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
@@ -58,7 +42,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        const dynamoDbResult: any = await dynamoDb.get(params).promise();
+        const dynamoDbResult: any = await dynamoDbClient.get(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -89,23 +73,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await dynamoDb.delete(params).promise();
+        await dynamoDbClient.delete(params).promise();
     }
 }   
 
-export class AsyncCallingContext {
-    readonly requestId: string;
-    readonly flowTypeName: string;
-    readonly flowInstanceId: string;
-    readonly flowCorrelationId: string;
-}
-
-export class AsyncRequestMessage {
-    readonly callingContext: AsyncCallingContext;
-    readonly request: any;
-}
-
-export class AsyncResponseMessage {
-    readonly callingContext: AsyncCallingContext;
-    readonly response: any;
-}
