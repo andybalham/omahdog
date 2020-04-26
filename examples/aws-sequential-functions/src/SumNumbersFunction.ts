@@ -4,10 +4,11 @@ import { LambdaActivityRequestHandler } from './omahdog-aws/LambdaActivityReques
 
 import { requestRouter, flowExchangeTopic, functionInstanceRepository, handlerFactory } from './FunctionsCommon';
 
-import { SumNumbersResponse, SumNumbersRequest } from './exchanges/SumNumbersExchange';
+import { SumNumbersResponse } from './exchanges/SumNumbersExchange';
+import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 
 const activityRequestHandler = 
-    new LambdaActivityRequestHandler(SumNumbersRequest, requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository);
+    new LambdaActivityRequestHandler(SumNumbersHandler, requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository);
 
 export const handler = async (event: SNSEvent): Promise<void> => {
     await activityRequestHandler.handle<SumNumbersResponse>(event);

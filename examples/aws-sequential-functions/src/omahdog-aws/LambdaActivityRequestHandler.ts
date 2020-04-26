@@ -2,7 +2,7 @@ import AWS from 'aws-sdk';
 import { SNSEvent } from 'aws-lambda';
 import { PublishInput } from 'aws-sdk/clients/sns';
 
-import { FlowContext, FlowInstance, AsyncResponse, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
+import { FlowContext, FlowInstance, AsyncResponse, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
 import { AsyncRequestMessage, AsyncResponseMessage, AsyncCallingContext } from './AWSUtils';
 
 // TODO 25Apr20: Find out the lifetime of the following sort of constants. I.e. are they statics?
@@ -10,16 +10,16 @@ const sns = new AWS.SNS();
 
 export class LambdaActivityRequestHandler<TReq> {
 
-    private readonly _RequestType: new () => TReq;
+    private readonly _HandlerType: new () => IActivityRequestHandlerBase;
     private readonly _requestRouter: RequestRouter;
     private readonly _handlerFactory: HandlerFactory;
     private readonly _flowExchangeTopic: string | undefined;
     private readonly _functionInstanceRepository: IFunctionInstanceRepository;
 
-    constructor(RequestType: new () => TReq, requestRouter: RequestRouter, handlerFactory: HandlerFactory, flowExchangeTopic: string | undefined, 
-        functionInstanceRepository: IFunctionInstanceRepository) {
+    constructor(HandlerType: new () => IActivityRequestHandlerBase, requestRouter: RequestRouter, handlerFactory: HandlerFactory, 
+        flowExchangeTopic: string | undefined, functionInstanceRepository: IFunctionInstanceRepository) {
 
-        this._RequestType = RequestType;
+        this._HandlerType = HandlerType;
         this._requestRouter = requestRouter;
         this._handlerFactory = handlerFactory;
         this._flowExchangeTopic = flowExchangeTopic;
@@ -39,8 +39,7 @@ export class LambdaActivityRequestHandler<TReq> {
         let callingContext: AsyncCallingContext;
         let resumeCount: number;
     
-        const handlerType = this._requestRouter.getHandlerType(this._RequestType);
-        const handler = this._handlerFactory.newHandler(handlerType);
+        const handler = this._handlerFactory.newHandler(this._HandlerType);
 
         if ('request' in message) {
             
@@ -59,9 +58,9 @@ export class LambdaActivityRequestHandler<TReq> {
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
-            if (functionInstance.callingContext.requestId !== message.callingContext.requestId) {
+            if (functionInstance.requestId !== message.callingContext.requestId) {
                 // TODO 26Apr20: Do something more in this case where request is not as we expect
-                console.log(`The requestId does not match what was expected. Expected: ${functionInstance.callingContext.requestId}, Actual: ${message.callingContext.requestId}`);
+                console.log(`The requestId does not match what was expected. Expected: ${functionInstance.requestId}, Actual: ${message.callingContext.requestId}`);
                 return;
             }
     

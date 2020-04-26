@@ -1,10 +1,11 @@
 import { SNSEvent } from 'aws-lambda';
 import { LambdaActivityRequestHandler } from './omahdog-aws/LambdaActivityRequestHandler';
 import { flowExchangeTopic, requestRouter, functionInstanceRepository, handlerFactory } from './FunctionsCommon';
-import { AddThreeNumbersResponse, AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
+import { AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
+import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 
 const addThreeNumbersLambdaHandler = 
-    new LambdaActivityRequestHandler(AddThreeNumbersRequest, requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository);
+    new LambdaActivityRequestHandler(AddThreeNumbersHandler, requestRouter, handlerFactory, flowExchangeTopic, functionInstanceRepository);
 
 export const handler = async (event: SNSEvent): Promise<void> => {
     await addThreeNumbersLambdaHandler.handle<AddThreeNumbersResponse>(event);

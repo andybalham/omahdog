@@ -4,6 +4,7 @@ import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExc
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { RequestRouter, HandlerFactory } from './omahdog/FlowContext';
+import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 
 export const flowExchangeTopic = process.env.FLOW_EXCHANGE_TOPIC_ARN;
 
@@ -15,6 +16,7 @@ class SumNumbersSNSHandler extends SNSActivityRequestHandler<SumNumbersRequest, 
 }
 
 export const requestRouter = new RequestRouter()
+    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersSNSHandler)
     ;
 

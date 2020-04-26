@@ -119,6 +119,7 @@ class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     requestJson: string;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
         const requestId = uuid.v4();
+        console.log(flowContext.rootStackFrame.flowTypeName);
         this.requestJson = JSON.stringify(request);
         return flowContext.getAsyncResponse(requestId);
     }
