@@ -1,5 +1,9 @@
 # TODO
 
+* Look at the following mocking frameworks:
+  * [substitute.js](https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking)
+  * [typemoq](https://github.com/florinn/typemoq)
+
 * Generate SAM template from an 'application' class
 
 * Look at minimising the use of `Type.name`

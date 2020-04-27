@@ -57,6 +57,7 @@ Resources:
             TableName: !Ref FlowInstanceTable
       Environment:
         Variables:
+          # If this flow wanted to call other Lambdas directly, then it would need the ARN of them here
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
       Events:
@@ -110,6 +111,7 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+          # TODO: How to auto-generate this? The handler would have to expose that it needed such a variable
           FLOW_RESULT_TABLE_NAME: !Ref FlowResultTable
       Events:
         NotificationTopic:

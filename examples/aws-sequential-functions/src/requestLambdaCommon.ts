@@ -13,12 +13,7 @@ import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { SumNumbersSNSHandler, StoreTotalSNSHandler } from './snsActivityRequestHandlers';
 
 const documentClient = new DynamoDB.DocumentClient();
-const sns = getSNS();
-
-function getSNS(): SNS {
-    console.log('getSNS() called');
-    return new SNS;
-}
+const sns = new SNS();
 
 export const flowExchangeTopic = process.env.FLOW_EXCHANGE_TOPIC_ARN;
 export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
