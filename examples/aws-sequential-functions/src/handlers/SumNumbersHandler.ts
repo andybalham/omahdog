@@ -1,7 +1,6 @@
 import { IActivityRequestHandler } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
 import { SumNumbersRequest as SumNumbersRequest, SumNumbersResponse as SumNumbersResponse } from '../exchanges/SumNumbersExchange';
-import { SNSActivityRequestHandler } from '../omahdog-aws/SNSActivityRequestHandler';
 
 export class SumNumbersHandler implements IActivityRequestHandler<SumNumbersRequest, SumNumbersResponse> {
 
@@ -11,6 +10,3 @@ export class SumNumbersHandler implements IActivityRequestHandler<SumNumbersRequ
     }
 }
 
-export class SumNumbersSNSHandler extends SNSActivityRequestHandler<SumNumbersRequest, SumNumbersResponse> {
-    constructor(topicArn?: string) { super(SumNumbersRequest, SumNumbersResponse, topicArn); }
-}

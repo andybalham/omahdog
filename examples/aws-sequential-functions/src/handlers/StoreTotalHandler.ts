@@ -1,6 +1,5 @@
 import { IActivityRequestHandler } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
-import { SNSActivityRequestHandler } from '../omahdog-aws/SNSActivityRequestHandler';
 
 import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
 
@@ -36,8 +35,4 @@ export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequ
 
         return { id: id };
     }
-}
-
-export class StoreTotalSNSHandler extends SNSActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
-    constructor(topicArn?: string) { super(StoreTotalRequest, StoreTotalResponse, topicArn); }
 }

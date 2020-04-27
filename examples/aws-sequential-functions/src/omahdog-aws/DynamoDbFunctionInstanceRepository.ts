@@ -1,13 +1,13 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 
-const dynamoDbClient = new DynamoDB.DocumentClient();
-
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
+    private readonly _documentClient: DynamoDB.DocumentClient;
     private readonly _tableName?: string;
 
-    constructor(tableName?: string) {
+    constructor(documentClient: DynamoDB.DocumentClient, tableName?: string) {
+        this._documentClient = documentClient;
         this._tableName = tableName;        
     }
 
@@ -28,7 +28,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await dynamoDbClient.put(params).promise();
+        await this._documentClient.put(params).promise();
     }
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
@@ -42,7 +42,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        const dynamoDbResult: any = await dynamoDbClient.get(params).promise();
+        const dynamoDbResult: any = await this._documentClient.get(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -73,7 +73,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await dynamoDbClient.delete(params).promise();
+        await this._documentClient.delete(params).promise();
     }
 }   
 

@@ -1,18 +1,22 @@
+import DynamoDB from 'aws-sdk/clients/dynamodb';
+import SNS from 'aws-sdk/clients/sns';
+
 import { RequestRouter, HandlerFactory } from './omahdog/FlowContext';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
-import { SumNumbersHandler, SumNumbersSNSHandler } from './handlers/SumNumbersHandler';
+import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { StoreTotalSNSHandler, StoreTotalHandler } from './handlers/StoreTotalHandler';
-import DynamoDB from 'aws-sdk/clients/dynamodb';
+import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { SumNumbersSNSHandler, StoreTotalSNSHandler } from './snsActivityRequestHandlers';
+
+const documentClient = new DynamoDB.DocumentClient();
+const sns = new SNS();
 
 export const flowExchangeTopic = process.env.FLOW_EXCHANGE_TOPIC_ARN;
-export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(process.env.FLOW_INSTANCE_TABLE_NAME);
-
-const dynamoDbClient = new DynamoDB.DocumentClient();
+export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
 
 export const requestRouter = new RequestRouter()
     .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
@@ -23,7 +27,7 @@ export const requestRouter = new RequestRouter()
 export const handlerFactory = new HandlerFactory()
     .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Bigly number'))
     .register(SumNumbersHandler, () => new SumNumbersHandler)
-    .register(SumNumbersSNSHandler, () => new SumNumbersSNSHandler(flowExchangeTopic))
-    .register(StoreTotalHandler, () => new StoreTotalHandler(dynamoDbClient, process.env.FLOW_RESULT_TABLE_NAME))
-    .register(StoreTotalSNSHandler, () => new StoreTotalSNSHandler(flowExchangeTopic))
+    .register(SumNumbersSNSHandler, () => new SumNumbersSNSHandler(sns, flowExchangeTopic))
+    .register(StoreTotalHandler, () => new StoreTotalHandler(documentClient, process.env.FLOW_RESULT_TABLE_NAME))
+    .register(StoreTotalSNSHandler, () => new StoreTotalSNSHandler(sns, flowExchangeTopic))
     ;

@@ -5,24 +5,23 @@ import { FlowContext, AsyncResponse, RequestRouter, HandlerFactory, IActivityReq
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 import { AsyncCallingContext, AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
 
-// TODO 25Apr20: Find out the lifetime of the following sort of constants. I.e. are they statics?
-const sns = new SNS();
-
 export class LambdaActivityRequestHandler {
 
     private readonly _HandlerType: new () => IActivityRequestHandlerBase;
     private readonly _requestRouter: RequestRouter;
     private readonly _handlerFactory: HandlerFactory;
-    private readonly _flowExchangeTopic: string | undefined;
+    private readonly _flowExchangeTopic?: string;
+    private readonly _sns: SNS;
     private readonly _functionInstanceRepository: IFunctionInstanceRepository;
 
     constructor(HandlerType: new () => IActivityRequestHandlerBase, requestRouter: RequestRouter, handlerFactory: HandlerFactory, 
-        flowExchangeTopic: string | undefined, functionInstanceRepository: IFunctionInstanceRepository) {
+        sns: SNS, flowExchangeTopic: string | undefined, functionInstanceRepository: IFunctionInstanceRepository) {
 
         this._HandlerType = HandlerType;
         this._requestRouter = requestRouter;
         this._handlerFactory = handlerFactory;
         this._flowExchangeTopic = flowExchangeTopic;
+        this._sns = sns;
         this._functionInstanceRepository = functionInstanceRepository;
     }
 
@@ -109,16 +108,14 @@ export class LambdaActivityRequestHandler {
                 }
             };
             
-            const publishResponse = await sns.publish(params).promise();
+            const publishResponse = await this._sns.publish(params).promise();
         
-            console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
-    
+            console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);    
         }
     
         if (!('AsyncResponse' in response) && (resumeCount > 0)) {
             console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
-            // TODO 25Apr20: Reinstate the delete
-            // await this._functionInstanceRepository.delete(message.callingContext.flowInstanceId);
+            await this._functionInstanceRepository.delete(message.callingContext.flowInstanceId);
         }
     }
 }
