@@ -4,9 +4,23 @@
   * [substitute.js](https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking)
   * [typemoq](https://github.com/florinn/typemoq)
 
+* Have a DLQ for asynchronous invocation
+
+* Think about how you could have one set of activities calling another
+  * E.g. A decision flow calling an Affordability activity maintained by a different group
+  * Calling function would have to have a reference to the topic name and ARN to send requests and receive responses
+  * __Q. How persistent is an ARN?__
+    * A. Very, if resource is given a name, e.g. `arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${topicName}`
+
+* Provide support for calling other Lambdas directly
+
 * Generate SAM template from an 'application' class
+  * I don't know whether this is a viable aim
+  * Perhaps we could have a CLI to aid in the boilerplate code
 
 * Look at minimising the use of `Type.name`
+
+* Use object references when storing the flow stack frames, 
 
 * Look to add a trace to the flow context and persist it in the function instance
   * Look at X-Ray
@@ -36,8 +50,6 @@ export interface StateBinder<TObj, TState> {
 * Look into 'Document This' extension
 * Q. How can we ensure that handlers are in place for all requests?
   * I.e. can we do a sort of test traversal of all paths to see?
-
-* Use object references when storing the flow stack frames, 
 
 * Look into use of DynamoDb vs. S3 for storing flow instances
   * [S3 or DynamoDB?](https://serverless.pub/s3-or-dynamodb/)

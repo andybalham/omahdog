@@ -25,6 +25,7 @@
     "uuid": "^7.0.3"
   },
   "devDependencies": {
+    "@fluffy-spoon/substitute": "^1.133.0",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^7.0.2",
     "@typescript-eslint/eslint-plugin": "^2.27.0",

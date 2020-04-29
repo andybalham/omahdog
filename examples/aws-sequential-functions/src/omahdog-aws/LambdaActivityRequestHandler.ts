@@ -10,17 +10,17 @@ export class LambdaActivityRequestHandler {
     private readonly _HandlerType: new () => IActivityRequestHandlerBase;
     private readonly _requestRouter: RequestRouter;
     private readonly _handlerFactory: HandlerFactory;
-    private readonly _flowExchangeTopic?: string;
+    private readonly _exchangeTopicArn?: string;
     private readonly _sns: SNS;
     private readonly _functionInstanceRepository: IFunctionInstanceRepository;
 
     constructor(HandlerType: new () => IActivityRequestHandlerBase, requestRouter: RequestRouter, handlerFactory: HandlerFactory, 
-        sns: SNS, flowExchangeTopic: string | undefined, functionInstanceRepository: IFunctionInstanceRepository) {
+        sns: SNS, exchangeTopicArn: string | undefined, functionInstanceRepository: IFunctionInstanceRepository) {
 
         this._HandlerType = HandlerType;
         this._requestRouter = requestRouter;
         this._handlerFactory = handlerFactory;
-        this._flowExchangeTopic = flowExchangeTopic;
+        this._exchangeTopicArn = exchangeTopicArn;
         this._sns = sns;
         this._functionInstanceRepository = functionInstanceRepository;
     }
@@ -102,7 +102,7 @@ export class LambdaActivityRequestHandler {
     
             const params: PublishInput = {
                 Message: JSON.stringify(responseMessage),
-                TopicArn: this._flowExchangeTopic,
+                TopicArn: this._exchangeTopicArn,
                 MessageAttributes: {
                     MessageType: { DataType: 'String', StringValue: `${callingContext.flowTypeName}:Response` }
                 }
