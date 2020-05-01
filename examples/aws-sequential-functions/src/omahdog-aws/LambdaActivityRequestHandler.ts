@@ -59,7 +59,7 @@ export class LambdaActivityRequestHandler {
 
             if (functionInstance.requestId !== message.callingContext.requestId) {
                 // TODO 26Apr20: Do something more in this case where request is not as we expect
-                console.log(`The requestId does not match what was expected. Expected: ${functionInstance.requestId}, Actual: ${message.callingContext.requestId}`);
+                console.error(`The requestId does not match what was expected. Expected: ${functionInstance.requestId}, Actual: ${message.callingContext.requestId}`);
                 return;
             }
     
@@ -74,7 +74,22 @@ export class LambdaActivityRequestHandler {
             flowContext.requestRouter = this._requestRouter;
             flowContext.handlerFactory = this._handlerFactory;
 
-            response = await handler.handle(flowContext);
+            // TODO 01May20: If we throw an error on resume, then we would reject the response SNS message
+            // TODO 01May20: This may not necessarily throw an error when resuming with an error (we could have onError().goto etc)
+            // TODO 01May20: When do we want to explicitly send an AsyncErrorResponse to the caller?
+
+            try {
+                
+                response = await handler.handle(flowContext);
+                    
+            } catch (error) {
+                if ('AsyncErrorResponse' in message.response) {
+                    // TODO 01May20: How do we know that the error was caused by the AsyncErrorResponse?
+                    throw error;
+                } else {
+                    throw error;
+                }
+            }
         }
     
         if ('AsyncResponse' in response) {

@@ -2,6 +2,7 @@ import fs = require('fs');
 import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
 import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse } from './FlowContext';
+import { AsyncErrorResponse } from './FlowExchanges';
 
 export abstract class FlowRequestHandlerBase {
     readonly typeName: string;
@@ -366,14 +367,21 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
     private resumeActivity(flowContext: FlowContext, stepIndex: number, step: any): number {
 
+        // TODO 01May20: This is where we need to throw an error if flowContext.asyncResponse is an ErrorResponse
+        if ('AsyncErrorResponse' in flowContext.asyncResponse) {
+            const asyncErrorResponse = (flowContext.asyncResponse as AsyncErrorResponse);
+            delete flowContext.asyncResponse;
+            throw new Error(asyncErrorResponse.message);
+        }
+
         const stepResponse = flowContext.asyncResponse;
 
-        step.bindState(stepResponse, flowContext.currentStackFrame.state);
-
-        this.debugPostActivityResponse(step.name, stepResponse, flowContext.currentStackFrame.state);
-
         delete flowContext.asyncResponse;
-
+    
+        step.bindState(stepResponse, flowContext.currentStackFrame.state);
+    
+        this.debugPostActivityResponse(step.name, stepResponse, flowContext.currentStackFrame.state);
+    
         return stepIndex + 1;
     }
 }

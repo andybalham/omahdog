@@ -1,10 +1,8 @@
 # TODO
 
-* Look at the following mocking frameworks:
-  * [substitute.js](https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking)
-  * [typemoq](https://github.com/florinn/typemoq)
-
 * Have a DLQ for asynchronous invocation
+  * [AWS Serverless Application Model - DeadLetterQueue](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-deadletterqueue.html)
+  * __Q. What should happen to failed responses?__ Should it mean that the flow should be terminated?
 
 * Think about how you could have one set of activities calling another
   * E.g. A decision flow calling an Affordability activity maintained by a different group
@@ -17,6 +15,8 @@
 * Generate SAM template from an 'application' class
   * I don't know whether this is a viable aim
   * Perhaps we could have a CLI to aid in the boilerplate code
+
+* Look at layers and stacks
 
 * Look at minimising the use of `Type.name`
 
@@ -64,13 +64,19 @@ export interface StateBinder<TObj, TState> {
 
 * Correlation ids
 
-* AWS X-Ray
-
-* Dependency injection
-
 * Mocha test explorer extension
+
+* Look at
+  * DynamoDB Accelerator (DAX) adds a highly available in-memory cache for DynamoDB that delivers up to 10x performance improvement from milliseconds to microseconds.
+  * Amazon Elasticsearch Service (Amazon ES) makes it easy to deploy, secure, operate, and scale Elasticsearch for log analytics, full-text search, application monitoring, and more.
+  * AWS AppSync is a managed GraphQL service with real-time and offline capabilities, as well as enterprise grade security controls that make developing applications simple. 
+  * AWS X-Ray lets you analyze and debug serverless applications by providing distributed tracing and service maps to easily identify performance bottlenecks by visualizing a request end-to-end. 
 
 # Done
 
 * Mocking AWS services
   * [aws-sdk-mock](https://github.com/dwyl/aws-sdk-mock)
+
+* Look at the following mocking frameworks:
+  * [substitute.js](https://github.com/ffMathy/FluffySpoon.JavaScript.Testing.Faking)
+  * [typemoq](https://github.com/florinn/typemoq)

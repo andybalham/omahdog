@@ -4,6 +4,7 @@ import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
 import { FlowContext, FlowInstance, RequestRouter, IActivityRequestHandler, AsyncResponse, HandlerFactory } from '../src/FlowContext';
 import { expect } from 'chai';
+import { AsyncErrorResponse } from '../src/FlowExchanges';
 
 describe('Handlers', () => {
 
@@ -33,7 +34,7 @@ describe('Handlers', () => {
 
         const asyncActivityHandler = new AsyncActivityHandler();
 
-        const asyncMediator = new RequestRouter()
+        const asyncRequestRouter = new RequestRouter()
             .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
             .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
         const handlerFactory = new HandlerFactory()
@@ -41,7 +42,7 @@ describe('Handlers', () => {
             .register(ChildFlowHandler, () => new ChildFlowHandler);
 
         let flowContext = FlowContext.newContext();
-        flowContext.requestRouter = asyncMediator;
+        flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
 
         const request = new ParentFlowRequest();
@@ -63,7 +64,7 @@ describe('Handlers', () => {
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
         flowContext = FlowContext.newResumeContext(flowInstance, response01);
-        flowContext.requestRouter = asyncMediator;
+        flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
         const asyncResponse02 = await new ParentFlowHandler().handle(flowContext);
@@ -77,7 +78,7 @@ describe('Handlers', () => {
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
         flowContext = FlowContext.newResumeContext(flowInstance, response02);
-        flowContext.requestRouter = asyncMediator;
+        flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
         const asyncResponse03 = await new ParentFlowHandler().handle(flowContext);
@@ -91,12 +92,60 @@ describe('Handlers', () => {
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
         flowContext = FlowContext.newResumeContext(flowInstance, response03);
-        flowContext.requestRouter = asyncMediator;
+        flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
         const response04 = await new ParentFlowHandler().handle(flowContext);
 
         expect((response04 as ParentFlowResponse).total).to.equal(666);
+    });
+
+    it('throws an error when asynchronous error received', async () => {
+
+        const asyncActivityHandler = new AsyncActivityHandler();
+
+        const asyncRequestRouter = new RequestRouter()
+            .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
+            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
+        const handlerFactory = new HandlerFactory()
+            .register(AsyncActivityHandler, () => asyncActivityHandler)
+            .register(ChildFlowHandler, () => new ChildFlowHandler);
+
+        let flowContext = FlowContext.newContext();
+        flowContext.requestRouter = asyncRequestRouter;
+        flowContext.handlerFactory = handlerFactory;
+
+        const request = new ParentFlowRequest();
+        request.a = 200;
+        request.b = 210;
+        request.c = 206;
+        request.d = 50;
+
+        let flowInstance: FlowInstance;
+        
+        const asyncResponse01 = await new ParentFlowHandler().handle(flowContext, request);
+
+        expect('AsyncResponse' in asyncResponse01).to.be.true;
+        // eslint-disable-next-line prefer-const
+        flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
+
+        // Feed in asynchronous error
+
+        const asyncErrorResponse = new AsyncErrorResponse('Something went bandy!');
+        
+        flowContext = FlowContext.newResumeContext(flowInstance, asyncErrorResponse);
+        flowContext.requestRouter = asyncRequestRouter;
+        flowContext.handlerFactory = handlerFactory;
+        
+        let isErrorThrown: boolean;        
+        try {
+            await new ParentFlowHandler().handle(flowContext);
+            isErrorThrown = false;
+        } catch (error) {
+            isErrorThrown = true;
+        }
+
+        expect(isErrorThrown).to.be.true;
     });
 });
 

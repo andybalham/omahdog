@@ -35,4 +35,33 @@ describe('AddThreeNumbersHandler tests', () => {
         expect(flowContext.instanceId).to.be.not.undefined;
         expect((response as AddThreeNumbersResponse).total).to.be.equal(616);
     });
+
+    it.only('throws an exception on 666', async () => {
+
+        const flowContext = FlowContext.newContext();
+        flowContext.requestRouter
+            .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler);
+        flowContext.handlerFactory
+            .register(SumNumbersHandler, () => new SumNumbersHandler());
+        flowContext.mocks
+            .add('Store_total', (req: StoreTotalRequest) => { 
+                console.log(`Store_total: ${JSON.stringify(req)}`); 
+                const response: StoreTotalResponse = { id: 'totalId' };
+                return response;
+            });
+
+        const request = new AddThreeNumbersRequest();
+        request.a = 666;
+        request.b = 210;
+        request.c = 206;
+
+        console.log(JSON.stringify(request));
+
+        try {
+            await new AddThreeNumbersHandler().handle(flowContext, request);
+            expect(false).to.be.true;
+        } catch (error) {
+            expect((error as Error).message).to.contain('bandy');
+        }
+    });
 });

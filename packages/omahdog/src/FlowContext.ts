@@ -24,6 +24,7 @@ export class FlowContext {
         return new FlowContext(flowCorrelationId);
     }
 
+    // TODO 01May20: Could we pass in a 'error response' here?
     static newResumeContext(flowInstance: FlowInstance, asyncResponse: any): FlowContext {
         return new FlowContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, asyncResponse);
     }
