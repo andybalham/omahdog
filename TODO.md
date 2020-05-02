@@ -16,6 +16,8 @@
   * I don't know whether this is a viable aim
   * Perhaps we could have a CLI to aid in the boilerplate code
 
+* Look at reducing package size
+
 * Look at layers and stacks
 
 * Look at minimising the use of `Type.name`
