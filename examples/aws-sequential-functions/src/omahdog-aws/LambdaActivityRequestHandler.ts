@@ -29,9 +29,14 @@ export class LambdaActivityRequestHandler {
     async handle<TRes>(event: SNSEvent): Promise<void> {    
 
         console.log(`event: ${JSON.stringify(event)}`);
-    
+
         const snsMessage = event.Records[0].Sns;
         const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
+    
+        // TODO 02May20: Remove this temporary code
+        if (snsMessage.Message.includes('6666') && (this._HandlerType.name === 'SumNumbersHandler')) {
+            throw new Error('Non-handler error in LambdaActivityRequestHandler!');
+        }
 
         console.log(`message: ${JSON.stringify(message)}`);
     

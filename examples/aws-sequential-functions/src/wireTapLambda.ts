@@ -19,7 +19,7 @@ export const handler = async (event: SNSEvent): Promise<void> => {
     
         console.log(JSON.stringify(logEntry));
     
-    } if ('response' in message) {
+    } else if ('response' in message) {
 
         const logEntry = {
             MessageAttributes: snsMessage.MessageAttributes,
