@@ -4,10 +4,18 @@ export class EmptyRequest { }
 
 export class EmptyResponse { }
 
-export class AsyncErrorResponse {
-    get AsyncErrorResponse(): boolean { return true; }
+export class ErrorResponse {
+    
+    readonly ErrorResponse: boolean;
+    
+    readonly name: string;
     readonly message: string;
-    constructor (message: string) {
-        this.message = message;
+    readonly stack?: string;
+
+    constructor (error: Error) {
+        this.ErrorResponse = true;
+        this.name = error.name;
+        this.message = error.message;
+        this.stack = error.stack;
     }
 }

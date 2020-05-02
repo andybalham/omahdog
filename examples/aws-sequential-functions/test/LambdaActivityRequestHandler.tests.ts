@@ -1,5 +1,6 @@
 import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, HandlerFactory, FlowInstance } from '../src/omahdog/FlowContext';
 import { SNSEvent } from 'aws-lambda/trigger/sns';
+import { ErrorResponse } from '../src/omahdog/FlowExchanges';
 import { AsyncRequestMessage, AsyncResponseMessage } from '../src/omahdog-aws/AsyncExchange';
 import { LambdaActivityRequestHandler } from '../src/omahdog-aws/LambdaActivityRequestHandler';
 import * as AWSMock from 'aws-sdk-mock';
@@ -20,9 +21,9 @@ class TestResponse {
 class TestActivityRequestHandler implements IActivityRequestHandler<TestRequest, TestResponse> {
 
     private readonly _request?: TestRequest;
-    private readonly _response?: TestResponse | AsyncResponse;
+    private readonly _response?: () => TestResponse | AsyncResponse;
     
-    constructor(request?: TestRequest, response?: TestResponse | AsyncResponse) {
+    constructor(request?: TestRequest, response?: () => TestResponse | AsyncResponse) {
         this._request = request;
         this._response = response;
     }
@@ -30,7 +31,7 @@ class TestActivityRequestHandler implements IActivityRequestHandler<TestRequest,
     async handle(flowContext: FlowContext, request?: TestRequest): Promise<TestResponse | AsyncResponse> {                
         expect(request).to.deep.equal(this._request);
         if (this._response === undefined) throw new Error('this._response');
-        return this._response;
+        return this._response();
     }    
 }
 
@@ -62,7 +63,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         const requestRouter = new RequestRouter();
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, response));
+            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -122,7 +123,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         const requestRouter = new RequestRouter();
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, response));
+            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -182,7 +183,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         const requestRouter = new RequestRouter();
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(undefined, response));
+            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(undefined, () => response));
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -237,6 +238,147 @@ describe('LambdaActivityRequestHandler tests', () => {
 
             expect(responseMessage.callingContext).to.deep.equal(functionInstance.callingContext);
             expect(responseMessage.response).to.deep.equal(response);
+        }
+
+        flowInstanceRepository.received()
+            .delete(Arg.is(v => v === 'flowInstanceId'));
+    });    
+
+    it('returns error response on error', async () => {
+
+        // Arrange
+
+        let actualPublishInput: PublishInput | undefined = undefined;
+
+        AWSMock.mock('SNS', 'publish', (params: PublishInput, callback: Function) => {
+            actualPublishInput = params;
+            callback(null, {
+                MessageId: 'MessageId'
+            });
+        });
+        
+        const request: TestRequest = { input: 666 };
+
+        const requestRouter = new RequestRouter();
+        const handlerFactory = new HandlerFactory()
+            .register(TestActivityRequestHandler, () => 
+                new TestActivityRequestHandler(request, () => { throw new Error('Something went bandy!'); }));
+        const sns = new AWS.SNS();        
+        const exchangeTopicArn = 'exchangeTopicArn';
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+
+        const lambdaHandlerSut = 
+            new LambdaActivityRequestHandler(
+                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+
+        const requestMessage: AsyncRequestMessage = {
+            callingContext: {
+                flowCorrelationId: 'flowCorrelationId',
+                flowInstanceId: 'flowInstanceId',
+                flowTypeName: 'flowTypeName',
+                requestId: 'requestId'
+            },
+            request: request
+        };
+            
+        // Act
+
+        await lambdaHandlerSut.handle(getSNSEvent(requestMessage));
+        
+        // Assert
+        
+        expect(actualPublishInput).to.not.be.undefined;
+
+        if (actualPublishInput !== undefined) {
+
+            actualPublishInput = actualPublishInput as PublishInput;
+
+            expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
+            expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('flowTypeName:Response');
+    
+            const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
+
+            expect(responseMessage.callingContext).to.deep.equal(requestMessage.callingContext);
+            expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
+            expect((responseMessage.response as ErrorResponse).message).to.equal('Something went bandy!');
+        }
+    });    
+
+    it('handles asynchronous error response', async () => {
+
+        // Arrange
+
+        let actualPublishInput: PublishInput | undefined = undefined;
+
+        AWSMock.mock('SNS', 'publish', (params: PublishInput, callback: Function) => {
+            actualPublishInput = params;
+            callback(null, {
+                MessageId: 'MessageId'
+            });
+        });
+        
+        const response: TestResponse = { output: 616 };
+
+        const requestRouter = new RequestRouter();
+        const handlerFactory = new HandlerFactory()
+            .register(TestActivityRequestHandler, () => 
+                new TestActivityRequestHandler(undefined, () => { throw new Error('Something went bandy!'); }));
+        const sns = new AWS.SNS();        
+        const exchangeTopicArn = 'exchangeTopicArn';
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        
+        const lambdaHandlerSut = 
+            new LambdaActivityRequestHandler(
+                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+
+        const responseMessage: AsyncResponseMessage = {
+            callingContext: {
+                flowCorrelationId: 'flowCorrelationId',
+                flowInstanceId: 'flowInstanceId',
+                flowTypeName: 'flowTypeName',
+                requestId: 'asyncRequestId'
+            },
+            response: {}
+        };
+
+        const functionInstance: FunctionInstance = {
+            callingContext: {
+                flowCorrelationId: 'flowCorrelationId',
+                flowInstanceId: 'callingFlowInstanceId',
+                flowTypeName: 'callingFlowTypeName',
+                requestId: 'callingRequestId'
+            },
+            requestId: 'asyncRequestId',
+            flowInstance: new FlowInstance('flowCorrelationId', 'flowInstanceId', []),
+            resumeCount: 0
+        };
+
+        flowInstanceRepository
+            .retrieve(Arg.is(v => v === 'flowInstanceId'))
+            .resolves(functionInstance);
+
+        // Act
+
+        await lambdaHandlerSut.handle(getSNSEvent(responseMessage));
+        
+        // Assert
+        
+        expect(actualPublishInput).to.not.be.undefined;
+
+        if (actualPublishInput !== undefined) {
+
+            actualPublishInput = actualPublishInput as PublishInput;
+
+            expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
+            expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingFlowTypeName:Response');
+    
+            const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
+
+            expect(responseMessage.callingContext).to.deep.equal(functionInstance.callingContext);
+            expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
+            expect((responseMessage.response as ErrorResponse).message).to.equal('Something went bandy!');
         }
 
         flowInstanceRepository.received()

@@ -2,7 +2,7 @@ import fs = require('fs');
 import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
 import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse } from './FlowContext';
-import { AsyncErrorResponse } from './FlowExchanges';
+import { ErrorResponse } from './FlowExchanges';
 
 export abstract class FlowRequestHandlerBase {
     readonly typeName: string;
@@ -196,6 +196,8 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
             const step = flowDefinition.steps[stepIndex as number];
 
+            // TODO 02May20: Handle all errors, log with step name and rethrow
+
             flowContext.currentStackFrame.stepName = step.name;
 
             // TODO 08Mar20: Should all logging be done via the FlowContext? I.e. assign an ILogger implementation
@@ -367,11 +369,13 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
     private resumeActivity(flowContext: FlowContext, stepIndex: number, step: any): number {
 
-        // TODO 01May20: This is where we need to throw an error if flowContext.asyncResponse is an ErrorResponse
-        if ('AsyncErrorResponse' in flowContext.asyncResponse) {
-            const asyncErrorResponse = (flowContext.asyncResponse as AsyncErrorResponse);
+        if ('ErrorResponse' in flowContext.asyncResponse) {
+            const error = (flowContext.asyncResponse as ErrorResponse);
             delete flowContext.asyncResponse;
-            throw new Error(asyncErrorResponse.message);
+            // TODO 02May20: Externalise how such errors are logged
+            console.error(`Step '${step.name}' received error response: ${error.message}`);
+            console.error(error.stack);
+            throw new Error(error.message);
         }
 
         const stepResponse = flowContext.asyncResponse;

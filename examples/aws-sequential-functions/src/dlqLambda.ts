@@ -25,7 +25,8 @@ export const handler = async (event: SNSEvent): Promise<void> => {
     
     } if ('response' in deadMessage) {
 
-        // TODO 01May20: What should we do with a dead response? We should package it some way, but how should it be handled?
+        // TODO 01May20: We will need to abort the flow that could not process the request
+        
         const logEntry = {
             MessageAttributes: snsMessage.MessageAttributes,
             MessageContext: deadMessage.callingContext,

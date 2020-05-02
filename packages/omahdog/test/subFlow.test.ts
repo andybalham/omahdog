@@ -4,7 +4,7 @@ import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
 import { FlowContext, FlowInstance, RequestRouter, IActivityRequestHandler, AsyncResponse, HandlerFactory } from '../src/FlowContext';
 import { expect } from 'chai';
-import { AsyncErrorResponse } from '../src/FlowExchanges';
+import { ErrorResponse } from '../src/FlowExchanges';
 
 describe('Handlers', () => {
 
@@ -100,7 +100,7 @@ describe('Handlers', () => {
         expect((response04 as ParentFlowResponse).total).to.equal(666);
     });
 
-    it('throws an error when asynchronous error received', async () => {
+    it.only('throws an error when asynchronous error received', async () => {
 
         const asyncActivityHandler = new AsyncActivityHandler();
 
@@ -121,19 +121,18 @@ describe('Handlers', () => {
         request.c = 206;
         request.d = 50;
 
-        let flowInstance: FlowInstance;
-        
         const asyncResponse01 = await new ParentFlowHandler().handle(flowContext, request);
 
         expect('AsyncResponse' in asyncResponse01).to.be.true;
-        // eslint-disable-next-line prefer-const
-        flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
+        const flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
 
         // Feed in asynchronous error
 
-        const asyncErrorResponse = new AsyncErrorResponse('Something went bandy!');
+        let error: Error;
+        try { throw new Error('Something went bandy!'); } catch (e) { error = e; }
+        const errorResponse = new ErrorResponse(error);
         
-        flowContext = FlowContext.newResumeContext(flowInstance, asyncErrorResponse);
+        flowContext = FlowContext.newResumeContext(flowInstance, errorResponse);
         flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
@@ -142,6 +141,8 @@ describe('Handlers', () => {
             await new ParentFlowHandler().handle(flowContext);
             isErrorThrown = false;
         } catch (error) {
+            console.error(error.message);
+            console.error(error.stack);
             isErrorThrown = true;
         }
 

@@ -4,6 +4,8 @@
   * [AWS Serverless Application Model - DeadLetterQueue](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-deadletterqueue.html)
   * __Q. What should happen to failed responses?__ Should it mean that the flow should be terminated?
 
+* Look at wrapping all AWS services in our own services
+
 * Think about how you could have one set of activities calling another
   * E.g. A decision flow calling an Affordability activity maintained by a different group
   * Calling function would have to have a reference to the topic name and ARN to send requests and receive responses

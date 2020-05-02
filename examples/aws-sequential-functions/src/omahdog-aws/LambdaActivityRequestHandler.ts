@@ -4,6 +4,7 @@ import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 import { FlowContext, AsyncResponse, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 import { AsyncCallingContext, AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
+import { ErrorResponse } from '../omahdog/FlowExchanges';
 
 export class LambdaActivityRequestHandler {
 
@@ -25,16 +26,16 @@ export class LambdaActivityRequestHandler {
         this._functionInstanceRepository = functionInstanceRepository;
     }
 
-    async handle<TRes>(event: SNSEvent): Promise<void> {
-    
+    async handle<TRes>(event: SNSEvent): Promise<void> {    
+
         console.log(`event: ${JSON.stringify(event)}`);
     
         const snsMessage = event.Records[0].Sns;
         const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
-    
+
         console.log(`message: ${JSON.stringify(message)}`);
     
-        let response: TRes | AsyncResponse;
+        let response: TRes | AsyncResponse | ErrorResponse;
         let callingContext: AsyncCallingContext;
         let resumeCount: number;
     
@@ -49,7 +50,11 @@ export class LambdaActivityRequestHandler {
             flowContext.requestRouter = this._requestRouter;
             flowContext.handlerFactory = this._handlerFactory;
     
-            response = await handler.handle(flowContext, message.request);
+            try {
+                response = await handler.handle(flowContext, message.request);                    
+            } catch (error) {
+                response = new ErrorResponse(error);
+            }
     
         } else {
     
@@ -73,22 +78,11 @@ export class LambdaActivityRequestHandler {
             const flowContext = FlowContext.newResumeContext(flowInstance, message.response);
             flowContext.requestRouter = this._requestRouter;
             flowContext.handlerFactory = this._handlerFactory;
-
-            // TODO 01May20: If we throw an error on resume, then we would reject the response SNS message
-            // TODO 01May20: This may not necessarily throw an error when resuming with an error (we could have onError().goto etc)
-            // TODO 01May20: When do we want to explicitly send an AsyncErrorResponse to the caller?
-
+    
             try {
-                
                 response = await handler.handle(flowContext);
-                    
             } catch (error) {
-                if ('AsyncErrorResponse' in message.response) {
-                    // TODO 01May20: How do we know that the error was caused by the AsyncErrorResponse?
-                    throw error;
-                } else {
-                    throw error;
-                }
+                response = new ErrorResponse(error);
             }
         }
     
