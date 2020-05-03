@@ -10,7 +10,7 @@ import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExc
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
-import { SumNumbersSNSHandler, StoreTotalSNSHandler } from './snsActivityRequestHandlers';
+import { SumNumbersHandlerMessageProxy, StoreTotalHandlerMessageProxy } from './requestHandlerMessageProxies';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 
 const documentClient = new DynamoDB.DocumentClient();
@@ -21,14 +21,14 @@ export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository
 
 export const requestRouter = new RequestRouter()
     .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
-    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersSNSHandler)
-    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalSNSHandler)
+    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
     ;
 
 export const handlerFactory = new HandlerFactory()
     .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Bigly number'))
     .register(SumNumbersHandler, () => new SumNumbersHandler)
-    .register(SumNumbersSNSHandler, () => new SumNumbersSNSHandler(exchangeMessagePublisher))
+    .register(SumNumbersHandlerMessageProxy, () => new SumNumbersHandlerMessageProxy(exchangeMessagePublisher))
     .register(StoreTotalHandler, () => new StoreTotalHandler(documentClient, process.env.FLOW_RESULT_TABLE_NAME))
-    .register(StoreTotalSNSHandler, () => new StoreTotalSNSHandler(exchangeMessagePublisher))
+    .register(StoreTotalHandlerMessageProxy, () => new StoreTotalHandlerMessageProxy(exchangeMessagePublisher))
     ;

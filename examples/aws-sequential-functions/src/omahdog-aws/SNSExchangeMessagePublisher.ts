@@ -15,21 +15,10 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
 
     async publishRequest(requestTypeName: string, message: AsyncRequestMessage): Promise<void> {
 
+        console.log(`message: ${JSON.stringify(message)}`);
+
         if (this._sns === undefined) throw new Error('this._sns');
         if (this._exchangeTopicArn === undefined) throw new Error('this._exchangeTopicArn === undefined');
-        
-        // const requestId = uuid.v4();
-        
-        // const message: AsyncRequestMessage = 
-        //     {
-        //         callingContext: {
-        //             requestId: requestId,
-        //             flowInstanceId: flowContext.instanceId,
-        //             flowCorrelationId: flowContext.correlationId,
-        //             flowTypeName: flowContext.rootStackFrame.flowTypeName
-        //         },
-        //         request: request
-        //     };
 
         const params: PublishInput = {
             Message: JSON.stringify(message),
@@ -45,12 +34,6 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
     }
     
     async publishResponse(flowTypeName: string, message: AsyncResponseMessage): Promise<void> {
-    
-        // const message: AsyncResponseMessage = 
-        // {
-        //     callingContext: callingContext,
-        //     response: response
-        // };
 
         console.log(`message: ${JSON.stringify(message)}`);
 

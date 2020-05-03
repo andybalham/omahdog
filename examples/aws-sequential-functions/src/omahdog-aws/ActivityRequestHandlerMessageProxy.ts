@@ -1,18 +1,15 @@
-import SNS = require('aws-sdk/clients/sns');
 import uuid = require('uuid');
 import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers';
 import { FlowContext } from '../omahdog/FlowContext';
-import { PublishInput } from 'aws-sdk/clients/sns';
 import { AsyncRequestMessage } from './AsyncExchange';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
-export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
+export class ActivityRequestHandlerMessageProxy<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
     private readonly _RequestType: new() => TReq;
     private readonly _exchangeMessagePublisher?: IExchangeMessagePublisher;
 
     constructor(RequestType: new() => TReq, _ResponseType: new() => TRes, exchangeMessagePublisher?: IExchangeMessagePublisher) {
-
         this._RequestType = RequestType;
         this._exchangeMessagePublisher = exchangeMessagePublisher;
     }

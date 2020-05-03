@@ -59,7 +59,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${Application}-DeadLetterQueueFunction
-      Handler: deadLetterQueueLambda.handler
+      Handler: requestLambdas.deadLetterQueueHandler
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
