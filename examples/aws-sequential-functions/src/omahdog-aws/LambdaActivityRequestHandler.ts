@@ -5,28 +5,25 @@ import { FlowContext, AsyncResponse, RequestRouter, HandlerFactory, IActivityReq
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 import { AsyncCallingContext, AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
+import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
 export class LambdaActivityRequestHandler {
 
-    private readonly _HandlerType: new () => IActivityRequestHandlerBase;
     private readonly _requestRouter: RequestRouter;
     private readonly _handlerFactory: HandlerFactory;
-    private readonly _exchangeTopicArn?: string;
-    private readonly _sns: SNS;
+    private readonly _exchangeMessagePublisher: IExchangeMessagePublisher;
     private readonly _functionInstanceRepository: IFunctionInstanceRepository;
 
-    constructor(HandlerType: new () => IActivityRequestHandlerBase, requestRouter: RequestRouter, handlerFactory: HandlerFactory, 
-        sns: SNS, exchangeTopicArn: string | undefined, functionInstanceRepository: IFunctionInstanceRepository) {
+    constructor(requestRouter: RequestRouter, handlerFactory: HandlerFactory, 
+        exchangeMessagePublisher: IExchangeMessagePublisher, functionInstanceRepository: IFunctionInstanceRepository) {
 
-        this._HandlerType = HandlerType;
         this._requestRouter = requestRouter;
         this._handlerFactory = handlerFactory;
-        this._exchangeTopicArn = exchangeTopicArn;
-        this._sns = sns;
+        this._exchangeMessagePublisher = exchangeMessagePublisher;
         this._functionInstanceRepository = functionInstanceRepository;
     }
 
-    async handle<TRes>(event: SNSEvent): Promise<void> {    
+    async handle(HandlerType: new () => IActivityRequestHandlerBase, event: SNSEvent): Promise<void> {    
 
         console.log(`event: ${JSON.stringify(event)}`);
 
@@ -34,17 +31,17 @@ export class LambdaActivityRequestHandler {
         const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
     
         // TODO 02May20: Remove this temporary code
-        if (snsMessage.Message.includes('6666') && (this._HandlerType.name === 'SumNumbersHandler')) {
+        if (snsMessage.Message.includes('6666') && (HandlerType.name === 'SumNumbersHandler')) {
             throw new Error('Non-handler error in LambdaActivityRequestHandler!');
         }
 
         console.log(`message: ${JSON.stringify(message)}`);
     
-        let response: TRes | AsyncResponse | ErrorResponse;
+        let response: any;
         let callingContext: AsyncCallingContext;
         let resumeCount: number;
     
-        const handler = this._handlerFactory.newHandler(this._HandlerType);
+        const handler = this._handlerFactory.newHandler(HandlerType);
 
         if ('request' in message) {
             
@@ -106,25 +103,13 @@ export class LambdaActivityRequestHandler {
     
         } else {
     
-            const responseMessage: AsyncResponseMessage = 
-                {
-                    callingContext: callingContext,
-                    response: response
-                };
-    
-            console.log(`responseMessage: ${JSON.stringify(responseMessage)}`);
-    
-            const params: PublishInput = {
-                Message: JSON.stringify(responseMessage),
-                TopicArn: this._exchangeTopicArn,
-                MessageAttributes: {
-                    MessageType: { DataType: 'String', StringValue: `${callingContext.flowTypeName}:Response` }
-                }
+            const message: AsyncResponseMessage = {
+                callingContext: callingContext,
+                response: response
             };
-            
-            const publishResponse = await this._sns.publish(params).promise();
-        
-            console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);    
+
+            await this._exchangeMessagePublisher.publishResponse(callingContext.flowTypeName, message);
+
         }
     
         if (!('AsyncResponse' in response) && (resumeCount > 0)) {

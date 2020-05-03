@@ -6,6 +6,7 @@ import { LambdaActivityRequestHandler } from '../src/omahdog-aws/LambdaActivityR
 import * as AWSMock from 'aws-sdk-mock';
 import AWS, { AWSError, Request as AWSRequest } from 'aws-sdk';
 import { IFunctionInstanceRepository, FunctionInstance } from '../src/omahdog-aws/IFunctionInstanceRepository';
+import { SNSExchangeMessagePublisher } from '../src/omahdog-aws/SNSExchangeMessagePublisher';
 import SNS, { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
@@ -67,10 +68,12 @@ describe('LambdaActivityRequestHandler tests', () => {
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
-                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
         const requestMessage: AsyncRequestMessage = {
             callingContext: {
@@ -84,7 +87,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        await lambdaHandlerSut.handle(getSNSEvent(requestMessage));
+        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(requestMessage));
         
         // Assert
         
@@ -127,10 +130,12 @@ describe('LambdaActivityRequestHandler tests', () => {
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
-                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
         const requestMessage: AsyncRequestMessage = {
             callingContext: {
@@ -151,7 +156,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        await lambdaHandlerSut.handle(getSNSEvent(requestMessage));
+        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(requestMessage));
         
         // Assert
         
@@ -187,10 +192,12 @@ describe('LambdaActivityRequestHandler tests', () => {
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
         
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
-                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
         const responseMessage: AsyncResponseMessage = {
             callingContext: {
@@ -220,7 +227,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         // Act
 
-        await lambdaHandlerSut.handle(getSNSEvent(responseMessage));
+        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(responseMessage));
         
         // Assert
         
@@ -266,10 +273,12 @@ describe('LambdaActivityRequestHandler tests', () => {
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
-                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
         const requestMessage: AsyncRequestMessage = {
             callingContext: {
@@ -283,7 +292,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        await lambdaHandlerSut.handle(getSNSEvent(requestMessage));
+        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(requestMessage));
         
         // Assert
         
@@ -318,8 +327,6 @@ describe('LambdaActivityRequestHandler tests', () => {
             });
         });
         
-        const response: TestResponse = { output: 616 };
-
         const requestRouter = new RequestRouter();
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => 
@@ -327,10 +334,12 @@ describe('LambdaActivityRequestHandler tests', () => {
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
-        
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
-                TestActivityRequestHandler, requestRouter, handlerFactory, sns, exchangeTopicArn, flowInstanceRepository);
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
         const responseMessage: AsyncResponseMessage = {
             callingContext: {
@@ -360,7 +369,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         // Act
 
-        await lambdaHandlerSut.handle(getSNSEvent(responseMessage));
+        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(responseMessage));
         
         // Assert
         

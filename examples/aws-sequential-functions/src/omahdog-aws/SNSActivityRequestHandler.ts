@@ -4,24 +4,22 @@ import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers'
 import { FlowContext } from '../omahdog/FlowContext';
 import { PublishInput } from 'aws-sdk/clients/sns';
 import { AsyncRequestMessage } from './AsyncExchange';
+import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
 export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-    private readonly _sns?: SNS;
     private readonly _RequestType: new() => TReq;
-    private readonly _topicArn?: string;
+    private readonly _exchangeMessagePublisher?: IExchangeMessagePublisher;
 
-    constructor(RequestType: new() => TReq, _ResponseType: new() => TRes, sns?: SNS, topicArn?: string) {
+    constructor(RequestType: new() => TReq, _ResponseType: new() => TRes, exchangeMessagePublisher?: IExchangeMessagePublisher) {
 
         this._RequestType = RequestType;
-        this._sns = sns;
-        this._topicArn = topicArn;
+        this._exchangeMessagePublisher = exchangeMessagePublisher;
     }
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
-
-        if (this._sns === undefined) throw new Error('this._sns');
-        if (this._topicArn === undefined) throw new Error('this._topicArn === undefined');
+        
+        if (this._exchangeMessagePublisher === undefined) throw new Error('this._exchangeMessagePublisher === undefined');
         
         const requestId = uuid.v4();
         
@@ -36,17 +34,7 @@ export class SNSActivityRequestHandler<TReq, TRes> implements IActivityRequestHa
                 request: request
             };
 
-        const params: PublishInput = {
-            Message: JSON.stringify(message),
-            TopicArn: this._topicArn,
-            MessageAttributes: {
-                MessageType: { DataType: 'String', StringValue: `${this._RequestType.name}:Handler` }
-            }
-        };
-        
-        const publishResponse = await this._sns.publish(params).promise();
-    
-        console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
+        await this._exchangeMessagePublisher.publishRequest(this._RequestType.name, message);
 
         return flowContext.getAsyncResponse(requestId);
     }
