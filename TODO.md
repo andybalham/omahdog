@@ -17,6 +17,8 @@
 * Generate SAM template from an 'application' class
   * I don't know whether this is a viable aim
   * Perhaps we could have a CLI to aid in the boilerplate code
+  * [Handlebars.js](https://handlebarsjs.com/)
+  * [Mustache.js](https://github.com/janl/mustache.js)
 
 * Look at reducing package size
 
@@ -63,6 +65,7 @@ export interface StateBinder<TObj, TState> {
     * Directly
     * From API gateway
     * Via SNS message
+  * [DAZN Lambda Powertools](https://github.com/getndazn/dazn-lambda-powertools)
 
 * Logging
 

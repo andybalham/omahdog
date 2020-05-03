@@ -5,33 +5,40 @@ import { AsyncRequestMessage, AsyncResponseMessage } from './omahdog-aws/AsyncEx
 
 export const handler = async (event: SNSEvent): Promise<void> => {
 
-    const snsMessage = event.Records[0].Sns;
+    try {
+        
+        const snsMessage = event.Records[0].Sns;
 
-    const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
+        const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
 
-    if ('request' in message) {
+        if ('request' in message) {
 
-        const logEntry = {
-            MessageAttributes: snsMessage.MessageAttributes,
-            MessageContext: message.callingContext,
-            Request: message.request
-        };
+            const logEntry = {
+                MessageAttributes: snsMessage.MessageAttributes,
+                MessageContext: message.callingContext,
+                Request: message.request
+            };
     
-        console.log(JSON.stringify(logEntry));
+            console.log(JSON.stringify(logEntry));
     
-    } else if ('response' in message) {
+        } else if ('response' in message) {
 
-        const logEntry = {
-            MessageAttributes: snsMessage.MessageAttributes,
-            MessageContext: message.callingContext,
-            Response: message.response
-        };
+            const logEntry = {
+                MessageAttributes: snsMessage.MessageAttributes,
+                MessageContext: message.callingContext,
+                Response: message.response
+            };
     
-        console.log(JSON.stringify(logEntry));
+            console.log(JSON.stringify(logEntry));
 
-    } else {
+        } else {
 
-        console.error(JSON.stringify(snsMessage));
+            console.error(JSON.stringify(snsMessage));
 
+        }
+
+    } catch (error) {
+        console.error(`error.message: ${error.message}`);        
+        console.error(`error.stack: ${error.stack}`);        
     }
 };
