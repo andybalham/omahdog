@@ -100,8 +100,12 @@ export class LambdaActivityRequestHandler {
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
             await this._functionInstanceRepository.store(functionInstance);
+
+            // TODO 04May20: If we had a direct caller and no resume, then we need to pass back something. 
     
         } else {
+
+            // TODO 04May20: If we had a direct caller and no resume, then we need to pass back the response directly
     
             const message: AsyncResponseMessage = {
                 callingContext: callingContext,

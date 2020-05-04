@@ -10,25 +10,45 @@ import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExc
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
-import { SumNumbersHandlerMessageProxy, StoreTotalHandlerMessageProxy } from './requestHandlerMessageProxies';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
+import { LambdaActivityRequestHandler } from './omahdog-aws/LambdaActivityRequestHandler';
+import { DeadLetterQueueHandler } from './omahdog-aws/DeadLetterQueueHandler';
+import { ActivityRequestHandlerMessageProxy } from './omahdog-aws/ActivityRequestHandlerMessageProxy';
+import { IExchangeMessagePublisher } from './omahdog-aws/IExchangeMessagePublisher';
+
+// TODO 04May20: Is there any way we can lazy load these? What is the overhead of them being created for *each* function?
 
 const documentClient = new DynamoDB.DocumentClient();
 const sns = new SNS();
 
-export const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, process.env.FLOW_EXCHANGE_TOPIC_ARN);
-export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
+const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, process.env.FLOW_EXCHANGE_TOPIC_ARN);
 
-export const requestRouter = new RequestRouter()
+class SumNumbersHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<SumNumbersRequest, SumNumbersResponse> {
+    constructor() { super(SumNumbersRequest, SumNumbersResponse, exchangeMessagePublisher); }
+}
+
+class StoreTotalHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<StoreTotalRequest, StoreTotalResponse> {
+    constructor() { super(StoreTotalRequest, StoreTotalResponse, exchangeMessagePublisher); }
+}
+
+const requestRouter = new RequestRouter()
     .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
     ;
 
-export const handlerFactory = new HandlerFactory()
+const handlerFactory = new HandlerFactory()
     .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Bigly number'))
     .register(SumNumbersHandler, () => new SumNumbersHandler)
-    .register(SumNumbersHandlerMessageProxy, () => new SumNumbersHandlerMessageProxy(exchangeMessagePublisher))
+    .register(SumNumbersHandlerMessageProxy, () => new SumNumbersHandlerMessageProxy())
     .register(StoreTotalHandler, () => new StoreTotalHandler(documentClient, process.env.FLOW_RESULT_TABLE_NAME))
-    .register(StoreTotalHandlerMessageProxy, () => new StoreTotalHandlerMessageProxy(exchangeMessagePublisher))
+    .register(StoreTotalHandlerMessageProxy, () => new StoreTotalHandlerMessageProxy())
     ;
+
+const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
+
+export const lambdaActivityRequestHandlerInstance = 
+    new LambdaActivityRequestHandler(
+        requestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository);
+
+export const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(exchangeMessagePublisher);
