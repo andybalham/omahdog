@@ -46,7 +46,7 @@ describe('LambdaActivityRequestHandler tests', () => {
         AWSMock.restore('SNS');
     });
 
-    it('handles request with synchronous handler response', async () => {
+    it('handles SNS request with synchronous handler response', async () => {
 
         // Arrange
 
@@ -108,7 +108,7 @@ describe('LambdaActivityRequestHandler tests', () => {
         }
     });    
 
-    it('handles request with asynchronous handler response', async () => {
+    it('handles SNS request with asynchronous handler response', async () => {
 
         // Arrange
 
@@ -251,7 +251,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             .delete(Arg.is(v => v === 'flowInstanceId'));
     });    
 
-    it('returns error response on error', async () => {
+    it('returns error response on error to SNS request', async () => {
 
         // Arrange
 
@@ -392,6 +392,123 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         flowInstanceRepository.received()
             .delete(Arg.is(v => v === 'flowInstanceId'));
+    });    
+
+    it('handles direct request with synchronous handler response', async () => {
+
+        // Arrange
+
+        let actualPublishInput: PublishInput | undefined = undefined;
+
+        AWSMock.mock('SNS', 'publish', (params: PublishInput, callback: Function) => {
+            actualPublishInput = params;
+            callback(null, {
+                MessageId: 'MessageId'
+            });
+        });
+        
+        const request: TestRequest = { input: 666 };
+        const response: TestResponse = { output: 616 };
+
+        const requestRouter = new RequestRouter();
+        const handlerFactory = new HandlerFactory()
+            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
+        const sns = new AWS.SNS();        
+        const exchangeTopicArn = 'exchangeTopicArn';
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+
+        const lambdaHandlerSut = 
+            new LambdaActivityRequestHandler(
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+
+        const requestMessage: AsyncRequestMessage = {
+            callingContext: {
+                flowCorrelationId: 'flowCorrelationId',
+                flowInstanceId: 'flowInstanceId',
+                flowTypeName: 'flowTypeName',
+                requestId: 'requestId'
+            },
+            request: request
+        };
+            
+        // Act
+
+        const responseMessage = await lambdaHandlerSut.handle(TestActivityRequestHandler, requestMessage);
+        
+        // Assert
+        
+        expect(actualPublishInput).to.be.undefined;
+
+        if (responseMessage !== undefined) {
+
+            expect((responseMessage as AsyncResponseMessage).callingContext).to.deep.equal(requestMessage.callingContext);
+            expect((responseMessage as AsyncResponseMessage).response).to.deep.equal(response);
+        }
+    });    
+
+    it('handles direct request with asynchronous handler response', async () => {
+
+        // Arrange
+
+        let actualPublishInput: PublishInput | undefined = undefined;
+
+        AWSMock.mock('SNS', 'publish', (params: PublishInput, callback: Function) => {
+            actualPublishInput = params;
+            callback(null, {
+                MessageId: 'MessageId'
+            });
+        });
+        
+        const request: TestRequest = { input: 666 };
+        const response = new AsyncResponse('flowCorrelationId', 'instanceId', [], 'requestId');
+
+        const requestRouter = new RequestRouter();
+        const handlerFactory = new HandlerFactory()
+            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
+        const sns = new AWS.SNS();        
+        const exchangeTopicArn = 'exchangeTopicArn';
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        // TODO 03May20: Mock out the IExchangeMessagePublisher
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+
+        const lambdaHandlerSut = 
+            new LambdaActivityRequestHandler(
+                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+
+        const requestMessage: AsyncRequestMessage = {
+            callingContext: {
+                flowCorrelationId: 'flowCorrelationId',
+                flowInstanceId: 'flowInstanceId',
+                flowTypeName: 'flowTypeName',
+                requestId: 'requestId'
+            },
+            request: request
+        };
+
+        let functionInstance: FunctionInstance | undefined;
+
+        flowInstanceRepository.store(Arg.is((fi: FunctionInstance) => {
+            functionInstance = fi;
+            return true;
+        }));
+            
+        // Act
+
+        const responseMessage = await lambdaHandlerSut.handle(TestActivityRequestHandler, requestMessage);
+        
+        // Assert
+        
+        expect(responseMessage).to.be.undefined;
+
+        expect(functionInstance).to.not.be.undefined;
+
+        if (functionInstance !== undefined) {
+            expect(functionInstance.callingContext).to.deep.equal(requestMessage.callingContext);
+            expect(functionInstance.flowInstance.correlationId).to.equal(requestMessage.callingContext.flowCorrelationId);
+            expect(functionInstance.resumeCount).to.equal(0);
+        }
     });    
 });
 

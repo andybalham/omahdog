@@ -1,5 +1,4 @@
-import { IActivityRequestHandler } from '../omahdog/FlowHandlers';
-import { FlowContext } from '../omahdog/FlowContext';
+import { FlowContext, IActivityRequestHandler } from '../omahdog/FlowContext';
 
 import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
 

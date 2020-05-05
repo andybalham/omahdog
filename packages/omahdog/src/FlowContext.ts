@@ -1,5 +1,6 @@
 import uuid = require('uuid');
 import { FlowMocks } from './FlowMocks';
+import { ErrorResponse } from './FlowExchanges';
 
 export class FlowContext {
 
@@ -124,7 +125,7 @@ export interface IActivityRequestHandlerBase {
 
 
 export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHandlerBase {
-    handle(flowContext: FlowContext, request?: TReq): Promise<TRes | AsyncResponse>;
+    handle(flowContext: FlowContext, request?: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
 }
 
 export class AsyncResponse {

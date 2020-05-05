@@ -23,16 +23,30 @@ export class LambdaActivityRequestHandler {
         this._functionInstanceRepository = functionInstanceRepository;
     }
 
-    async handle(HandlerType: new () => IActivityRequestHandlerBase, event: SNSEvent): Promise<void> {    
+    async handle(HandlerType: new () => IActivityRequestHandlerBase, event: SNSEvent | AsyncRequestMessage): Promise<AsyncResponseMessage | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        const snsMessage = event.Records[0].Sns;
-        const message: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(snsMessage.Message);
-    
-        // TODO 02May20: Remove this temporary code
-        if (snsMessage.Message.includes('6666') && (HandlerType.name === 'SumNumbersHandler')) {
-            throw new Error('Non-handler error in LambdaActivityRequestHandler!');
+        let message: AsyncRequestMessage | AsyncResponseMessage;
+        let isDirectRequest: boolean;
+
+        if ('Records' in event) {
+
+            isDirectRequest = false;
+
+            const snsMessage = event.Records[0].Sns;
+            message = JSON.parse(snsMessage.Message);
+        
+            // TODO 02May20: Remove this temporary code
+            if (snsMessage.Message.includes('6666') && (HandlerType.name === 'SumNumbersHandler')) {
+                throw new Error('Non-handler error in LambdaActivityRequestHandler!');
+            }
+                
+        } else {
+
+            isDirectRequest = true;            
+            message = event;
+
         }
 
         console.log(`message: ${JSON.stringify(message)}`);
@@ -100,25 +114,27 @@ export class LambdaActivityRequestHandler {
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
             await this._functionInstanceRepository.store(functionInstance);
-
-            // TODO 04May20: If we had a direct caller and no resume, then we need to pass back something. 
     
         } else {
 
-            // TODO 04May20: If we had a direct caller and no resume, then we need to pass back the response directly
-    
-            const message: AsyncResponseMessage = {
+            const responseMessage: AsyncResponseMessage = {
                 callingContext: callingContext,
                 response: response
             };
 
-            await this._exchangeMessagePublisher.publishResponse(callingContext.flowTypeName, message);
-
-        }
+            if (!isDirectRequest) {    
+                await this._exchangeMessagePublisher.publishResponse(callingContext.flowTypeName, responseMessage);
+            }
     
-        if (!('AsyncResponse' in response) && (resumeCount > 0)) {
-            console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
-            await this._functionInstanceRepository.delete(message.callingContext.flowInstanceId);
+            if (resumeCount > 0) {
+                console.log(`DELETE flowInstanceId: ${responseMessage.callingContext.flowInstanceId}`);
+                await this._functionInstanceRepository.delete(responseMessage.callingContext.flowInstanceId);
+            }
+
+            if (isDirectRequest && (resumeCount === 0)) {
+                console.log(`return: ${JSON.stringify(responseMessage)}`);
+                return responseMessage;
+            } 
         }
     }
 }

@@ -82,6 +82,8 @@ Resources:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
         - DynamoDBCrudPolicy:
             TableName: !Ref FlowInstanceTable
+        - LambdaInvokePolicy:
+            FunctionName: !Ref SumNumbersHandlerFunction
       DeadLetterQueue:
         Type: SNS
         TargetArn: !Ref FlowDeadLetterQueueTopic
@@ -89,6 +91,7 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersHandlerFunction
       Events:
         ExchangeTopic:
           Type: SNS

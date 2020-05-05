@@ -1,6 +1,5 @@
 import uuid = require('uuid');
-import { IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowHandlers';
-import { FlowContext } from '../omahdog/FlowContext';
+import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { AsyncRequestMessage } from './AsyncExchange';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
