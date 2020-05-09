@@ -10,6 +10,7 @@ import { SNSExchangeMessagePublisher } from '../src/omahdog-aws/SNSExchangeMessa
 import SNS, { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
+import { IResumableRequestHandler } from '../src/omahdog/FlowRequestHandler';
 
 class TestRequest {
     input: number
@@ -19,21 +20,26 @@ class TestResponse {
     output: number
 }
 
-class TestActivityRequestHandler implements IActivityRequestHandler<TestRequest, TestResponse> {
+class TestActivityRequestHandler implements IActivityRequestHandler<TestRequest, TestResponse>, IResumableRequestHandler {
 
-    private readonly _request?: TestRequest;
-    private readonly _response?: () => TestResponse | AsyncResponse;
+    private readonly request?: TestRequest;
+    private readonly response?: () => TestResponse | AsyncResponse;
     
     constructor(request?: TestRequest, response?: () => TestResponse | AsyncResponse) {
-        this._request = request;
-        this._response = response;
+        this.request = request;
+        this.response = response;
     }
 
-    async handle(flowContext: FlowContext, request?: TestRequest): Promise<TestResponse | AsyncResponse> {                
-        expect(request).to.deep.equal(this._request);
-        if (this._response === undefined) throw new Error('this._response');
-        return this._response();
+    async handle(flowContext: FlowContext, request: TestRequest): Promise<TestResponse | AsyncResponse> {                
+        expect(request).to.deep.equal(this.request);
+        if (this.response === undefined) throw new Error('this.response === undefined');
+        return this.response();
     }    
+
+    async resume(flowContext: FlowContext): Promise<any> {
+        if (this.response === undefined) throw new Error('this.response === undefined');
+        return this.response();
+    }
 }
 
 describe('LambdaActivityRequestHandler tests', () => {
@@ -62,7 +68,8 @@ describe('LambdaActivityRequestHandler tests', () => {
         const request: TestRequest = { input: 666 };
         const response: TestResponse = { output: 616 };
 
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
         const sns = new AWS.SNS();        
@@ -79,7 +86,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'requestId'
             },
             request: request
@@ -99,7 +106,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('flowTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
 
@@ -124,10 +131,11 @@ describe('LambdaActivityRequestHandler tests', () => {
         const request: TestRequest = { input: 666 };
         const response = new AsyncResponse('flowCorrelationId', 'instanceId', [], 'requestId');
 
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
-        const sns = new AWS.SNS();        
+        const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
@@ -141,7 +149,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'requestId'
             },
             request: request
@@ -186,7 +194,8 @@ describe('LambdaActivityRequestHandler tests', () => {
         
         const response: TestResponse = { output: 616 };
 
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(undefined, () => response));
         const sns = new AWS.SNS();        
@@ -203,7 +212,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'asyncRequestId'
             },
             response: {}
@@ -213,7 +222,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'callingFlowInstanceId',
-                flowTypeName: 'callingFlowTypeName',
+                handlerTypeName: 'callingHandlerTypeName',
                 requestId: 'callingRequestId'
             },
             requestId: 'asyncRequestId',
@@ -239,7 +248,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingFlowTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
 
@@ -249,7 +258,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         flowInstanceRepository.received()
             .delete(Arg.is(v => v === 'flowInstanceId'));
-    });    
+    });
 
     it('returns error response on error to SNS request', async () => {
 
@@ -266,7 +275,8 @@ describe('LambdaActivityRequestHandler tests', () => {
         
         const request: TestRequest = { input: 666 };
 
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => 
                 new TestActivityRequestHandler(request, () => { throw new Error('Something went bandy!'); }));
@@ -284,7 +294,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'requestId'
             },
             request: request
@@ -304,7 +314,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('flowTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
 
@@ -327,7 +337,8 @@ describe('LambdaActivityRequestHandler tests', () => {
             });
         });
         
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => 
                 new TestActivityRequestHandler(undefined, () => { throw new Error('Something went bandy!'); }));
@@ -345,7 +356,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'asyncRequestId'
             },
             response: {}
@@ -355,7 +366,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'callingFlowInstanceId',
-                flowTypeName: 'callingFlowTypeName',
+                handlerTypeName: 'callingHandlerTypeName',
                 requestId: 'callingRequestId'
             },
             requestId: 'asyncRequestId',
@@ -381,7 +392,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingFlowTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
 
@@ -410,7 +421,8 @@ describe('LambdaActivityRequestHandler tests', () => {
         const request: TestRequest = { input: 666 };
         const response: TestResponse = { output: 616 };
 
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
         const sns = new AWS.SNS();        
@@ -427,7 +439,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'requestId'
             },
             request: request
@@ -464,7 +476,8 @@ describe('LambdaActivityRequestHandler tests', () => {
         const request: TestRequest = { input: 666 };
         const response = new AsyncResponse('flowCorrelationId', 'instanceId', [], 'requestId');
 
-        const requestRouter = new RequestRouter();
+        const requestRouter = new RequestRouter()
+            .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
             .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
         const sns = new AWS.SNS();        
@@ -481,7 +494,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'requestId'
             },
             request: request

@@ -9,6 +9,7 @@
             "request": "launch",
             "name": "Mocha Current File",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "smartStep": true,
             "args": [
                 "--require",
                 "ts-node/register",

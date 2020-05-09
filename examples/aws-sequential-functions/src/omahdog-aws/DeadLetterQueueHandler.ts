@@ -49,7 +49,7 @@ export class DeadLetterQueueHandler {
                         response: response
                     };
         
-                await this._exchangeMessagePublisher.publishResponse(callingContext.flowTypeName, responseMessage);
+                await this._exchangeMessagePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
         
             } else if ('response' in deadMessage) {
     

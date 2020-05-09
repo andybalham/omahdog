@@ -6,15 +6,15 @@ import { AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
 
 export class ActivityRequestHandlerLambdaProxy<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
-    private readonly _functionName?: string;
+    private readonly functionName?: string;
 
-    constructor(_RequestType: new() => TReq, _ResponseType: new() => TRes, functionName?: string) {
-        this._functionName = functionName;
+    constructor(functionName?: string) {
+        this.functionName = functionName;
     }
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
         
-        if (this._functionName === undefined) throw new Error('this._functionName === undefined');
+        if (this.functionName === undefined) throw new Error('this.functionName === undefined');
 
         const requestId = uuid.v4();
 
@@ -24,13 +24,13 @@ export class ActivityRequestHandlerLambdaProxy<TReq, TRes> implements IActivityR
                     requestId: requestId,
                     flowInstanceId: flowContext.instanceId,
                     flowCorrelationId: flowContext.correlationId,
-                    flowTypeName: flowContext.rootStackFrame.flowTypeName
+                    handlerTypeName: flowContext.rootHandlerTypeName
                 },
                 request: request
             };
 
         const invocationRequest: Lambda.Types.InvocationRequest = {
-            FunctionName: this._functionName,
+            FunctionName: this.functionName,
             InvocationType: 'RequestResponse',
             Payload: JSON.stringify(message)            
         };

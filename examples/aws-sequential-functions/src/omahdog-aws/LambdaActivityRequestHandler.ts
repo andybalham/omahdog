@@ -6,24 +6,25 @@ import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstan
 import { AsyncCallingContext, AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
+import { IResumableRequestHandler } from '../omahdog/FlowRequestHandler';
 
 export class LambdaActivityRequestHandler {
 
-    private readonly _requestRouter: RequestRouter;
-    private readonly _handlerFactory: HandlerFactory;
-    private readonly _exchangeMessagePublisher: IExchangeMessagePublisher;
-    private readonly _functionInstanceRepository: IFunctionInstanceRepository;
+    private readonly requestRouter: RequestRouter;
+    private readonly handlerFactory: HandlerFactory;
+    private readonly exchangeMessagePublisher: IExchangeMessagePublisher;
+    private readonly functionInstanceRepository: IFunctionInstanceRepository;
 
     constructor(requestRouter: RequestRouter, handlerFactory: HandlerFactory, 
         exchangeMessagePublisher: IExchangeMessagePublisher, functionInstanceRepository: IFunctionInstanceRepository) {
 
-        this._requestRouter = requestRouter;
-        this._handlerFactory = handlerFactory;
-        this._exchangeMessagePublisher = exchangeMessagePublisher;
-        this._functionInstanceRepository = functionInstanceRepository;
+        this.requestRouter = requestRouter;
+        this.handlerFactory = handlerFactory;
+        this.exchangeMessagePublisher = exchangeMessagePublisher;
+        this.functionInstanceRepository = functionInstanceRepository;
     }
 
-    async handle(HandlerType: new () => IActivityRequestHandlerBase, event: SNSEvent | AsyncRequestMessage): Promise<AsyncResponseMessage | void> {
+    async handle(handlerType: new () => any, event: SNSEvent | AsyncRequestMessage): Promise<AsyncResponseMessage | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
@@ -38,7 +39,7 @@ export class LambdaActivityRequestHandler {
             message = JSON.parse(snsMessage.Message);
         
             // TODO 02May20: Remove this temporary code
-            if (snsMessage.Message.includes('6666') && (HandlerType.name === 'SumNumbersHandler')) {
+            if (snsMessage.Message.includes('6666') && (handlerType.name === 'SumNumbersHandler')) {
                 throw new Error('Non-handler error in LambdaActivityRequestHandler!');
             }
                 
@@ -55,26 +56,24 @@ export class LambdaActivityRequestHandler {
         let callingContext: AsyncCallingContext;
         let resumeCount: number;
     
-        const handler = this._handlerFactory.newHandler(HandlerType);
-
         if ('request' in message) {
             
             callingContext = message.callingContext;
             resumeCount = 0;
     
             const flowContext = FlowContext.newCorrelatedContext(message.callingContext.flowCorrelationId);
-            flowContext.requestRouter = this._requestRouter;
-            flowContext.handlerFactory = this._handlerFactory;
+            flowContext.requestRouter = this.requestRouter;
+            flowContext.handlerFactory = this.handlerFactory;
     
             try {
-                response = await handler.handle(flowContext, message.request);                    
+                response = await flowContext.handleRequest(handlerType, message.request);
             } catch (error) {
                 response = new ErrorResponse(error);
             }
     
         } else {
     
-            const functionInstance = await this._functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
+            const functionInstance = await this.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
@@ -91,12 +90,12 @@ export class LambdaActivityRequestHandler {
     
             const flowInstance = functionInstance.flowInstance;
     
-            const flowContext = FlowContext.newResumeContext(flowInstance, message.response);
-            flowContext.requestRouter = this._requestRouter;
-            flowContext.handlerFactory = this._handlerFactory;
+            const flowContext = FlowContext.newResumeContext(flowInstance);
+            flowContext.requestRouter = this.requestRouter;
+            flowContext.handlerFactory = this.handlerFactory;
     
             try {
-                response = await handler.handle(flowContext);
+                response = await flowContext.handleResponse(handlerType, message.response);
             } catch (error) {
                 response = new ErrorResponse(error);
             }
@@ -113,7 +112,7 @@ export class LambdaActivityRequestHandler {
     
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
-            await this._functionInstanceRepository.store(functionInstance);
+            await this.functionInstanceRepository.store(functionInstance);
     
         } else {
 
@@ -123,12 +122,12 @@ export class LambdaActivityRequestHandler {
             };
 
             if (!isDirectRequest) {    
-                await this._exchangeMessagePublisher.publishResponse(callingContext.flowTypeName, responseMessage);
+                await this.exchangeMessagePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
             }
     
             if (resumeCount > 0) {
-                console.log(`DELETE flowInstanceId: ${responseMessage.callingContext.flowInstanceId}`);
-                await this._functionInstanceRepository.delete(responseMessage.callingContext.flowInstanceId);
+                console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
+                await this.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
             }
 
             if (isDirectRequest && (resumeCount === 0)) {

@@ -13,10 +13,14 @@ describe('Handlers', () => {
         const flowContext = FlowContext.newContext();
         flowContext.requestRouter
             .register(SumActivityRequest, SumActivityResponse, SyncSumActivityHandler)
-            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
+            .register(ParentFlowRequest, ParentFlowResponse, ParentFlowHandler)
+            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
+        ;
         flowContext.handlerFactory
             .register(SyncSumActivityHandler, () => new SyncSumActivityHandler)
-            .register(ChildFlowHandler, () => new ChildFlowHandler);
+            .register(ParentFlowHandler, () => new ParentFlowHandler)
+            .register(ChildFlowHandler, () => new ChildFlowHandler)
+        ;
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -36,10 +40,13 @@ describe('Handlers', () => {
 
         const asyncRequestRouter = new RequestRouter()
             .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
-            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
+            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
+            ;
         const handlerFactory = new HandlerFactory()
             .register(AsyncActivityHandler, () => asyncActivityHandler)
-            .register(ChildFlowHandler, () => new ChildFlowHandler);
+            .register(ChildFlowHandler, () => new ChildFlowHandler)
+            .register(ParentFlowHandler, () => new ParentFlowHandler)
+            ;
 
         let flowContext = FlowContext.newContext();
         flowContext.requestRouter = asyncRequestRouter;
@@ -53,7 +60,8 @@ describe('Handlers', () => {
 
         let flowInstance: FlowInstance;
         
-        const asyncResponse01 = await new ParentFlowHandler().handle(flowContext, request);
+        const asyncResponse01 = 
+            await flowContext.handleRequest<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, request);
 
         expect('AsyncResponse' in asyncResponse01).to.be.true;
         flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
@@ -63,11 +71,12 @@ describe('Handlers', () => {
         const response01 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = FlowContext.newResumeContext(flowInstance, response01);
+        flowContext = FlowContext.newResumeContext(flowInstance);
         flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
-        const asyncResponse02 = await new ParentFlowHandler().handle(flowContext);
+        const asyncResponse02 = 
+            await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response01);
 
         expect('AsyncResponse' in asyncResponse02).to.be.true;
         flowInstance = (asyncResponse02 as AsyncResponse).getFlowInstance();
@@ -77,11 +86,12 @@ describe('Handlers', () => {
         const response02 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = FlowContext.newResumeContext(flowInstance, response02);
+        flowContext = FlowContext.newResumeContext(flowInstance);
         flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
-        const asyncResponse03 = await new ParentFlowHandler().handle(flowContext);
+        const asyncResponse03 = 
+            await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response02);
 
         expect('AsyncResponse' in asyncResponse03).to.be.true;
         flowInstance = (asyncResponse03 as AsyncResponse).getFlowInstance();
@@ -91,25 +101,28 @@ describe('Handlers', () => {
         const response03 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = FlowContext.newResumeContext(flowInstance, response03);
+        flowContext = FlowContext.newResumeContext(flowInstance);
         flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
-        const response04 = await new ParentFlowHandler().handle(flowContext);
+        const response04 = await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response03);
 
         expect((response04 as ParentFlowResponse).total).to.equal(666);
     });
 
-    it.only('throws an error when asynchronous error received', async () => {
+    it('throws an error when asynchronous error received', async () => {
 
         const asyncActivityHandler = new AsyncActivityHandler();
 
         const asyncRequestRouter = new RequestRouter()
             .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
-            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler);
+            .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
+            ;
         const handlerFactory = new HandlerFactory()
             .register(AsyncActivityHandler, () => asyncActivityHandler)
-            .register(ChildFlowHandler, () => new ChildFlowHandler);
+            .register(ParentFlowHandler, () => new ParentFlowHandler)
+            .register(ChildFlowHandler, () => new ChildFlowHandler)
+            ;
 
         let flowContext = FlowContext.newContext();
         flowContext.requestRouter = asyncRequestRouter;
@@ -121,7 +134,8 @@ describe('Handlers', () => {
         request.c = 206;
         request.d = 50;
 
-        const asyncResponse01 = await new ParentFlowHandler().handle(flowContext, request);
+        const asyncResponse01 = 
+            await flowContext.handleRequest<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, request);
 
         expect('AsyncResponse' in asyncResponse01).to.be.true;
         const flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
@@ -132,13 +146,13 @@ describe('Handlers', () => {
         try { throw new Error('Something went bandy!'); } catch (e) { error = e; }
         const errorResponse = new ErrorResponse(error);
         
-        flowContext = FlowContext.newResumeContext(flowInstance, errorResponse);
+        flowContext = FlowContext.newResumeContext(flowInstance);
         flowContext.requestRouter = asyncRequestRouter;
         flowContext.handlerFactory = handlerFactory;
         
         let isErrorThrown: boolean;        
         try {
-            await new ParentFlowHandler().handle(flowContext);
+            await flowContext.handleResponse(ParentFlowHandler, errorResponse);
             isErrorThrown = false;
         } catch (error) {
             console.error(error.message);
@@ -169,7 +183,6 @@ class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     requestJson: string;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
         const requestId = uuid.v4();
-        console.log(flowContext.rootStackFrame.flowTypeName);
         this.requestJson = JSON.stringify(request);
         return flowContext.getAsyncResponse(requestId);
     }

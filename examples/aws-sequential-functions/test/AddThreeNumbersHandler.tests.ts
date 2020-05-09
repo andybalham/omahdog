@@ -36,7 +36,7 @@ describe('AddThreeNumbersHandler tests', () => {
         expect((response as AddThreeNumbersResponse).total).to.be.equal(616);
     });
 
-    it.only('throws an exception on 666', async () => {
+    it('throws an exception on 666', async () => {
 
         const flowContext = FlowContext.newContext();
         flowContext.requestRouter

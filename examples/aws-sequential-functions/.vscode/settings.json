@@ -1,8 +1,12 @@
 {
     "cSpell.words": [
+        "ESNEXT",
         "Instantiator",
         "Instantiators",
         "cloudformation",
-        "dynamodb"
+        "downlevel",
+        "dynamodb",
+        "sourcemap",
+        "tslib"
     ]
 }

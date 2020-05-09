@@ -1,6 +1,7 @@
 import uuid = require('uuid');
 import { FlowMocks } from './FlowMocks';
 import { ErrorResponse } from './FlowExchanges';
+import { IResumableRequestHandler } from './FlowRequestHandler';
 
 export class FlowContext {
 
@@ -16,6 +17,11 @@ export class FlowContext {
     asyncResponse: any;
     
     readonly mocks: FlowMocks;
+    
+    private _rootHandlerTypeName: string;
+    get rootHandlerTypeName(): string { return this._rootHandlerTypeName; }
+
+    // TODO 09May20: Get rid of the factory methods and pass the flowInstance in when resuming
 
     static newContext(): FlowContext {
         return new FlowContext();
@@ -25,12 +31,11 @@ export class FlowContext {
         return new FlowContext(flowCorrelationId);
     }
 
-    // TODO 01May20: Could we pass in a 'error response' here?
-    static newResumeContext(flowInstance: FlowInstance, asyncResponse: any): FlowContext {
-        return new FlowContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, asyncResponse);
+    static newResumeContext(flowInstance: FlowInstance): FlowContext {
+        return new FlowContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames);
     }
 
-    private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], asyncResponse?: any) {
+    private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[]) {
 
         this.requestRouter = new RequestRouter();
         this.handlerFactory = new HandlerFactory();
@@ -41,18 +46,10 @@ export class FlowContext {
 
         this.stackFrames = [];
 
-        if (asyncResponse !== undefined) {
-
+        if (stackFrames !== undefined) {
             this.resumeStackFrames = stackFrames?.reverse();
-            this.asyncResponse = asyncResponse;
-            
             this.initialResumeStackFrameCount = this.resumeStackFrames?.length;
-
         }
-    }
-
-    get rootStackFrame(): FlowInstanceStackFrame {
-        return this.stackFrames[0];
     }
 
     get currentStackFrame(): FlowInstanceStackFrame {
@@ -63,17 +60,56 @@ export class FlowContext {
         return this.asyncResponse !== undefined;
     }
 
-    async sendRequest<TReq, TRes>(RequestType: new () => TReq, request: TReq): Promise<TRes> {
+    async sendRequest<TReq, TRes>(requestType: new () => TReq, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
 
-        const handlerType = this.requestRouter.getHandlerType(RequestType);
+        const handlerType = this.requestRouter.getHandlerType(requestType);
 
         if (handlerType === undefined) throw new Error('handlerType === undefined');
+        
+        return await this.handleRequest(handlerType, request);
+    }
+
+    async handleRequest<TReq, TRes>(handlerType: new () => IActivityRequestHandlerBase, request: TReq): 
+        Promise<TRes | AsyncResponse | ErrorResponse> {
+
+        if (this._rootHandlerTypeName === undefined) {
+            this._rootHandlerTypeName = handlerType.name;
+        }
 
         const handler = this.handlerFactory.newHandler(handlerType);
 
         const response = await handler.handle(this, request);
 
         return response;
+    }
+
+    async receiveResponse<TReq, TRes>(requestType: new () => TReq, asyncResponse: any): Promise<TRes | AsyncResponse | ErrorResponse> {
+        
+        const handlerType = this.requestRouter.getHandlerType(requestType);
+
+        if (handlerType === undefined) throw new Error('handlerType === undefined');
+        
+        return await this.handleResponse(handlerType, asyncResponse);
+    }
+
+    async handleResponse<TReq, TRes>(handlerType: new () => IActivityRequestHandlerBase, asyncResponse: any): 
+        Promise<TRes | AsyncResponse | ErrorResponse> {
+        
+        if (this._rootHandlerTypeName === undefined) {
+            this._rootHandlerTypeName = handlerType.name;
+        }
+
+        this.asyncResponse = asyncResponse;
+
+        const handler = 
+            this.handlerFactory.newHandler(handlerType) as IActivityRequestHandlerBase | IResumableRequestHandler;
+
+        if ('resume' in handler) {
+            const response = await handler.resume(this);
+            return response;
+        }
+
+        throw new Error(`${handlerType.name} does not implement IResumableRequestHandler`);
     }
 
     getMockResponse(stepName: any, request: any): any {
@@ -120,12 +156,12 @@ export class FlowInstanceStackFrame {
 }
 
 export interface IActivityRequestHandlerBase {
-    handle(flowContext: FlowContext, request?: any): Promise<any | AsyncResponse>;
+    handle(flowContext: FlowContext, request: any): Promise<any>;
 }
 
-
+// TODO 09May20: Have a separate interface for being able to resume? 
 export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHandlerBase {
-    handle(flowContext: FlowContext, request?: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
+    handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
 }
 
 export class AsyncResponse {

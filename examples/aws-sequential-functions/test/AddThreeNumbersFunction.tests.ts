@@ -14,7 +14,7 @@ describe('handler tests', () => {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
-                flowTypeName: 'flowTypeName',
+                handlerTypeName: 'handlerTypeName',
                 requestId: 'requestId'
             },
             request: request

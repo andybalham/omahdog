@@ -4,11 +4,16 @@ import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, Dec
 import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse } from './FlowContext';
 import { ErrorResponse } from './FlowExchanges';
 
-export abstract class FlowRequestHandlerBase {
+export interface IResumableRequestHandler {
+    resume(flowContext: FlowContext): Promise<any>;
+}
+
+export abstract class FlowRequestHandlerBase implements IResumableRequestHandler {
     readonly typeName: string;
     constructor(typeName: string) {
         this.typeName = typeName;
     }
+    abstract resume(flowContext: FlowContext): Promise<any>;
 }
 
 export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequestHandlerBase implements IActivityRequestHandler<TReq, TRes> {
@@ -148,23 +153,28 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
         appendLine('```');
     }
 
-    async handle(flowContext: FlowContext, request?: TReq): Promise<TRes | AsyncResponse> {
+    async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
-        if (flowContext.isResume) {
-
-            if (!flowContext.resumeStackFrames) throw new Error('flowContext.resumeStackFrames is undefined');
-            const resumeStackFrame = flowContext.resumeStackFrames.pop();
-            
-            if (!resumeStackFrame) throw new Error('resumeStackFrame is undefined');
-            flowContext.stackFrames.push(resumeStackFrame);
-
-        } else {
-
-            flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.StateType()));
-            
-        }
+        flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.StateType()));
 
         const response = await this.performFlow(flowContext, this.flowDefinition, request);
+
+        if (!('AsyncResponse' in response)) {
+            flowContext.stackFrames.pop();
+        }
+
+        return response;
+    }
+
+    async resume(flowContext: FlowContext): Promise<TRes | AsyncResponse> {
+
+        if (!flowContext.resumeStackFrames) throw new Error('flowContext.resumeStackFrames is undefined');
+        const resumeStackFrame = flowContext.resumeStackFrames.pop();
+        
+        if (!resumeStackFrame) throw new Error('resumeStackFrame is undefined');
+        flowContext.stackFrames.push(resumeStackFrame);
+
+        const response = await this.performFlow(flowContext, this.flowDefinition);
 
         if (!('AsyncResponse' in response)) {
             flowContext.stackFrames.pop();
@@ -183,7 +193,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
         let stepIndex: number | AsyncResponse;
 
         if (flowContext.isResume) {
-            if (!flowContext?.currentStackFrame?.stepName) throw new Error('flowContext.currentStackFrame.stepName is undefined');
+            if (!flowContext?.currentStackFrame?.stepName) {
+                throw new Error('flowContext.currentStackFrame.stepName is undefined');
+            }
             stepIndex = this.getStepIndex(flowContext.currentStackFrame.stepName, this.flowDefinition);
         } else {
             if (!flowDefinition.initialiseState) throw new Error('flowDefinition.initialiseState is undefined');
@@ -333,7 +345,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
     private async performActivity(flowContext: FlowContext, stepIndex: number, step: any): Promise<number | AsyncResponse> {
 
-        let stepResponse;
+        let stepResponse: any;
 
         if (step.RequestType === undefined) {
 
@@ -352,7 +364,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
             stepResponse =
                 mockResponse === undefined
-                    ? await flowContext.sendRequest(step.RequestType, stepRequest)
+                    ? flowContext.isResume
+                        ? await flowContext.receiveResponse(step.RequestType, flowContext.asyncResponse)
+                        : await flowContext.sendRequest(step.RequestType, stepRequest)
                     : mockResponse;
 
             if ('AsyncResponse' in stepResponse) {

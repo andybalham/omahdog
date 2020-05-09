@@ -1,11 +1,11 @@
 import { SNSEvent } from 'aws-lambda';
+import { AsyncResponseMessage, AsyncRequestMessage } from './omahdog-aws/AsyncExchange';
 
 import { lambdaActivityRequestHandlerInstance, deadLetterQueueHandlerInstance } from './requestConfiguration';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
-import { AsyncResponseMessage, AsyncRequestMessage } from './omahdog-aws/AsyncExchange';
 
 export const addThreeNumbersHandler = async (event: SNSEvent | AsyncRequestMessage): Promise<void | AsyncResponseMessage> => {
     return await lambdaActivityRequestHandlerInstance.handle(AddThreeNumbersHandler, event);

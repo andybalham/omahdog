@@ -9,6 +9,9 @@ Parameters:
   Application:
     Type: String
     Default: Omahdog-AddThreeNumbers
+  ApiStageName:
+    Type: String
+    Default: test
         
 Globals:
   Function:
@@ -17,6 +20,41 @@ Globals:
     Runtime: nodejs12.x
 
 Resources:
+
+  # ApiGatewayApi:
+  #   Type: AWS::Serverless::Api
+  #   Properties:
+  #     StageName: !Ref ApiStageName
+
+  # ApiFunction: # Adds a GET api endpoint at "/" to the ApiGatewayApi via an Api event
+  #   Type: AWS::Serverless::Function
+  #   Properties: 
+  #     Handler: controllers.handler
+  #     Environment:
+  #       Variables:
+  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+  #         # Could we work this out by convention? We would still need the right policy though
+  #         ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersHandlerFunction
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt FlowExchangeTopic.TopicName
+  #       - LambdaInvokePolicy:
+  #           FunctionName: !Ref AddThreeNumbersHandlerFunction
+  #     Events:
+  #       ApiGetEvent:
+  #         Type: Api
+  #         Properties:
+  #           Path: /get
+  #           Method: get
+  #           RestApiId:
+  #             Ref: ApiGatewayApi
+  #       ApiPostEvent:
+  #         Type: Api
+  #         Properties:
+  #           Path: /post
+  #           Method: post
+  #           RestApiId:
+  #             Ref: ApiGatewayApi
 
   FlowExchangeTopic:
     Type: AWS::SNS::Topic
@@ -35,10 +73,10 @@ Resources:
     Properties:
       TableName: !Sub ${Application}-FlowInstanceTable
 
-  FlowResultTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: !Sub ${Application}-FlowResultTable
+  # FlowResultTable:
+  #   Type: AWS::Serverless::SimpleTable
+  #   Properties:
+  #     TableName: !Sub ${Application}-FlowResultTable
   
   WireTapFunction:
     Type: AWS::Serverless::Function
@@ -129,46 +167,52 @@ Resources:
                 - SumNumbersRequest:Handler
                 - SumNumbersHandler:Response
   
-  StoreTotalFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${Application}-StoreTotalHandler
-      Handler: requestLambdas.storeTotalHandler
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowInstanceTable
-        # TODO: How to auto-generate this? The handler would have to expose that it needed such a table
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowResultTable
-      DeadLetterQueue:
-        Type: SNS
-        TargetArn: !Ref FlowDeadLetterQueueTopic
-      Environment:
-        Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          # TODO: How to auto-generate this? The handler would have to expose that it needed such a variable
-          FLOW_RESULT_TABLE_NAME: !Ref FlowResultTable
-      Events:
-        ExchangeTopic:
-          Type: SNS
-          Properties:
-            Topic: !Ref FlowExchangeTopic
-            FilterPolicy:
-              MessageType:
-                - StoreTotalRequest:Handler
-                - StoreTotalHandler:Response
+  # StoreTotalFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     FunctionName: !Sub ${Application}-StoreTotalHandler
+  #     Handler: requestLambdas.storeTotalHandler
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt FlowExchangeTopic.TopicName
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref FlowInstanceTable
+  #       # TODO: How to auto-generate this? The handler would have to expose that it needed such a table
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref FlowResultTable
+  #     DeadLetterQueue:
+  #       Type: SNS
+  #       TargetArn: !Ref FlowDeadLetterQueueTopic
+  #     Environment:
+  #       Variables:
+  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+  #         FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+  #         # TODO: How to auto-generate this? The handler would have to expose that it needed such a variable
+  #         FLOW_RESULT_TABLE_NAME: !Ref FlowResultTable
+  #     Events:
+  #       ExchangeTopic:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref FlowExchangeTopic
+  #           FilterPolicy:
+  #             MessageType:
+  #               - StoreTotalRequest:Handler
+  #               - StoreTotalHandler:Response
 
-Outputs:
+# Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  WireTapFunction:
-    Description: "Function to log all messages published to a topic"
-    Value: !GetAtt WireTapFunction.Arn
-  WireTapFunctionIamRole:
-    Description: "Implicit IAM Role created for WireTapFunction"
-    Value: !GetAtt WireTapFunction.Arn
+  # ApiFunction:
+  #   Description: "Function to log handle API calls"
+  #   Value: !GetAtt ApiFunction.Arn
+  # ApiEndpoint:
+  #   Description: "API endpoint"
+  #   Value: !Sub "https://${ApiGatewayApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/"
+  # WireTapFunction:
+  #   Description: "Function to log all messages published to a topic"
+  #   Value: !GetAtt WireTapFunction.Arn
+  # WireTapFunctionIamRole:
+  #   Description: "Implicit IAM Role created for WireTapFunction"
+  #   Value: !GetAtt WireTapFunction.Arn
   # TODO: Do we need to output anything else?
