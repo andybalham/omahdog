@@ -15,6 +15,8 @@ import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExc
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
+import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 
 // TODO 04May20: Is there any way we can lazy load these? What is the overhead of them being created for *each* function?
 
@@ -26,48 +28,67 @@ const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, process.en
 export class AddThreeNumbersHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<AddThreeNumbersRequest, AddThreeNumbersResponse> {
     constructor() { super(process.env.ADD_THREE_NUMBERS_FUNCTION_NAME); }
 }
-
 export class AddThreeNumbersHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<AddThreeNumbersRequest, AddThreeNumbersResponse> {
     constructor() { super(AddThreeNumbersRequest, AddThreeNumbersResponse, exchangeMessagePublisher); }
+}
+
+export class AddTwoNumbersHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<AddTwoNumbersRequest, AddTwoNumbersResponse> {
+    constructor() { super(process.env.ADD_TWO_NUMBERS_FUNCTION_NAME); }
+}
+export class AddTwoNumbersHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<AddTwoNumbersRequest, AddTwoNumbersResponse> {
+    constructor() { super(AddTwoNumbersRequest, AddTwoNumbersResponse, exchangeMessagePublisher); }
 }
 
 class SumNumbersHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<SumNumbersRequest, SumNumbersResponse> {
     constructor() { super(process.env.SUM_NUMBERS_FUNCTION_NAME); }
 }
-
 class SumNumbersHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<SumNumbersRequest, SumNumbersResponse> {
     constructor() { super(SumNumbersRequest, SumNumbersResponse, exchangeMessagePublisher); }
 }
 
+class StoreTotalHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<StoreTotalRequest, StoreTotalResponse> {
+    constructor() { super(process.env.STORE_TOTAL_FUNCTION_NAME); }
+}
 class StoreTotalHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<StoreTotalRequest, StoreTotalResponse> {
     constructor() { super(StoreTotalRequest, StoreTotalResponse, exchangeMessagePublisher); }
 }
 
-export const requestRouter = new RequestRouter()
-    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
-    // .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
-    // .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)
+export const syncRequestRouter = new RequestRouter()
+    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
+    .register(AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandlerLambdaProxy)
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerLambdaProxy)
-    // .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
-    // .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandler)
-    // .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerLambdaProxy)
+    ;
+
+export const asyncRequestRouter = new RequestRouter()
+    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
+    .register(AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandlerLambdaProxy)
+    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
     ;
 
 export const handlerFactory = new HandlerFactory()
-    .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Bigly number'))
+    .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Three numbers together'))
     .register(AddThreeNumbersHandlerLambdaProxy, () => new AddThreeNumbersHandlerLambdaProxy())
     .register(AddThreeNumbersHandlerMessageProxy, () => new AddThreeNumbersHandlerMessageProxy())
+    
+    .register(AddTwoNumbersHandler, () => new AddTwoNumbersHandler('Two numbers together'))
+    .register(AddTwoNumbersHandlerLambdaProxy, () => new AddTwoNumbersHandlerLambdaProxy())
+    .register(AddTwoNumbersHandlerMessageProxy, () => new AddTwoNumbersHandlerMessageProxy())
+
     .register(SumNumbersHandler, () => new SumNumbersHandler)
     .register(SumNumbersHandlerMessageProxy, () => new SumNumbersHandlerMessageProxy())
     .register(SumNumbersHandlerLambdaProxy, () => new SumNumbersHandlerLambdaProxy())
+    
     .register(StoreTotalHandler, () => new StoreTotalHandler(documentClient, process.env.FLOW_RESULT_TABLE_NAME))
     .register(StoreTotalHandlerMessageProxy, () => new StoreTotalHandlerMessageProxy())
+    .register(StoreTotalHandlerLambdaProxy, () => new StoreTotalHandlerLambdaProxy())
     ;
 
 const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
 
 export const lambdaActivityRequestHandlerInstance = 
     new LambdaActivityRequestHandler(
-        requestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository);
+        syncRequestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository);
 
 export const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(exchangeMessagePublisher);

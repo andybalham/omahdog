@@ -6,9 +6,14 @@ import { lambdaActivityRequestHandlerInstance, deadLetterQueueHandlerInstance } 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 
 export const addThreeNumbersHandler = async (event: SNSEvent | AsyncRequestMessage): Promise<void | AsyncResponseMessage> => {
     return await lambdaActivityRequestHandlerInstance.handle(AddThreeNumbersHandler, event);
+};
+
+export const addTwoNumbersHandler = async (event: SNSEvent | AsyncRequestMessage): Promise<void | AsyncResponseMessage> => {
+    return await lambdaActivityRequestHandlerInstance.handle(AddTwoNumbersHandler, event);
 };
 
 export const sumNumbersHandler = async (event: SNSEvent | AsyncRequestMessage): Promise<void | AsyncResponseMessage> => {

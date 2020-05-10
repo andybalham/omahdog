@@ -1,15 +1,11 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { AsyncRequestMessage, AsyncResponseMessage } from './omahdog-aws/AsyncExchange';
-import { FlowContext, AsyncResponse, IActivityRequestHandlerBase } from './omahdog/FlowContext';
-import { requestRouter, handlerFactory, AddThreeNumbersHandlerLambdaProxy, AddThreeNumbersHandlerMessageProxy } from './requestConfiguration';
-import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
-import { FlowRequestHandler } from './omahdog/FlowRequestHandler';
-import { FlowBuilder } from './omahdog/FlowBuilder';
-import { FlowDefinition } from './omahdog/FlowDefinition';
+import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, RequestRouter } from './omahdog/FlowContext';
 import { ErrorResponse } from './omahdog/FlowExchanges';
-import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
+import { syncRequestRouter, handlerFactory, AddThreeNumbersHandlerLambdaProxy, AddThreeNumbersHandlerMessageProxy, asyncRequestRouter, AddTwoNumbersHandlerLambdaProxy, AddTwoNumbersHandlerMessageProxy } from './requestConfiguration';
+import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
+import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 
-// TODO 01May20: Package this up as a class for easy use in a host application
+// TODO 10May20: Think about how to package this up as a generic class
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
 
@@ -17,23 +13,46 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         
         console.log(`event: ${JSON.stringify(event)}`);
 
-        if (event.httpMethod !== 'POST') throw new Error(`Unhandled HTTP method: ${event.httpMethod}`);
-        if (event.body === null) throw new Error('Request body was null');
-
         const functionName = event.pathParameters?.functionName;
-        const invocationMethod = event.pathParameters?.invocationMethod;
 
         if (functionName === undefined) throw new Error('functionName === undefined');
-        if (invocationMethod === undefined) throw new Error('invocationMethod === undefined');
         
+        let requestRouter: RequestRouter;
+        let request: any;
+        if (event.httpMethod === 'GET') {
+
+            requestRouter = syncRequestRouter;
+
+            if (event.queryStringParameters === null) throw new Error('event.queryStringParameters === null');
+
+            request = {};
+            for (const key in event.queryStringParameters) {
+                const value = event.queryStringParameters[key];
+                request[key] = parseInt(value);
+            }
+
+        } else {
+
+            requestRouter = asyncRequestRouter;
+
+            if (event.body === null) throw new Error('Request body was null');
+        
+            request = JSON.parse(event.body);
+
+        }
+
+        console.log(`request: ${JSON.stringify(request)}`);
+
         const flowContext = FlowContext.newContext(requestRouter, handlerFactory);
-        
-        const request: any = JSON.parse(event.body);
+
         let response: any;
 
         switch (functionName) {
+        case 'add-two-numbers':
+            response = await HandleAddTwoNumbersRequest(flowContext, event.httpMethod, request);
+            break;
         case 'add-three-numbers':
-            response = await HandleAddThreeNumbersRequest(flowContext, invocationMethod, request);
+            response = await HandleAddThreeNumbersRequest(flowContext, event.httpMethod, request);
             break;
         default:
             throw new Error(`Unhandled function: ${functionName}`);
@@ -52,23 +71,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 };
 
-async function HandleAddThreeNumbersRequest(flowContext: FlowContext, invocationMethod: string, request: AddThreeNumbersRequest): 
+async function HandleAddThreeNumbersRequest(flowContext: FlowContext, httpMethod: string, request: AddThreeNumbersRequest): 
     Promise<APIGatewayProxyResult> {
 
     let handlerType: new () => IActivityRequestHandlerBase;
 
-    switch (invocationMethod) {
-    case 'direct':
-        handlerType = AddThreeNumbersHandler;
-        break;        
-    case 'lambda':
+    switch (httpMethod) {
+    case 'GET':
         handlerType = AddThreeNumbersHandlerLambdaProxy;
         break;        
-    case 'sns':
+    case 'POST':
         handlerType = AddThreeNumbersHandlerMessageProxy;
         break;            
     default:
-        throw new Error(`Unhandled invocationMethod: ${invocationMethod}`);
+        throw new Error(`Unhandled invocationMethod: ${httpMethod}`);
     }
     
     const response: AddThreeNumbersResponse | AsyncResponse | ErrorResponse = 
@@ -95,31 +111,42 @@ async function HandleAddThreeNumbersRequest(flowContext: FlowContext, invocation
     };    
 }
 
-// TODO 09May20: Remove the code below
+async function HandleAddTwoNumbersRequest(flowContext: FlowContext, httpMethod: string, request: AddTwoNumbersRequest): 
+    Promise<APIGatewayProxyResult> {
 
-class RequestResponseState {
-    request: AddThreeNumbersRequest;
-    response: AddThreeNumbersResponse;
-}
+    let handlerType: new () => IActivityRequestHandlerBase;
 
-class RequestResponseFlowHandler extends FlowRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse, RequestResponseState> {
+    switch (httpMethod) {
+    case 'GET':
+        handlerType = AddTwoNumbersHandlerLambdaProxy;
+        break;        
+    case 'POST':
+        handlerType = AddTwoNumbersHandlerMessageProxy;
+        break;            
+    default:
+        throw new Error(`Unhandled invocationMethod: ${httpMethod}`);
+    }
+    
+    const response: AddTwoNumbersResponse | AsyncResponse | ErrorResponse = 
+        await flowContext.handleRequest(handlerType, request);   
 
-    constructor () {
-        super(RequestResponseFlowHandler, AddThreeNumbersResponse, RequestResponseState);
+    if ('AsyncResponse' in response) {
+        return {
+            statusCode: 201,
+            body: JSON.stringify({ requestId: response.requestId })
+        };    
+    }
+    
+    if ('ErrorResponse' in response) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify(response)
+        };    
     }
 
-    buildFlow(flowBuilder: FlowBuilder<AddThreeNumbersRequest, AddThreeNumbersResponse, RequestResponseState>): 
-        FlowDefinition<AddThreeNumbersRequest, AddThreeNumbersResponse, RequestResponseState> {
-
-        return flowBuilder
-            .initialise((req, state) => {
-                state.request = req;
-            })
-            .perform('Activity', AddThreeNumbersRequest, AddThreeNumbersResponse, 
-                (req, state) => { req = state.request; }, // TODO 08May20: How to copy all properties?
-                (res, state) => { state.response = res; })
-            .finalise((res, state) => {
-                res = state.response;
-            });
-    }
+    return {
+        // TODO 10May20: The status code here could well depend on the response
+        statusCode: 200,
+        body: JSON.stringify(response)
+    };    
 }
