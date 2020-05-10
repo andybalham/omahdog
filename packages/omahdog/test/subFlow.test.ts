@@ -48,9 +48,7 @@ describe('Handlers', () => {
             .register(ParentFlowHandler, () => new ParentFlowHandler)
             ;
 
-        let flowContext = FlowContext.newContext();
-        flowContext.requestRouter = asyncRequestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        let flowContext = FlowContext.newContext(asyncRequestRouter, handlerFactory);
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -71,9 +69,7 @@ describe('Handlers', () => {
         const response01 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = FlowContext.newResumeContext(flowInstance);
-        flowContext.requestRouter = asyncRequestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
         
         const asyncResponse02 = 
             await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response01);
@@ -86,9 +82,7 @@ describe('Handlers', () => {
         const response02 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = FlowContext.newResumeContext(flowInstance);
-        flowContext.requestRouter = asyncRequestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
         
         const asyncResponse03 = 
             await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response02);
@@ -101,9 +95,7 @@ describe('Handlers', () => {
         const response03 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
         
-        flowContext = FlowContext.newResumeContext(flowInstance);
-        flowContext.requestRouter = asyncRequestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
         
         const response04 = await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response03);
 

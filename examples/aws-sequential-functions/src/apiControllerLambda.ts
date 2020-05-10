@@ -1,12 +1,13 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { AsyncRequestMessage, AsyncResponseMessage } from './omahdog-aws/AsyncExchange';
-import { FlowContext, AsyncResponse } from './omahdog/FlowContext';
+import { FlowContext, AsyncResponse, IActivityRequestHandlerBase } from './omahdog/FlowContext';
 import { requestRouter, handlerFactory, AddThreeNumbersHandlerLambdaProxy, AddThreeNumbersHandlerMessageProxy } from './requestConfiguration';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { FlowRequestHandler } from './omahdog/FlowRequestHandler';
 import { FlowBuilder } from './omahdog/FlowBuilder';
 import { FlowDefinition } from './omahdog/FlowDefinition';
 import { ErrorResponse } from './omahdog/FlowExchanges';
+import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 
 // TODO 01May20: Package this up as a class for easy use in a host application
 
@@ -17,51 +18,28 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         console.log(`event: ${JSON.stringify(event)}`);
 
         if (event.httpMethod !== 'POST') throw new Error(`Unhandled HTTP method: ${event.httpMethod}`);
-
         if (event.body === null) throw new Error('Request body was null');
 
-        const request = JSON.parse(event.body);
-    
-        const flowContext = FlowContext.newContext();
-        // TODO 08May20: Would we want a different routing for the controller?
-        flowContext.requestRouter = requestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        const functionName = event.pathParameters?.functionName;
+        const invocationMethod = event.pathParameters?.invocationMethod;
 
-        let response: AddThreeNumbersResponse | AsyncResponse | ErrorResponse;
+        if (functionName === undefined) throw new Error('functionName === undefined');
+        if (invocationMethod === undefined) throw new Error('invocationMethod === undefined');
+        
+        const flowContext = FlowContext.newContext(requestRouter, handlerFactory);
+        
+        const request: any = JSON.parse(event.body);
+        let response: any;
 
-        switch (event.path) {
-        case '/add-three-numbers/direct':
-            response = await flowContext.sendRequest(AddThreeNumbersRequest, request);                
-            break;        
-        case '/add-three-numbers/lambda':
-            response = await flowContext.handleRequest(AddThreeNumbersHandlerLambdaProxy, request);                
-            break;        
-        case '/add-three-numbers/sns':
-            response = await flowContext.handleRequest(AddThreeNumbersHandlerMessageProxy, request);                
-            break;            
+        switch (functionName) {
+        case 'add-three-numbers':
+            response = await HandleAddThreeNumbersRequest(flowContext, invocationMethod, request);
+            break;
         default:
-            throw new Error(`Unhandled path: ${event.path}`);
-        }
-        
-        if ('AsyncResponse' in response) {
-            return {
-                statusCode: 201,
-                body: JSON.stringify({ requestId: response.requestId })
-            };    
-        }
-        
-        if ('ErrorResponse' in response) {
-            return {
-                statusCode: 500,
-                body: JSON.stringify(response)
-            };    
+            throw new Error(`Unhandled function: ${functionName}`);
         }
 
-        return {
-            // TODO 10May20: The status code here could well depend on the response
-            statusCode: 200,
-            body: JSON.stringify(response)
-        };    
+        return response;
 
     } catch (error) {
         console.error(`error.message: ${error.message}`);        
@@ -73,6 +51,49 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         };
     }
 };
+
+async function HandleAddThreeNumbersRequest(flowContext: FlowContext, invocationMethod: string, request: AddThreeNumbersRequest): 
+    Promise<APIGatewayProxyResult> {
+
+    let handlerType: new () => IActivityRequestHandlerBase;
+
+    switch (invocationMethod) {
+    case 'direct':
+        handlerType = AddThreeNumbersHandler;
+        break;        
+    case 'lambda':
+        handlerType = AddThreeNumbersHandlerLambdaProxy;
+        break;        
+    case 'sns':
+        handlerType = AddThreeNumbersHandlerMessageProxy;
+        break;            
+    default:
+        throw new Error(`Unhandled invocationMethod: ${invocationMethod}`);
+    }
+    
+    const response: AddThreeNumbersResponse | AsyncResponse | ErrorResponse = 
+        await flowContext.handleRequest(handlerType, request);   
+
+    if ('AsyncResponse' in response) {
+        return {
+            statusCode: 201,
+            body: JSON.stringify({ requestId: response.requestId })
+        };    
+    }
+    
+    if ('ErrorResponse' in response) {
+        return {
+            statusCode: 500,
+            body: JSON.stringify(response)
+        };    
+    }
+
+    return {
+        // TODO 10May20: The status code here could well depend on the response
+        statusCode: 200,
+        body: JSON.stringify(response)
+    };    
+}
 
 // TODO 09May20: Remove the code below
 

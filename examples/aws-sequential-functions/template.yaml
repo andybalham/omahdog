@@ -25,8 +25,10 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref ApiStageName
-      Name: ApiGateway
+      Name: !Sub ${ApplicationName}-ApiGateway
       EndpointConfiguration: REGIONAL
+      Auth:
+        ApiKeyRequired: true # sets for all methods
 
   ApiControllerFunction:
     Type: AWS::Serverless::Function
@@ -48,28 +50,13 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName: !Ref SumNumbersHandlerFunction
       Events:
-        # TODO: Is there any way to route all ApiPostEvents regardless of path?
-        DirectPostEvent:
+        FunctionEvent:
           Type: Api
           Properties:
             RestApiId:
               Ref: ApiGateway
-            Method: post
-            Path: /add-three-numbers/direct
-        LambdaPostEvent:
-          Type: Api
-          Properties:
-            RestApiId:
-              Ref: ApiGateway
-            Method: post
-            Path: /add-three-numbers/lambda
-        SNSPostEvent:
-          Type: Api
-          Properties:
-            RestApiId:
-              Ref: ApiGateway
-            Method: post
-            Path: /add-three-numbers/sns
+            Method: ANY
+            Path: /{functionName}/{invocationMethod}
 
   FlowExchangeTopic:
     Type: AWS::SNS::Topic

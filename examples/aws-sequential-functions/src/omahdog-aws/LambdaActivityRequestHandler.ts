@@ -61,9 +61,9 @@ export class LambdaActivityRequestHandler {
             callingContext = message.callingContext;
             resumeCount = 0;
     
-            const flowContext = FlowContext.newCorrelatedContext(message.callingContext.flowCorrelationId);
-            flowContext.requestRouter = this.requestRouter;
-            flowContext.handlerFactory = this.handlerFactory;
+            const flowContext = 
+                FlowContext.newCorrelatedContext(
+                    message.callingContext.flowCorrelationId, this.requestRouter, this.handlerFactory);
     
             try {
                 response = await flowContext.handleRequest(handlerType, message.request);
@@ -90,9 +90,7 @@ export class LambdaActivityRequestHandler {
     
             const flowInstance = functionInstance.flowInstance;
     
-            const flowContext = FlowContext.newResumeContext(flowInstance);
-            flowContext.requestRouter = this.requestRouter;
-            flowContext.handlerFactory = this.handlerFactory;
+            const flowContext = FlowContext.newResumeContext(flowInstance, this.requestRouter, this.handlerFactory);
     
             try {
                 response = await flowContext.handleResponse(handlerType, message.response);

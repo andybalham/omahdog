@@ -24,22 +24,24 @@ export class FlowContext {
     // TODO 09May20: Get rid of the factory methods and pass the flowInstance in when resuming
     // TODO 10May20: Also, always pass in the request router and handler factory
 
-    static newContext(): FlowContext {
-        return new FlowContext();
+    static newContext(requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
+        return new FlowContext(undefined, undefined, undefined, requestRouter, handlerFactory);
     }
 
-    static newCorrelatedContext(flowCorrelationId: string): FlowContext {
-        return new FlowContext(flowCorrelationId);
+    static newCorrelatedContext(flowCorrelationId: string, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
+        return new FlowContext(flowCorrelationId, undefined, undefined, requestRouter, handlerFactory);
     }
 
-    static newResumeContext(flowInstance: FlowInstance): FlowContext {
-        return new FlowContext(flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames);
+    static newResumeContext(flowInstance: FlowInstance, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
+        return new FlowContext(
+            flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, requestRouter, handlerFactory);
     }
 
-    private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[]) {
+    private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], 
+        requestRouter?: RequestRouter, handlerFactory?: HandlerFactory) {
 
-        this.requestRouter = new RequestRouter();
-        this.handlerFactory = new HandlerFactory();
+        this.requestRouter = requestRouter ?? new RequestRouter();
+        this.handlerFactory = handlerFactory ?? new HandlerFactory();
         this.mocks = new FlowMocks();
 
         this.correlationId = flowCorrelationId ?? uuid.v4();
@@ -160,7 +162,6 @@ export interface IActivityRequestHandlerBase {
     handle(flowContext: FlowContext, request: any): Promise<any>;
 }
 
-// TODO 09May20: Have a separate interface for being able to resume? 
 export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHandlerBase {
     handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
 }
