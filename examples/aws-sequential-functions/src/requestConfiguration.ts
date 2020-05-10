@@ -23,8 +23,12 @@ const sns = new SNS();
 
 const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, process.env.FLOW_EXCHANGE_TOPIC_ARN);
 
-class AddThreeNumbersHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<AddThreeNumbersRequest, AddThreeNumbersResponse> {
+export class AddThreeNumbersHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<AddThreeNumbersRequest, AddThreeNumbersResponse> {
     constructor() { super(process.env.ADD_THREE_NUMBERS_FUNCTION_NAME); }
+}
+
+export class AddThreeNumbersHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<AddThreeNumbersRequest, AddThreeNumbersResponse> {
+    constructor() { super(AddThreeNumbersRequest, AddThreeNumbersResponse, exchangeMessagePublisher); }
 }
 
 class SumNumbersHandlerLambdaProxy extends ActivityRequestHandlerLambdaProxy<SumNumbersRequest, SumNumbersResponse> {
@@ -40,11 +44,11 @@ class StoreTotalHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<S
 }
 
 export const requestRouter = new RequestRouter()
-    // .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
-    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
+    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
+    // .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
     // .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)
-    // .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerLambdaProxy)
-    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
+    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerLambdaProxy)
+    // .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
     // .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandler)
     // .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
     ;
@@ -52,6 +56,7 @@ export const requestRouter = new RequestRouter()
 export const handlerFactory = new HandlerFactory()
     .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Bigly number'))
     .register(AddThreeNumbersHandlerLambdaProxy, () => new AddThreeNumbersHandlerLambdaProxy())
+    .register(AddThreeNumbersHandlerMessageProxy, () => new AddThreeNumbersHandlerMessageProxy())
     .register(SumNumbersHandler, () => new SumNumbersHandler)
     .register(SumNumbersHandlerMessageProxy, () => new SumNumbersHandlerMessageProxy())
     .register(SumNumbersHandlerLambdaProxy, () => new SumNumbersHandlerLambdaProxy())
