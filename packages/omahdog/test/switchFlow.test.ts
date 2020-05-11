@@ -79,8 +79,6 @@ describe('Switch test', () => {
             const flowContext = FlowContext.newContext();
             flowContext.requestRouter
                 .register(NullActivityRequest, NullActivityResponse, NullActivityHandler);
-            flowContext.handlerFactory
-                .register(NullActivityHandler, () => new NullActivityHandler);
 
             const request = new SwitchTestFlowRequest();
             request.value = theory.value;

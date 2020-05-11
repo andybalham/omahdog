@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, RequestRouter } from './omahdog/FlowContext';
 import { ErrorResponse } from './omahdog/FlowExchanges';
-import { syncRequestRouter, handlerFactory, AddThreeNumbersHandlerLambdaProxy, AddThreeNumbersHandlerMessageProxy, asyncRequestRouter, AddTwoNumbersHandlerLambdaProxy, AddTwoNumbersHandlerMessageProxy } from './requestConfiguration';
+import { requestRouter, handlerFactory, AddThreeNumbersHandlerLambdaProxy, AddThreeNumbersHandlerMessageProxy, AddTwoNumbersHandlerLambdaProxy, AddTwoNumbersHandlerMessageProxy } from './requestConfiguration';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 
@@ -17,11 +17,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         if (functionName === undefined) throw new Error('functionName === undefined');
         
-        let requestRouter: RequestRouter;
         let request: any;
         if (event.httpMethod === 'GET') {
-
-            requestRouter = syncRequestRouter;
 
             if (event.queryStringParameters === null) throw new Error('event.queryStringParameters === null');
 
@@ -33,12 +30,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         } else {
 
-            requestRouter = asyncRequestRouter;
-
             if (event.body === null) throw new Error('Request body was null');
         
             request = JSON.parse(event.body);
-
         }
 
         console.log(`request: ${JSON.stringify(request)}`);

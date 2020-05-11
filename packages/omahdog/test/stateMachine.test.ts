@@ -75,14 +75,6 @@ describe('Handlers', () => {
             .register(DipCreateCaseRequest, EmptyResponse, DipCreateCaseHandler)
         ;
 
-        flowContext.handlerFactory
-            .register(DipValidateProductAndFeeHandler, () => new DipValidateProductAndFeeHandler)
-            .register(DipValidateMortgageClubHandler, () => new DipValidateMortgageClubHandler)
-            .register(UpdateCaseStatusHandler, () => new UpdateCaseStatusHandler)
-            .register(SendCaseStatusUpdatedEventHandler, () => new SendCaseStatusUpdatedEventHandler)
-            .register(DipCreateCaseHandler, () => new DipCreateCaseHandler)
-        ;
-
         const request = new DipCreationRequest();
 
         const response = await new DipCreationHandler().handle(flowContext, request);

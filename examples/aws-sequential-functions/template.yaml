@@ -43,6 +43,7 @@ Resources:
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
+        # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
         - LambdaInvokePolicy:
             FunctionName: !Ref AddThreeNumbersHandlerFunction
         - LambdaInvokePolicy:

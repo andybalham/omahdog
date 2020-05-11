@@ -44,8 +44,6 @@ describe('Handlers', () => {
             ;
         const handlerFactory = new HandlerFactory()
             .register(AsyncActivityHandler, () => asyncActivityHandler)
-            .register(ChildFlowHandler, () => new ChildFlowHandler)
-            .register(ParentFlowHandler, () => new ParentFlowHandler)
             ;
 
         let flowContext = FlowContext.newContext(asyncRequestRouter, handlerFactory);
@@ -112,8 +110,6 @@ describe('Handlers', () => {
             ;
         const handlerFactory = new HandlerFactory()
             .register(AsyncActivityHandler, () => asyncActivityHandler)
-            .register(ParentFlowHandler, () => new ParentFlowHandler)
-            .register(ChildFlowHandler, () => new ChildFlowHandler)
             ;
 
         let flowContext = FlowContext.newContext();

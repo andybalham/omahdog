@@ -28,8 +28,6 @@ describe('Handlers', () => {
         const context = FlowContext.newContext();
         context.requestRouter
             .register(ExampleActivityRequest, ExampleActivityResponse, ExampleHandler);
-        context.handlerFactory
-            .register(ExampleHandler, () => new ExampleHandler);
 
         const response = await context.sendRequest(ExampleActivityRequest, request) as ExampleActivityResponse;
 

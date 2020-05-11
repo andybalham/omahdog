@@ -1,6 +1,10 @@
 # TODO
 
-* Implement business process using Step Functions
+* Implement 'add number' flows using Step Functions
+  * [Building Serverless workflows with AWS Step Functions](https://medium.com/finimize-engineering/building-serverless-workflows-with-aws-step-functions-89eca69a93f3)
+  * [AWS::StepFunctions::StateMachine](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-stepfunctions-statemachine.html)
+  * [How AWS Step Functions Works with IAM](https://docs.aws.amazon.com/step-functions/latest/dg/procedure-create-iam-role.html)
+  * [IAM Policies for Integrated Services](https://docs.aws.amazon.com/step-functions/latest/dg/service-integration-iam-templates.html)
 
 * Look at wrapping all AWS services in our own services
 

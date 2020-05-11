@@ -53,42 +53,26 @@ class StoreTotalHandlerMessageProxy extends ActivityRequestHandlerMessageProxy<S
     constructor() { super(StoreTotalRequest, StoreTotalResponse, exchangeMessagePublisher); }
 }
 
-export const syncRequestRouter = new RequestRouter()
-    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
-    .register(AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandlerLambdaProxy)
+export const requestRouter = new RequestRouter()
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerLambdaProxy)
     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerLambdaProxy)
     ;
 
-export const asyncRequestRouter = new RequestRouter()
-    .register(AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandlerLambdaProxy)
-    .register(AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandlerLambdaProxy)
-    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
-    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
-    ;
+// export const requestRouter = new RequestRouter()
+//     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandlerMessageProxy)
+//     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandlerMessageProxy)
+//     ;
 
 export const handlerFactory = new HandlerFactory()
-    .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Three numbers together'))
-    .register(AddThreeNumbersHandlerLambdaProxy, () => new AddThreeNumbersHandlerLambdaProxy())
-    .register(AddThreeNumbersHandlerMessageProxy, () => new AddThreeNumbersHandlerMessageProxy())
-    
+    .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('Three numbers together'))    
     .register(AddTwoNumbersHandler, () => new AddTwoNumbersHandler('Two numbers together'))
-    .register(AddTwoNumbersHandlerLambdaProxy, () => new AddTwoNumbersHandlerLambdaProxy())
-    .register(AddTwoNumbersHandlerMessageProxy, () => new AddTwoNumbersHandlerMessageProxy())
-
-    .register(SumNumbersHandler, () => new SumNumbersHandler)
-    .register(SumNumbersHandlerMessageProxy, () => new SumNumbersHandlerMessageProxy())
-    .register(SumNumbersHandlerLambdaProxy, () => new SumNumbersHandlerLambdaProxy())
-    
     .register(StoreTotalHandler, () => new StoreTotalHandler(documentClient, process.env.FLOW_RESULT_TABLE_NAME))
-    .register(StoreTotalHandlerMessageProxy, () => new StoreTotalHandlerMessageProxy())
-    .register(StoreTotalHandlerLambdaProxy, () => new StoreTotalHandlerLambdaProxy())
     ;
 
 const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
 
 export const lambdaActivityRequestHandlerInstance = 
     new LambdaActivityRequestHandler(
-        syncRequestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository);
+        requestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository);
 
 export const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(exchangeMessagePublisher);

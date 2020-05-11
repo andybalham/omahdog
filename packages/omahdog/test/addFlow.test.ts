@@ -82,8 +82,6 @@ describe('Handlers', () => {
         
         flowContext.requestRouter
             .register(SumActivityRequest, SumActivityResponse, SumActivityHandler);
-        flowContext.handlerFactory
-            .register(SumActivityHandler, () => new SumActivityHandler);
 
         const request = new SumFlowRequest();
         request.a = 200;

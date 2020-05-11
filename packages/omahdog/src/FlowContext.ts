@@ -201,9 +201,10 @@ export class HandlerFactory {
 
         const instantiator = this._handlerInstantiators.get(HandlerType.name);
 
-        if (instantiator === undefined) throw new Error(`No handler registered for: ${HandlerType.name}`);
+        if (instantiator === undefined) {
+            return new HandlerType();
+        }
 
-        // TODO 25Apr20: Should we instantiate the handler each time? The instantiation should be lightweight
         const handler = instantiator();
         return handler;
     }
