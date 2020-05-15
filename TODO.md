@@ -1,6 +1,9 @@
 # TODO
 
 * Implement 'add number' flows using Step Functions
+  * [ResultPath](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-resultpath.html)
+  * [Input and Output Processing in Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-input-output-filtering.html)
+  * [Creating a Lambda State Machine for Step Functions Using AWS CloudFormation](https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-lambda-state-machine-cloudformation.html)
   * [Building Serverless workflows with AWS Step Functions](https://medium.com/finimize-engineering/building-serverless-workflows-with-aws-step-functions-89eca69a93f3)
   * [AWS::StepFunctions::StateMachine](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-stepfunctions-statemachine.html)
   * [How AWS Step Functions Works with IAM](https://docs.aws.amazon.com/step-functions/latest/dg/procedure-create-iam-role.html)
@@ -17,36 +20,6 @@
   * [Mustache.js](https://github.com/janl/mustache.js)
 
 * Look at layers and stacks
-
-* Look at minimising the use of `Type.name`
-  * I.e. store as a string at the earliest opportunity to avoid unnecessary evaluation
-
-* Use object references when storing the flow stack frames, 
-
-* Look to add a trace to the flow context and persist it in the function instance
-  * Look at X-Ray
-  * Look at middy and how it fits in with this approach
-
-* Allow for 'fire-and-forget' requests
-  * We will need to change the response to be either:
-    * A 'null' response
-  * This response indicates that processing can continue and no binding to the state is required
-
-* Look at interfaces for functions (https://www.typescriptlang.org/docs/handbook/interfaces.html#function-types)
-```
-export interface ObjectBinder<TObj, TState> {
-    (obj: TObj, state: TState): void;
-}
-
-export interface StateBinder<TObj, TState> {
-    (obj: TObj, state: TState): void;
-}
-```
-
-* Look into 'Document This' extension
-
-* Q. How can we ensure that handlers are in place for all requests?
-  * I.e. can we do a sort of test traversal of all paths to see?
 
 * [middy](https://middy.js.org/)
   * [DAZN Lambda Powertools](https://github.com/getndazn/dazn-lambda-powertools)
@@ -73,9 +46,40 @@ export interface StateBinder<TObj, TState> {
   * AWS AppSync is a managed GraphQL service with real-time and offline capabilities, as well as enterprise grade security controls that make developing applications simple. 
   * AWS X-Ray lets you analyse and debug serverless applications by providing distributed tracing and service maps to easily identify performance bottlenecks by visualizing a request end-to-end. 
 
+* Look at minimising the use of `Type.name`
+  * I.e. store as a string at the earliest opportunity to avoid unnecessary evaluation
+
+* Look to add a trace to the flow context and persist it in the function instance
+  * Look at X-Ray
+  * Look at middy and how it fits in with this approach
+
+* Use object references when storing the flow stack frames, 
+
+* Allow for 'fire-and-forget' requests
+  * We will need to change the response to be either:
+    * A 'null' response
+  * This response indicates that processing can continue and no binding to the state is required
+
+* Look at interfaces for functions (https://www.typescriptlang.org/docs/handbook/interfaces.html#function-types)
+```
+export interface ObjectBinder<TObj, TState> {
+    (obj: TObj, state: TState): void;
+}
+
+export interface StateBinder<TObj, TState> {
+    (obj: TObj, state: TState): void;
+}
+```
+
+* Look into 'Document This' extension
+
+* Q. How can we ensure that handlers are in place for all requests?
+  * I.e. can we do a sort of test traversal of all paths to see?
+
 * Have a DLQ for asynchronous invocation
   * [AWS Serverless Application Model - DeadLetterQueue](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-deadletterqueue.html)
   * __Q. What should happen to failed responses?__ Should it mean that the flow should be terminated?
+    * __Q. Do we need to think if we should store a 'state' as part of the flow instance?__
 
 # Done
 

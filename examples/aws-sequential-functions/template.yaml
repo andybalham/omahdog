@@ -38,16 +38,16 @@ Resources:
       Environment:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersHandlerFunction
-          ADD_TWO_NUMBERS_FUNCTION_NAME: !Ref AddTwoNumbersHandlerFunction
+          ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersFunction
+          ADD_TWO_NUMBERS_FUNCTION_NAME: !Ref AddTwoNumbersFunction
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
         # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
         - LambdaInvokePolicy:
-            FunctionName: !Ref AddThreeNumbersHandlerFunction
+            FunctionName: !Ref AddThreeNumbersFunction
         - LambdaInvokePolicy:
-            FunctionName: !Ref AddTwoNumbersHandlerFunction
+            FunctionName: !Ref AddTwoNumbersFunction
       Events:
         GetFunctionEvent:
           Type: Api
@@ -118,10 +118,10 @@ Resources:
           Properties:
             Topic: !Ref FlowDeadLetterQueueTopic
   
-  AddThreeNumbersHandlerFunction:
+  AddThreeNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ApplicationName}-AddThreeNumbersHandler
+      FunctionName: !Sub ${ApplicationName}-AddThreeNumbersFunction
       Handler: requestLambdas.addThreeNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
@@ -129,7 +129,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref FlowInstanceTable
         - LambdaInvokePolicy:
-            FunctionName: !Ref SumNumbersHandlerFunction
+            FunctionName: !Ref SumNumbersFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref StoreTotalFunction
       DeadLetterQueue:
@@ -139,7 +139,7 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersHandlerFunction
+          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersFunction
           STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
       Events:
         ExchangeTopic:
@@ -151,10 +151,10 @@ Resources:
                 - AddThreeNumbersRequest:Handler
                 - AddThreeNumbersHandler:Response
   
-  AddTwoNumbersHandlerFunction:
+  AddTwoNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ApplicationName}-AddTwoNumbersHandler
+      FunctionName: !Sub ${ApplicationName}-AddTwoNumbersFunction
       Handler: requestLambdas.addTwoNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
@@ -162,7 +162,7 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref FlowInstanceTable
         - LambdaInvokePolicy:
-            FunctionName: !Ref SumNumbersHandlerFunction
+            FunctionName: !Ref SumNumbersFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref StoreTotalFunction
       DeadLetterQueue:
@@ -172,7 +172,7 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersHandlerFunction
+          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersFunction
           STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
       Events:
         ExchangeTopic:
@@ -184,10 +184,10 @@ Resources:
                 - AddTwoNumbersRequest:Handler
                 - AddTwoNumbersHandler:Response
   
-  SumNumbersHandlerFunction:
+  SumNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ApplicationName}-SumNumbersHandler
+      FunctionName: !Sub ${ApplicationName}-SumNumbersFunction
       Handler: requestLambdas.sumNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
@@ -214,7 +214,7 @@ Resources:
   StoreTotalFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ApplicationName}-StoreTotalHandler
+      FunctionName: !Sub ${ApplicationName}-StoreTotalFunction
       Handler: requestLambdas.storeTotalHandler
       Policies:
         - SNSPublishMessagePolicy:

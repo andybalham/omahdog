@@ -1,7 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, RequestRouter } from './omahdog/FlowContext';
+import { FlowContext, AsyncResponse, IActivityRequestHandlerBase } from './omahdog/FlowContext';
 import { ErrorResponse } from './omahdog/FlowExchanges';
-import { requestRouter, handlerFactory, AddThreeNumbersHandlerLambdaProxy, AddThreeNumbersHandlerMessageProxy, AddTwoNumbersHandlerLambdaProxy, AddTwoNumbersHandlerMessageProxy } from './requestConfiguration';
+import { requestRouter, handlerFactory } from './requestConfiguration';
+import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy } from './lambdaProxies';
+import { AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy } from './messageProxies';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 
@@ -12,6 +14,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     try {
         
         console.log(`event: ${JSON.stringify(event)}`);
+
+        console.log(`process.env: ${JSON.stringify(process.env)}`);        
 
         const functionName = event.pathParameters?.functionName;
 
@@ -43,10 +47,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
         switch (functionName) {
         case 'add-two-numbers':
-            response = await HandleAddTwoNumbersRequest(flowContext, event.httpMethod, request);
+            response = await handleAddTwoNumbersRequest(flowContext, event.httpMethod, request);
             break;
         case 'add-three-numbers':
-            response = await HandleAddThreeNumbersRequest(flowContext, event.httpMethod, request);
+            response = await handleAddThreeNumbersRequest(flowContext, event.httpMethod, request);
             break;
         default:
             throw new Error(`Unhandled function: ${functionName}`);
@@ -65,17 +69,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     }
 };
 
-async function HandleAddThreeNumbersRequest(flowContext: FlowContext, httpMethod: string, request: AddThreeNumbersRequest): 
+async function handleAddThreeNumbersRequest(flowContext: FlowContext, httpMethod: string, request: AddThreeNumbersRequest): 
     Promise<APIGatewayProxyResult> {
 
     let handlerType: new () => IActivityRequestHandlerBase;
 
     switch (httpMethod) {
     case 'GET':
-        handlerType = AddThreeNumbersHandlerLambdaProxy;
+        handlerType = AddThreeNumbersLambdaProxy;
         break;        
     case 'POST':
-        handlerType = AddThreeNumbersHandlerMessageProxy;
+        handlerType = AddThreeNumbersMessageProxy;
         break;            
     default:
         throw new Error(`Unhandled invocationMethod: ${httpMethod}`);
@@ -105,17 +109,17 @@ async function HandleAddThreeNumbersRequest(flowContext: FlowContext, httpMethod
     };    
 }
 
-async function HandleAddTwoNumbersRequest(flowContext: FlowContext, httpMethod: string, request: AddTwoNumbersRequest): 
+async function handleAddTwoNumbersRequest(flowContext: FlowContext, httpMethod: string, request: AddTwoNumbersRequest): 
     Promise<APIGatewayProxyResult> {
 
     let handlerType: new () => IActivityRequestHandlerBase;
 
     switch (httpMethod) {
     case 'GET':
-        handlerType = AddTwoNumbersHandlerLambdaProxy;
+        handlerType = AddTwoNumbersLambdaProxy;
         break;        
     case 'POST':
-        handlerType = AddTwoNumbersHandlerMessageProxy;
+        handlerType = AddTwoNumbersMessageProxy;
         break;            
     default:
         throw new Error(`Unhandled invocationMethod: ${httpMethod}`);

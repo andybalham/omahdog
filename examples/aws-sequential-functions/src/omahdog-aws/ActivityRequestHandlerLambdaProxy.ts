@@ -4,15 +4,17 @@ import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
 
-export class ActivityRequestHandlerLambdaProxy<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
+export class ActivityRequestLambdaProxy<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
-    private readonly functionName?: string;
+    readonly functionName?: string;
 
     constructor(functionName?: string) {
         this.functionName = functionName;
     }
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
+        
+        console.log(`Lambda proxy for ${this.functionName} called with: ${JSON.stringify(request)}`);
         
         if (this.functionName === undefined) throw new Error('this.functionName === undefined');
 
@@ -42,8 +44,8 @@ export class ActivityRequestHandlerLambdaProxy<TReq, TRes> implements IActivityR
         console.log(`invokeResult: ${JSON.stringify(invokeResult)}`);
 
         if (invokeResult.FunctionError !== undefined) {
-            // TODO 05May20: Should we log the error here or do something more? 
-            throw new Error(invokeResult.FunctionError);            
+            console.error(`Error invoking function ${this.functionName}: ${JSON.stringify(invokeResult)}`);
+            throw new Error(`Error invoking function ${this.functionName}`);
         }
 
         if (typeof invokeResult.Payload === undefined) {
@@ -59,8 +61,8 @@ export class ActivityRequestHandlerLambdaProxy<TReq, TRes> implements IActivityR
         const response: TRes | AsyncResponse | ErrorResponse = responseMessage.response;
 
         if ('ErrorResponse' in response) {
-            // TODO 05May20: What details should we use to throw here?
-            throw new Error(response.message);
+            console.error(`ErrorResponse received from ${this.functionName}: ${JSON.stringify(response)}`);
+            throw new Error(`ErrorResponse received from ${this.functionName}`);
         }
 
         return response;

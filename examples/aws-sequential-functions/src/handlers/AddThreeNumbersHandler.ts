@@ -7,13 +7,13 @@ import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalEx
 
 export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState> {
     
-    private readonly _totalDescription: string;
+    private readonly totalDescription: string;
 
     constructor(totalDescription?: string) {
         
         super(AddThreeNumbersHandler, AddThreeNumbersResponse, AddThreeNumbersState);
 
-        this._totalDescription = totalDescription ?? 'Total';
+        this.totalDescription = totalDescription ?? 'Total';
     }
 
     buildFlow(flowBuilder: FlowBuilder<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState>): 
@@ -22,28 +22,26 @@ export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRe
         return flowBuilder
             .initialise(
                 (req, state) => {
+                    state.request = req;
                     state.startTime = new Date();
-                    state.a = req.a;
-                    state.b = req.b;
-                    state.c = req.c;
                     state.total = 0;
                 })
 
             .perform('Sum_a_and_total', SumNumbersRequest, SumNumbersResponse,
-                (req, state) => { req.values = [state.total, state.a]; },
+                (req, state) => { req.values = [state.total, state.request.a]; },
                 (res, state) => { state.total = res.total; })
 
             .perform('Sum_b_and_total', SumNumbersRequest, SumNumbersResponse,
-                (req, state) => { req.values = [state.total, state.b]; },
+                (req, state) => { req.values = [state.total, state.request.b]; },
                 (res, state) => { state.total = res.total; })
 
             .perform('Sum_c_and_total', SumNumbersRequest, SumNumbersResponse,
-                (req, state) => { req.values = [state.total, state.c]; },
+                (req, state) => { req.values = [state.total, state.request.c]; },
                 (res, state) => { state.total = res.total; })
 
             .perform('Store_total', StoreTotalRequest, StoreTotalResponse,
                 (req, state) => { 
-                    req.description = this._totalDescription; 
+                    req.description = this.totalDescription; 
                     req.total = state.total;
                     req.startTime = state.startTime;
                     req.endTime = new Date();
@@ -57,8 +55,6 @@ export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRe
 
 class AddThreeNumbersState {
     startTime: Date;
-    a: number;
-    b: number;
-    c: number;
+    request: AddThreeNumbersRequest;
     total: number;
 }
