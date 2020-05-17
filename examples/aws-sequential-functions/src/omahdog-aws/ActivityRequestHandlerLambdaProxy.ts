@@ -39,9 +39,15 @@ export class ActivityRequestLambdaProxy<TReq, TRes> implements IActivityRequestH
 
         const lambda = new Lambda();
 
-        const invokeResult = await lambda.invoke(invocationRequest).promise();
-
-        console.log(`invokeResult: ${JSON.stringify(invokeResult)}`);
+        let invokeResult;
+        try {
+            console.log(`invocationRequest: ${JSON.stringify(invocationRequest)}`);
+            invokeResult = await lambda.invoke(invocationRequest).promise();
+            console.log(`invokeResult: ${JSON.stringify(invokeResult)}`);
+        } catch (error) {
+            console.error('Error calling lambda.invoke: ' + error.message);
+            throw new Error('Error calling lambda.invoke');
+        }
 
         if (invokeResult.FunctionError !== undefined) {
             console.error(`Error invoking function ${this.functionName}: ${JSON.stringify(invokeResult)}`);

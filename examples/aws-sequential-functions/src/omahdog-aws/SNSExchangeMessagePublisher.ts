@@ -5,50 +5,56 @@ import { AsyncResponseMessage, AsyncCallingContext, AsyncRequestMessage } from '
 // TODO 03May20: Have a set of tests for this
 export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
     
-    private readonly _sns: SNS;
-    private readonly _exchangeTopicArn?: string;
+    private readonly sns: SNS;
+    private readonly exchangeTopicArn?: string;
 
     constructor (sns: SNS, exchangeTopicArn?: string) {
-        this._sns = sns;
-        this._exchangeTopicArn = exchangeTopicArn;
+        this.sns = sns;
+        this.exchangeTopicArn = exchangeTopicArn;
     }
 
     async publishRequest(requestTypeName: string, message: AsyncRequestMessage): Promise<void> {
 
+        console.log(`Publishing message to exchangeTopicArn: ${this.exchangeTopicArn}`);
         console.log(`message: ${JSON.stringify(message)}`);
 
-        if (this._sns === undefined) throw new Error('this._sns');
-        if (this._exchangeTopicArn === undefined) throw new Error('this._exchangeTopicArn === undefined');
+        if (this.sns === undefined) throw new Error('this._sns');
+        if (this.exchangeTopicArn === undefined) throw new Error('this._exchangeTopicArn === undefined');
 
         const params: PublishInput = {
             Message: JSON.stringify(message),
-            TopicArn: this._exchangeTopicArn,
+            TopicArn: this.exchangeTopicArn,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: `${requestTypeName}:Handler` }
             }
         };
-        
-        const publishResponse = await this._sns.publish(params).promise();
-    
-        console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);
+
+        try {
+            console.log(`params: ${JSON.stringify(params)}`);                
+            const publishResponse = await this.sns.publish(params).promise();    
+            console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);                
+        } catch (error) {
+            console.error('Error calling this.sns.publish: ' + error.message);
+            throw new Error('Error calling this.sns.publish');
+        }
     }
     
     async publishResponse(flowTypeName: string, message: AsyncResponseMessage): Promise<void> {
 
         console.log(`message: ${JSON.stringify(message)}`);
 
-        if (this._sns === undefined) throw new Error('this._sns === undefined');
-        if (this._exchangeTopicArn === undefined) throw new Error('this._exchangeTopicArn === undefined');
+        if (this.sns === undefined) throw new Error('this._sns === undefined');
+        if (this.exchangeTopicArn === undefined) throw new Error('this._exchangeTopicArn === undefined');
 
         const params: PublishInput = {
             Message: JSON.stringify(message),
-            TopicArn: this._exchangeTopicArn,
+            TopicArn: this.exchangeTopicArn,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: `${flowTypeName}:Response` }
             }
         };
     
-        const publishResponse = await this._sns.publish(params).promise();
+        const publishResponse = await this.sns.publish(params).promise();
         
         console.log(`publishResponse.MessageId: ${publishResponse.MessageId}`);    
     }

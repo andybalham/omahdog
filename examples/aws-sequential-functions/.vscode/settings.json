@@ -3,6 +3,7 @@
         "ESNEXT",
         "Instantiator",
         "Instantiators",
+        "appmesh",
         "cloudformation",
         "downlevel",
         "dynamodb",

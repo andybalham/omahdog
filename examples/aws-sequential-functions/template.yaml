@@ -38,14 +38,14 @@ Resources:
       Environment:
         Variables:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersFunction
+          # ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersFunction
           ADD_TWO_NUMBERS_FUNCTION_NAME: !Ref AddTwoNumbersFunction
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
         # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
-        - LambdaInvokePolicy:
-            FunctionName: !Ref AddThreeNumbersFunction
+        # - LambdaInvokePolicy:
+        #     FunctionName: !Ref AddThreeNumbersFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AddTwoNumbersFunction
       Events:
@@ -55,14 +55,21 @@ Resources:
             RestApiId:
               Ref: ApiGateway
             Method: GET
-            Path: /do/{functionName}
+            Path: /do/add-two-numbers
+        GetFunctionEvent:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Method: GET
+            Path: /do/add-two-numbers/x/{x}/y/{y}
         PostFunctionEvent:
           Type: Api
           Properties:
             RestApiId:
               Ref: ApiGateway
             Method: POST
-            Path: /do/{functionName}
+            Path: /do/add-two-numbers
 
   FlowExchangeTopic:
     Type: AWS::SNS::Topic
@@ -101,55 +108,55 @@ Resources:
           Properties:
             Topic: !Ref FlowDeadLetterQueueTopic
   
-  DeadLetterQueueFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${ApplicationName}-DeadLetterQueueFunction
-      Handler: requestLambdas.deadLetterQueueHandler
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
-      Environment:
-        Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-      Events:
-        DeadLetterQueueTopic:
-          Type: SNS
-          Properties:
-            Topic: !Ref FlowDeadLetterQueueTopic
+  # DeadLetterQueueFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     FunctionName: !Sub ${ApplicationName}-DeadLetterQueueFunction
+  #     Handler: requestLambdas.deadLetterQueueHandler
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt FlowExchangeTopic.TopicName
+  #     Environment:
+  #       Variables:
+  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+  #     Events:
+  #       DeadLetterQueueTopic:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref FlowDeadLetterQueueTopic
   
-  AddThreeNumbersFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${ApplicationName}-AddThreeNumbersFunction
-      Handler: requestLambdas.addThreeNumbersHandler
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowInstanceTable
-        - LambdaInvokePolicy:
-            FunctionName: !Ref SumNumbersFunction
-        - LambdaInvokePolicy:
-            FunctionName: !Ref StoreTotalFunction
-      DeadLetterQueue:
-        Type: SNS
-        TargetArn: !Ref FlowDeadLetterQueueTopic
-      Environment:
-        Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersFunction
-          STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
-      Events:
-        ExchangeTopic:
-          Type: SNS
-          Properties:
-            Topic: !Ref FlowExchangeTopic
-            FilterPolicy:
-              MessageType:
-                - AddThreeNumbersRequest:Handler
-                - AddThreeNumbersHandler:Response
+  # AddThreeNumbersFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     FunctionName: !Sub ${ApplicationName}-AddThreeNumbersFunction
+  #     Handler: requestLambdas.addThreeNumbersHandler
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt FlowExchangeTopic.TopicName
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref FlowInstanceTable
+  #       - LambdaInvokePolicy:
+  #           FunctionName: !Ref SumNumbersFunction
+  #       - LambdaInvokePolicy:
+  #           FunctionName: !Ref StoreTotalFunction
+  #     DeadLetterQueue:
+  #       Type: SNS
+  #       TargetArn: !Ref FlowDeadLetterQueueTopic
+  #     Environment:
+  #       Variables:
+  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+  #         FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+  #         SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersFunction
+  #         STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
+  #     Events:
+  #       ExchangeTopic:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref FlowExchangeTopic
+  #           FilterPolicy:
+  #             MessageType:
+  #               - AddThreeNumbersRequest:Handler
+  #               - AddThreeNumbersHandler:Response
   
   AddTwoNumbersFunction:
     Type: AWS::Serverless::Function
@@ -163,8 +170,8 @@ Resources:
             TableName: !Ref FlowInstanceTable
         - LambdaInvokePolicy:
             FunctionName: !Ref SumNumbersFunction
-        - LambdaInvokePolicy:
-            FunctionName: !Ref StoreTotalFunction
+        # - LambdaInvokePolicy:
+        #     FunctionName: !Ref StoreTotalFunction
       DeadLetterQueue:
         Type: SNS
         TargetArn: !Ref FlowDeadLetterQueueTopic
@@ -173,7 +180,7 @@ Resources:
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
           SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersFunction
-          STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
+          # STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
       Events:
         ExchangeTopic:
           Type: SNS
@@ -211,37 +218,37 @@ Resources:
                 - SumNumbersRequest:Handler
                 - SumNumbersHandler:Response
   
-  StoreTotalFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      FunctionName: !Sub ${ApplicationName}-StoreTotalFunction
-      Handler: requestLambdas.storeTotalHandler
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowInstanceTable
-        # TODO: How to auto-generate this? The handler would have to expose that it needed such a table
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowResultTable
-      DeadLetterQueue:
-        Type: SNS
-        TargetArn: !Ref FlowDeadLetterQueueTopic
-      Environment:
-        Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          # TODO: How to auto-generate this? The handler would have to expose that it needed such a variable
-          FLOW_RESULT_TABLE_NAME: !Ref FlowResultTable
-      Events:
-        ExchangeTopic:
-          Type: SNS
-          Properties:
-            Topic: !Ref FlowExchangeTopic
-            FilterPolicy:
-              MessageType:
-                - StoreTotalRequest:Handler
-                - StoreTotalHandler:Response
+  # StoreTotalFunction:
+  #   Type: AWS::Serverless::Function
+  #   Properties:
+  #     FunctionName: !Sub ${ApplicationName}-StoreTotalFunction
+  #     Handler: requestLambdas.storeTotalHandler
+  #     Policies:
+  #       - SNSPublishMessagePolicy:
+  #           TopicName: !GetAtt FlowExchangeTopic.TopicName
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref FlowInstanceTable
+  #       # TODO: How to auto-generate this? The handler would have to expose that it needed such a table
+  #       - DynamoDBCrudPolicy:
+  #           TableName: !Ref FlowResultTable
+  #     DeadLetterQueue:
+  #       Type: SNS
+  #       TargetArn: !Ref FlowDeadLetterQueueTopic
+  #     Environment:
+  #       Variables:
+  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+  #         FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+  #         # TODO: How to auto-generate this? The handler would have to expose that it needed such a variable
+  #         FLOW_RESULT_TABLE_NAME: !Ref FlowResultTable
+  #     Events:
+  #       ExchangeTopic:
+  #         Type: SNS
+  #         Properties:
+  #           Topic: !Ref FlowExchangeTopic
+  #           FilterPolicy:
+  #             MessageType:
+  #               - StoreTotalRequest:Handler
+  #               - StoreTotalHandler:Response
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
