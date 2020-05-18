@@ -21,6 +21,28 @@ Globals:
 
 Resources:
 
+  FlowExchangeTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${ApplicationName}-FlowExchangeTopic
+      DisplayName: Topic for request & response messages
+
+  FlowDeadLetterQueueTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${ApplicationName}-FlowDeadLetterQueueTopic
+      DisplayName: Topic for flow dead letter messages
+
+  FlowInstanceTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${ApplicationName}-FlowInstanceTable
+
+  FlowResultTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${ApplicationName}-FlowResultTable
+
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
@@ -37,17 +59,20 @@ Resources:
       Handler: apiControllerLambda.handler
       Environment:
         Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+          STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalFunction
           ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersFunction
           ADD_TWO_NUMBERS_FUNCTION_NAME: !Ref AddTwoNumbersFunction
+          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
       Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
         # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
+        - LambdaInvokePolicy:
+            FunctionName: !Ref StoreTotalFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AddThreeNumbersFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AddTwoNumbersFunction
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt FlowExchangeTopic.TopicName
       Events:
         AddTwoNumbersByQueryStringEvent:
           Type: Api
@@ -84,34 +109,12 @@ Resources:
               Ref: ApiGateway
             Method: POST
             Path: /do/add-three-numbers
-
-  FlowExchangeTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub ${ApplicationName}-FlowExchangeTopic
-      DisplayName: Topic for request & response messages
-
-  FlowDeadLetterQueueTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: !Sub ${ApplicationName}-FlowDeadLetterQueueTopic
-      DisplayName: Topic for flow dead letter messages
-
-  FlowInstanceTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: !Sub ${ApplicationName}-FlowInstanceTable
-
-  FlowResultTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: !Sub ${ApplicationName}-FlowResultTable
   
   WireTapFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ApplicationName}-WireTapFunction
-      Handler: wireTapLambda.handler
+      Handler: requestLambdas.exchangeWireTapHandler
       Events:
         ExchangeTopic:
           Type: SNS
@@ -271,10 +274,4 @@ Outputs:
   ApiEndpoint:
     Description: "API endpoint"
     Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/"
-  # WireTapFunction:
-  #   Description: "Function to log all messages published to a topic"
-  #   Value: !GetAtt WireTapFunction.Arn
-  # WireTapFunctionIamRole:
-  #   Description: "Implicit IAM Role created for WireTapFunction"
-  #   Value: !GetAtt WireTapFunction.Arn
-  # TODO: Do we need to output anything else?
+  

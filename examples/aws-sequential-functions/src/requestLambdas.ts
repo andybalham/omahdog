@@ -27,7 +27,7 @@ export const deadLetterQueueHandler = async (event: SNSEvent): Promise<void> => 
 };
 
 const exchangeWireTapLambda = new LambdaExchangeWireTap();
-export const handler = async (event: SNSEvent): Promise<void> => {
+export const exchangeWireTapHandler = async (event: SNSEvent): Promise<void> => {
     await exchangeWireTapLambda.handle(event);
 };
 
