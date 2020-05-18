@@ -1,6 +1,6 @@
 import { AddThreeNumbersRequest } from '../src/exchanges/AddThreeNumbersExchange';
 import { SNSEvent } from 'aws-lambda';
-import { AsyncRequestMessage } from '../src/omahdog-aws/AsyncExchange';
+import { ExchangeRequestMessage } from '../src/omahdog-aws/Exchange';
 
 describe('handler tests', () => {
 
@@ -10,7 +10,7 @@ describe('handler tests', () => {
             a: 202, b: 202, c: 212
         };
 
-        const snsFlowMessage: AsyncRequestMessage = {
+        const snsFlowMessage: ExchangeRequestMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',

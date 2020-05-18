@@ -1,5 +1,5 @@
 import { SNSEvent } from 'aws-lambda';
-import { AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
+import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
@@ -23,7 +23,7 @@ export class DeadLetterQueueHandler {
     
             const deadSnsMessage = deadEvent.Records[0].Sns;
     
-            const deadMessage: AsyncRequestMessage | AsyncResponseMessage = JSON.parse(deadSnsMessage.Message);
+            const deadMessage: ExchangeRequestMessage | ExchangeResponseMessage = JSON.parse(deadSnsMessage.Message);
     
             if ('request' in deadMessage) {
     
@@ -43,7 +43,7 @@ export class DeadLetterQueueHandler {
                     message: snsMessage.MessageAttributes.ErrorMessage.Value
                 };
     
-                const responseMessage: AsyncResponseMessage = 
+                const responseMessage: ExchangeResponseMessage = 
                     {
                         callingContext: callingContext,
                         response: response

@@ -2,7 +2,7 @@ import { Lambda } from 'aws-sdk';
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
+import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 
 export class ActivityRequestLambdaProxy<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
@@ -20,7 +20,7 @@ export class ActivityRequestLambdaProxy<TReq, TRes> implements IActivityRequestH
 
         const requestId = uuid.v4();
 
-        const message: AsyncRequestMessage = 
+        const message: ExchangeRequestMessage = 
             {
                 callingContext: {
                     requestId: requestId,
@@ -62,7 +62,7 @@ export class ActivityRequestLambdaProxy<TReq, TRes> implements IActivityRequestH
             throw new Error('typeof invokeResult.Payload !== \'string\'');
         }
 
-        const responseMessage: AsyncResponseMessage = JSON.parse(invokeResult.Payload);
+        const responseMessage: ExchangeResponseMessage = JSON.parse(invokeResult.Payload);
 
         const response: TRes | AsyncResponse | ErrorResponse = responseMessage.response;
 

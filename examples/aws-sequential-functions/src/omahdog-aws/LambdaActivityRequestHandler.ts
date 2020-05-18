@@ -3,7 +3,7 @@ import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 
 import { FlowContext, AsyncResponse, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
-import { AsyncCallingContext, AsyncRequestMessage, AsyncResponseMessage } from './AsyncExchange';
+import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 import { IResumableRequestHandler } from '../omahdog/FlowRequestHandler';
@@ -24,11 +24,11 @@ export class LambdaActivityRequestHandler {
         this.functionInstanceRepository = functionInstanceRepository;
     }
 
-    async handle(handlerType: new () => any, event: SNSEvent | AsyncRequestMessage): Promise<AsyncResponseMessage | void> {
+    async handle(handlerType: new () => any, event: SNSEvent | ExchangeRequestMessage): Promise<ExchangeResponseMessage | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        let message: AsyncRequestMessage | AsyncResponseMessage;
+        let message: ExchangeRequestMessage | ExchangeResponseMessage;
         let isDirectRequest: boolean;
 
         if ('Records' in event) {
@@ -53,7 +53,7 @@ export class LambdaActivityRequestHandler {
         console.log(`message: ${JSON.stringify(message)}`);
     
         let response: any;
-        let callingContext: AsyncCallingContext;
+        let callingContext: ExchangeCallingContext;
         let resumeCount: number;
     
         if ('request' in message) {
@@ -68,6 +68,7 @@ export class LambdaActivityRequestHandler {
             try {
                 response = await flowContext.handleRequest(handlerType, message.request);
             } catch (error) {
+                console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);
             }
     
@@ -95,6 +96,7 @@ export class LambdaActivityRequestHandler {
             try {
                 response = await flowContext.handleResponse(handlerType, message.response);
             } catch (error) {
+                console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);
             }
         }
@@ -114,7 +116,7 @@ export class LambdaActivityRequestHandler {
     
         } else {
 
-            const responseMessage: AsyncResponseMessage = {
+            const responseMessage: ExchangeResponseMessage = {
                 callingContext: callingContext,
                 response: response
             };
@@ -124,6 +126,7 @@ export class LambdaActivityRequestHandler {
             }
     
             if (resumeCount > 0) {
+                // TODO 18May20: Perhaps we want to leave a trace, could have a TTL on the table
                 console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
                 await this.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
             }

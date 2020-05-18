@@ -1,7 +1,7 @@
 import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, HandlerFactory, FlowInstance } from '../src/omahdog/FlowContext';
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { ErrorResponse } from '../src/omahdog/FlowExchanges';
-import { AsyncRequestMessage, AsyncResponseMessage } from '../src/omahdog-aws/AsyncExchange';
+import { ExchangeRequestMessage, ExchangeResponseMessage } from '../src/omahdog-aws/Exchange';
 import { LambdaActivityRequestHandler } from '../src/omahdog-aws/LambdaActivityRequestHandler';
 import * as AWSMock from 'aws-sdk-mock';
 import AWS, { AWSError, Request as AWSRequest } from 'aws-sdk';
@@ -82,7 +82,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const requestMessage: AsyncRequestMessage = {
+        const requestMessage: ExchangeRequestMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
@@ -108,7 +108,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
 
             expect(responseMessage.callingContext).to.deep.equal(requestMessage.callingContext);
             expect(responseMessage.response).to.deep.equal(response);
@@ -145,7 +145,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const requestMessage: AsyncRequestMessage = {
+        const requestMessage: ExchangeRequestMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
@@ -208,12 +208,12 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const responseMessage: AsyncResponseMessage = {
+        const responseMessage: ExchangeResponseMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
                 handlerTypeName: 'handlerTypeName',
-                requestId: 'asyncRequestId'
+                requestId: 'ExchangeRequestId'
             },
             response: {}
         };
@@ -225,7 +225,7 @@ describe('LambdaActivityRequestHandler tests', () => {
                 handlerTypeName: 'callingHandlerTypeName',
                 requestId: 'callingRequestId'
             },
-            requestId: 'asyncRequestId',
+            requestId: 'ExchangeRequestId',
             flowInstance: new FlowInstance('flowCorrelationId', 'flowInstanceId', []),
             resumeCount: 0
         };
@@ -250,7 +250,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
 
             expect(responseMessage.callingContext).to.deep.equal(functionInstance.callingContext);
             expect(responseMessage.response).to.deep.equal(response);
@@ -290,7 +290,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const requestMessage: AsyncRequestMessage = {
+        const requestMessage: ExchangeRequestMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
@@ -316,7 +316,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
 
             expect(responseMessage.callingContext).to.deep.equal(requestMessage.callingContext);
             expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
@@ -352,12 +352,12 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const responseMessage: AsyncResponseMessage = {
+        const responseMessage: ExchangeResponseMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
                 handlerTypeName: 'handlerTypeName',
-                requestId: 'asyncRequestId'
+                requestId: 'ExchangeRequestId'
             },
             response: {}
         };
@@ -369,7 +369,7 @@ describe('LambdaActivityRequestHandler tests', () => {
                 handlerTypeName: 'callingHandlerTypeName',
                 requestId: 'callingRequestId'
             },
-            requestId: 'asyncRequestId',
+            requestId: 'ExchangeRequestId',
             flowInstance: new FlowInstance('flowCorrelationId', 'flowInstanceId', []),
             resumeCount: 0
         };
@@ -394,7 +394,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as AsyncResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
 
             expect(responseMessage.callingContext).to.deep.equal(functionInstance.callingContext);
             expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
@@ -435,7 +435,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const requestMessage: AsyncRequestMessage = {
+        const requestMessage: ExchangeRequestMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',
@@ -455,8 +455,8 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         if (responseMessage !== undefined) {
 
-            expect((responseMessage as AsyncResponseMessage).callingContext).to.deep.equal(requestMessage.callingContext);
-            expect((responseMessage as AsyncResponseMessage).response).to.deep.equal(response);
+            expect((responseMessage as ExchangeResponseMessage).callingContext).to.deep.equal(requestMessage.callingContext);
+            expect((responseMessage as ExchangeResponseMessage).response).to.deep.equal(response);
         }
     });    
 
@@ -490,7 +490,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             new LambdaActivityRequestHandler(
                 requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
 
-        const requestMessage: AsyncRequestMessage = {
+        const requestMessage: ExchangeRequestMessage = {
             callingContext: {
                 flowCorrelationId: 'flowCorrelationId',
                 flowInstanceId: 'flowInstanceId',

@@ -1,7 +1,7 @@
-import { AsyncResponseMessage, AsyncRequestMessage, AsyncCallingContext } from './AsyncExchange';
+import { ExchangeResponseMessage, ExchangeRequestMessage, ExchangeCallingContext } from './Exchange';
 import { FlowContext } from '../omahdog/FlowContext';
 
 export interface IExchangeMessagePublisher {
-    publishRequest(requestTypeName: string, message: AsyncRequestMessage): Promise<void>;
-    publishResponse(flowTypeName: string, message: AsyncResponseMessage): Promise<void>;
+    publishRequest(requestTypeName: string, message: ExchangeRequestMessage): Promise<void>;
+    publishResponse(flowTypeName: string, message: ExchangeResponseMessage): Promise<void>;
 }

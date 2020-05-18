@@ -1,6 +1,6 @@
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
-import { AsyncRequestMessage } from './AsyncExchange';
+import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
 // TODO 10May20: Make this SNSProxy and use SNS directly?
@@ -20,7 +20,7 @@ export class ActivityRequestHandlerMessageProxy<TReq, TRes> implements IActivity
         
         const requestId = uuid.v4();
         
-        const message: AsyncRequestMessage = 
+        const message: ExchangeRequestMessage = 
             {
                 callingContext: {
                     requestId: requestId,

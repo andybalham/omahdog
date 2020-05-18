@@ -1,5 +1,5 @@
 import { FlowInstance } from '../omahdog/FlowContext';
-import { AsyncCallingContext } from './AsyncExchange';
+import { ExchangeCallingContext } from './Exchange';
 
 export interface IFunctionInstanceRepository {
 
@@ -11,7 +11,7 @@ export interface IFunctionInstanceRepository {
 }
 
 export class FunctionInstance {
-    readonly callingContext: AsyncCallingContext;
+    readonly callingContext: ExchangeCallingContext;
     readonly flowInstance: FlowInstance;
     readonly requestId: string;
     readonly resumeCount: number;
