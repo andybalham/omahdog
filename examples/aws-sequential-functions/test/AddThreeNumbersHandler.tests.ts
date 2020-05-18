@@ -1,20 +1,24 @@
 import { expect } from 'chai';
-import { FlowContext } from '../src/omahdog/FlowContext';
+import { FlowContext, RequestRouter, HandlerFactory, AsyncResponse } from '../src/omahdog/FlowContext';
 import { SumNumbersRequest, SumNumbersResponse } from '../src/exchanges/SumNumbersExchange';
 import { SumNumbersHandler } from '../src/handlers/SumNumbersHandler';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from '../src/exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from '../src/exchanges/StoreTotalExchange';
+import { ErrorResponse } from '../src/omahdog/FlowExchanges';
 
 describe('AddThreeNumbersHandler tests', () => {
 
     it('returns the total of the inputs', async () => {
 
-        const flowContext = FlowContext.newContext();
-        flowContext.requestRouter
+        const requestRouter = new RequestRouter()
             .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler);
-        flowContext.handlerFactory
-            .register(SumNumbersHandler, () => new SumNumbersHandler());
+
+        const handlerFactory = new HandlerFactory()
+            .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('The answer to life, the universe, and everything'));
+
+        const flowContext = FlowContext.newContext(requestRouter, handlerFactory);
+
         flowContext.mocks
             .add('Store_total', (req: StoreTotalRequest) => { 
                 console.log(`Store_total: ${JSON.stringify(req)}`); 
@@ -22,27 +26,23 @@ describe('AddThreeNumbersHandler tests', () => {
                 return response;
             });
 
-        const request = new AddThreeNumbersRequest();
-        request.a = 200;
-        request.b = 210;
-        request.c = 206;
+        const request: AddThreeNumbersRequest = { a: 12, b: 14, c: 16 };
 
         console.log(JSON.stringify(request));
 
-        // TODO 25Apr20: There's no way to force us to inject the dependencies into the handler
-        const response = await new AddThreeNumbersHandler().handle(flowContext, request);
+        const response = await flowContext.handleRequest(AddThreeNumbersHandler, request) as AddThreeNumbersResponse;
 
         expect(flowContext.instanceId).to.be.not.undefined;
-        expect((response as AddThreeNumbersResponse).total).to.be.equal(616);
+        expect(response.total).to.be.equal(42);
     });
 
     it('throws an exception on 666', async () => {
 
-        const flowContext = FlowContext.newContext();
-        flowContext.requestRouter
+        const requestRouter = new RequestRouter()
             .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler);
-        flowContext.handlerFactory
-            .register(SumNumbersHandler, () => new SumNumbersHandler());
+
+        const flowContext = FlowContext.newContext(requestRouter);
+
         flowContext.mocks
             .add('Store_total', (req: StoreTotalRequest) => { 
                 console.log(`Store_total: ${JSON.stringify(req)}`); 
@@ -50,15 +50,10 @@ describe('AddThreeNumbersHandler tests', () => {
                 return response;
             });
 
-        const request = new AddThreeNumbersRequest();
-        request.a = 666;
-        request.b = 210;
-        request.c = 206;
-
-        console.log(JSON.stringify(request));
+        const request: AddThreeNumbersRequest = { a: 666, b: 210, c: 206 };
 
         try {
-            await new AddThreeNumbersHandler().handle(flowContext, request);
+            await flowContext.handleRequest(AddThreeNumbersHandler, request);
             expect(false).to.be.true;
         } catch (error) {
             expect((error as Error).message).to.contain('bandy');
