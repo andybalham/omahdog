@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Add Three Numbers
+
+  SAM Template for the example of adding three numbers together
+
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: Omahdog-AwsSequentialFunctions
+  ApiStageName:
+    Type: String
+    Default: test
+
+Globals:
+  Function:
+    Timeout: 3
+    CodeUri: dist/
+    Runtime: nodejs12.x
+
+Resources:
+
+  FlowExchangeTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub:
+          - ${ApplicationName}-FlowExchangeTopic
+      DisplayName: Topic for request & response messages
+
+  FlowDeadLetterQueueTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub ${ApplicationName}-FlowDeadLetterQueueTopic
+      DisplayName: Topic for flow dead letter messages
+
+  FlowInstanceTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${ApplicationName}-FlowInstanceTable
+
+  FlowResultTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${ApplicationName}-FlowResultTable
+
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref ApiStageName
+      Name: !Sub ${ApplicationName}-ApiGateway
+      EndpointConfiguration: REGIONAL
+      Auth:
+        ApiKeyRequired: true # sets for all methods
+  MyFunctionName: "!Ref ApiStageName"
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  ApiEndpoint:
+    Description: "API endpoint"
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${A\
+      piStageName}/"
