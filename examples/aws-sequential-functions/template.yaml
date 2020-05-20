@@ -24,7 +24,8 @@ Resources:
   FlowExchangeTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub ${ApplicationName}-FlowExchangeTopic
+      TopicName:
+        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
       DisplayName: Topic for request & response messages
 
   FlowDeadLetterQueueTopic:
@@ -46,8 +47,10 @@ Resources:
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
-      StageName: !Ref ApiStageName
-      Name: !Sub ${ApplicationName}-ApiGateway
+      StageName: 
+        Ref: ApiStageName
+      Name: 
+        Fn::Sub: ${ApplicationName}-ApiGateway
       EndpointConfiguration: REGIONAL
       Auth:
         ApiKeyRequired: true # sets for all methods
@@ -72,7 +75,8 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName: !Ref AddTwoNumbersFunction
         - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
+            TopicName: 
+              Fn::GetAtt: [ FlowExchangeTopic, TopicName ]
       Events:
         AddTwoNumbersByQueryStringEvent:
           Type: Api
@@ -211,25 +215,32 @@ Resources:
   SumNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ApplicationName}-SumNumbersFunction
+      FunctionName: 
+        Fn::Sub: ${ApplicationName}-SumNumbersFunction
       Handler: requestLambdas.sumNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
+            TopicName: 
+              Fn::GetAtt: [ FlowExchangeTopic, TopicName ]
         - DynamoDBCrudPolicy:
-            TableName: !Ref FlowInstanceTable
+            TableName: 
+              Ref: FlowInstanceTable
       DeadLetterQueue:
         Type: SNS
-        TargetArn: !Ref FlowDeadLetterQueueTopic
+        TargetArn: 
+          Ref: FlowDeadLetterQueueTopic
       Environment:
         Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
+          FLOW_EXCHANGE_TOPIC_ARN: 
+            Ref: FlowExchangeTopic
+          FLOW_INSTANCE_TABLE_NAME: 
+            Ref: FlowInstanceTable
       Events:
         ExchangeTopic:
           Type: SNS
           Properties:
-            Topic: !Ref FlowExchangeTopic
+            Topic: 
+              Ref: FlowExchangeTopic
             FilterPolicy:
               MessageType:
                 - SumNumbersRequest:Handler
@@ -238,34 +249,50 @@ Resources:
   StoreTotalFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: !Sub ${ApplicationName}-StoreTotalFunction
+      # The app definition can specify a template for this, referencing any parameters
+      FunctionName: 
+        Fn::Sub: ${ApplicationName}-StoreTotalFunction
+      # The app definition can specify the module name, the method can be derived by convention
       Handler: requestLambdas.storeTotalHandler
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName: !GetAtt FlowExchangeTopic.TopicName
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowInstanceTable
-        # TODO: How to auto-generate this? The handler would have to expose that it needed such a table
-        - DynamoDBCrudPolicy:
-            TableName: !Ref FlowResultTable
-      DeadLetterQueue:
-        Type: SNS
-        TargetArn: !Ref FlowDeadLetterQueueTopic
+      # The app definition will wire up environment variables to the function
       Environment:
         Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          # TODO: How to auto-generate this? The handler would have to expose that it needed such a variable
-          FLOW_RESULT_TABLE_NAME: !Ref FlowResultTable
+          # These will be inferred from the sub-classing of LambdaActivityRequestHandler
+          FLOW_EXCHANGE_TOPIC_ARN: 
+            Ref: FlowExchangeTopic
+          FLOW_INSTANCE_TABLE_NAME: 
+            Ref: FlowInstanceTable
+          # This will be inferred from the wiring up of the DynamoDb resource access
+          FLOW_RESULT_TABLE_NAME: 
+            Ref: FlowResultTable
+      Policies:
+        # LambdaActivityRequestHandler will say it needs the following two resources
+        - SNSPublishMessagePolicy:
+            TopicName: 
+              Fn::GetAtt: [ FlowExchangeTopic, TopicName ]
+        - DynamoDBCrudPolicy:
+            TableName: 
+              Ref: FlowInstanceTable
+        # This will be inferred from the wiring up of the DynamoDb resource access
+        - DynamoDBCrudPolicy:
+            TableName: 
+              Ref: FlowResultTable
       Events:
+        # The app definition will define that this function is triggered by this event
         ExchangeTopic:
           Type: SNS
           Properties:
-            Topic: !Ref FlowExchangeTopic
+            Topic: 
+              Ref: FlowExchangeTopic
             FilterPolicy:
               MessageType:
+                # Would we ever want to have one of the following, but not the other?
                 - StoreTotalRequest:Handler
                 - StoreTotalHandler:Response
+      DeadLetterQueue:
+        Type: SNS
+        TargetArn: 
+          Ref: FlowDeadLetterQueueTopic
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

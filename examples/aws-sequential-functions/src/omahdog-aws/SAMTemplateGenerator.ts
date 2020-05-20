@@ -25,10 +25,11 @@ export abstract class SAMTemplateGenerator {
 
         const resourcesMap = templateYaml.get('Resources') as YAMLMap;
 
-        resourcesMap.set('MyFunctionName', new Scalar('!Ref ApiStageName'));
+        resourcesMap.set('MyFunctionName', new Scalar('ApiStageName'));
 
         // https://eemeli.org/yaml/#creating-documents
         // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-sub.html
+        // https://www.fischco.org/technica/2017/cloud-formation-sub/
 
         const processedTemplateContent = templateYaml.toString();
         const processedTemplateFilePath = path.join(workspaceFolderName, processedTemplateFileName);

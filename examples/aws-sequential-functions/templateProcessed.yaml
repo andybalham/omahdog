@@ -25,31 +25,34 @@ Resources:
     Type: AWS::SNS::Topic
     Properties:
       TopicName:
-        Fn::Sub:
-          - ${ApplicationName}-FlowExchangeTopic
+        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
       DisplayName: Topic for request & response messages
 
   FlowDeadLetterQueueTopic:
     Type: AWS::SNS::Topic
     Properties:
-      TopicName: !Sub ${ApplicationName}-FlowDeadLetterQueueTopic
+      TopicName:
+        Fn::Sub: ${ApplicationName}-FlowDeadLetterQueueTopic
       DisplayName: Topic for flow dead letter messages
 
   FlowInstanceTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
-      TableName: !Sub ${ApplicationName}-FlowInstanceTable
+      TableName:
+        Fn::Sub: ${ApplicationName}-FlowInstanceTable
 
   FlowResultTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
-      TableName: !Sub ${ApplicationName}-FlowResultTable
+      TableName:
+        Fn::Sub: ${ApplicationName}-FlowResultTable
 
   ApiGateway:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref ApiStageName
-      Name: !Sub ${ApplicationName}-ApiGateway
+      Name:
+        Fn::Sub: ${ApplicationName}-ApiGateway
       EndpointConfiguration: REGIONAL
       Auth:
         ApiKeyRequired: true # sets for all methods
