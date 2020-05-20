@@ -24,15 +24,19 @@ abstract class ConfigurationValue {
 
 class EnvironmentVariableValue extends ConfigurationValue {
     
-    readonly environmentVariableName: string;
+    readonly environmentVariableName?: string;
+    readonly resourceName?: string;
 
-    constructor(environmentVariableName?: string) {
+    constructor(environmentVariableName?: string, resourceName?: string) {
+        
         super(EnvironmentVariableValue);
-        if (environmentVariableName === undefined) throw new Error('environmentVariableName === undefined');
+        
         this.environmentVariableName = environmentVariableName;
+        this.resourceName = resourceName;
     }
 
     getValue(): string | undefined {
+        if (this.environmentVariableName === undefined) throw new Error('this.environmentVariableName === undefined');
         return process.env[this.environmentVariableName];
     }
 }
@@ -57,7 +61,6 @@ class HandlerService {
 class DynamoDbTableService extends HandlerService {
     documentClient: DocumentClient;
     tableName: ConfigurationValue; 
-    itemResult: ConfigurationValue; 
 }
 
 class Handler {
@@ -72,7 +75,7 @@ class Handler {
             TableName: this.services.tableService.tableName.value,
             Item: {
                 id: 'id',
-                result: this.services.tableService.itemResult.value
+                result: 'result'
             }
         };
 
@@ -85,15 +88,18 @@ describe('Ad-hoc tests', () => {
 
     it('test handler reflection', () => {
         
-        process.env.MY_ENVIRONMENT_VARIABLE = 'Aloha!';
+        process.env.FLOW_RESULT_TABLE_NAME = 'Aloha!';
         
-        const myEnvironmentVariable = new EnvironmentVariableValue('MY_ENVIRONMENT_VARIABLE');
+        const resources = {
+            flowResultTable: 'FlowResultTable'
+        };
+
+        const flowResultTableNameEnvVar = new EnvironmentVariableValue('FLOW_RESULT_TABLE_NAME', resources.flowResultTable);
 
         const handler = new Handler;
         handler.services.tableService = {
             documentClient: new DocumentClient, // TODO 20May20: Should this be a function too? I.e. just provide the wiring to get the instance
-            tableName: myEnvironmentVariable,
-            itemResult: new ConstantValue('Change is the only constant')
+            tableName: flowResultTableNameEnvVar
         };
 
         if ('services' in handler) {
