@@ -43,8 +43,8 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
 
         console.log(`message: ${JSON.stringify(message)}`);
 
-        if (this.sns === undefined) throw new Error('this._sns === undefined');
-        if (this.exchangeTopicArn === undefined) throw new Error('this._exchangeTopicArn === undefined');
+        if (this.sns === undefined) throw new Error('this.sns === undefined');
+        if (this.exchangeTopicArn === undefined) throw new Error('this.exchangeTopicArn === undefined');
 
         const params: PublishInput = {
             Message: JSON.stringify(message),
