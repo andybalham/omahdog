@@ -1,7 +1,6 @@
 class DocumentClient {
     put(params: any): void {}
 }
-
 class SNS {
     publish(params: any): void {
     }
@@ -73,7 +72,6 @@ abstract class AwsResource {
         this.templateReference = templateReference;
     }
 }
-
 class DynamoDbTableCrudResource extends AwsResource {
     
     tableName?: EnvironmentVariable;
@@ -85,7 +83,6 @@ class DynamoDbTableCrudResource extends AwsResource {
         this.documentClient = documentClient;
     }
 }
-
 class SNSTopicPublishResource extends AwsResource {
     
     topicArn?: EnvironmentVariable;
@@ -98,20 +95,22 @@ class SNSTopicPublishResource extends AwsResource {
     }
 }
 
-interface IHandlerInitialiser {
-    (handler: Handler): void;
+interface IHandler {
+    handle(): void;
 }
-
+interface IHandlerInitialiser {
+    (handler: IHandler): void;
+}
 class HandlerFactory {
 
     private readonly initialisers = new Map<string, IHandlerInitialiser>();
 
-    addInitialiser<T extends Handler>(type: new () => T, initialiser: (handler: T) => void): HandlerFactory {
+    addInitialiser<T extends IHandler>(type: new () => T, initialiser: (handler: T) => void): HandlerFactory {
         this.initialisers.set(type.name, initialiser);
         return this;
     }
 
-    build<T extends Handler>(type: new () => T): T {
+    build<T extends IHandler>(type: new () => T): T {
         const initialiser = this.initialisers.get(type.name);
         if (initialiser === undefined) throw new Error('initialiser === undefined');
         const handler = new type();
@@ -120,12 +119,9 @@ class HandlerFactory {
     }
 }
 
-abstract class Handler {
-    abstract handle(): void;
-}
+class ExampleHandler implements IHandler {
 
-class TableHandler extends Handler {
-
+    // TODO 23May20: How can a composite handler return a union of all resources in use?
     resources = {
         flowResultTable: new DynamoDbTableCrudResource,
         exchangeTopic: new SNSTopicPublishResource,
@@ -161,11 +157,58 @@ class TableHandler extends Handler {
     }
 }
 
-describe('Ad-hoc tests', () => {
+class ActivityTrigger {}
+
+class ActivityFunction {
+    resourceName: string;
+    // TODO 23May20: FunctionName, DeadLetterQueue
+    triggers: Map<string, ActivityTrigger>;
+    resources: Map<string, AwsResource>;
+}
+
+class ActivityFunctions {
+
+    // TODO 23May20: We need to return the triggers and resources for each function
+
+    triggers = {
+        // TODO 23May20: Define SNS event, specifying topic, but with filter by convention
+    }
+
+    // TODO 23May20: How can this be combined with the resources required by the handlers?
+    // TODO 23May20: The following resources are common to all functions
+    resources = {
+        flowInstanceTable: new DynamoDbTableCrudResource,
+        exchangeTopic: new SNSTopicPublishResource,
+    }
+
+    constructor(deadLetterQueueReference?: TemplateReference) {
+        // TODO 23May20: Assuming the same DLQ for all functions, if a DLQ reference supplied
+        // TODO 23May20: Set requestRouter, handlerFactory here
+    }
+
+    register(handlerType: new () => IHandler, nameTemplate: string): any {
+        // TODO 23May20: Register the handlers to be made into functions, for purposes of inspection 
+    }
+
+    getFunctions(): ActivityFunction[] {
+        // TODO 23May20: Should we always return a DLQ function?
+        return [];
+    }
+
+    handleRequest(handlerType: new () => IHandler, event: any): any {        
+    }
+
+    handleDeadLetterQueueMessage(event: any): any {
+    }
+}
+
+
+
+describe('Handler tests', () => {
 
     it('can be unit tested', () => {
         
-        const tableHandler = new TableHandler;
+        const tableHandler = new ExampleHandler;
         
         tableHandler.resources.flowResultTable.tableName = new MockEnvironmentVariable('MyTable');
         tableHandler.resources.flowResultTable.documentClient = new DocumentClient;
@@ -210,14 +253,14 @@ describe('Ad-hoc tests', () => {
         };
 
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TableHandler, handler => { 
+            .addInitialiser(ExampleHandler, handler => { 
                 handler.resources.flowResultTable = awsResources.flowResultTable;
                 handler.resources.exchangeTopic = awsResources.exchangeTopic;
             });
 
         // Get a handler and inspect the resources
 
-        const handler = handlerFactory.build(TableHandler);
+        const handler = handlerFactory.build(ExampleHandler);
         
         if ('resources' in handler) {
             console.log(JSON.stringify(handler.resources));

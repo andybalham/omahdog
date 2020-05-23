@@ -1,3 +1,5 @@
+// TODO 23May20: Change to FlowCallContext, FlowRequestMessage, and FlowResponseMessage
+
 export class ExchangeCallingContext {
     readonly requestId: string;
     readonly handlerTypeName: string;

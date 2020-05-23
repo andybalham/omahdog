@@ -6,7 +6,6 @@ import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstan
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
-import { IResumableRequestHandler } from '../omahdog/FlowRequestHandler';
 
 export class LambdaActivityRequestHandler {
 
