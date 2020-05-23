@@ -7,70 +7,59 @@ class SNS {
     }
 }
 
-abstract class ConfigurationValue {
-
-    readonly configurationValueType: string;
+class EnvironmentVariable {
     
-    constructor(type: new () => ConfigurationValue) {
-        this.configurationValueType = type.name;
-    }
+    readonly variableName: string;
+    readonly templateReference: TemplateReference;
 
-    abstract getValue(): string | undefined;
+    constructor(variableName: string, resourceReference: TemplateReference) {        
+        this.variableName = variableName;
+        this.templateReference = resourceReference;
+    }
 
     get value(): string | undefined {
-        return this.getValue();
-    }
-}
-
-class EnvironmentVariableValue extends ConfigurationValue {
-    
-    readonly variableName?: string;
-    readonly resourceReference?: ResourceReference;
-
-    constructor(variableName?: string, resourceReference?: ResourceReference) {
-        
-        super(EnvironmentVariableValue);
-        
-        this.variableName = variableName;
-        this.resourceReference= resourceReference;
-    }
-
-    getValue(): string | undefined {
-        if (this.variableName === undefined) throw new Error('this.environmentVariableName === undefined');
         return process.env[this.variableName];
     }
 }
-
-class ConstantValue extends ConfigurationValue {
+class MockEnvironmentVariable implements EnvironmentVariable {
+    readonly variableName: string;
+    readonly templateReference: TemplateReference;
+    private readonly mockValue?: string;
     
-    readonly constantValue?: string;
-
-    constructor(constantValue?: string) {
-        super(ConstantValue);
-        this.constantValue = constantValue;
+    constructor(mockValue?: string) {
+        this.mockValue = mockValue;
     }
 
-    getValue(): string | undefined {
-        return this.constantValue;
+    get value(): string | undefined {
+        return this.mockValue;
     }
 }
 
-abstract class ResourceReference {
-    // constructor(type: new () => ResourceReference){}
+abstract class TemplateReference {
+    readonly typeName: string;
+    constructor(type: new () => TemplateReference) {
+        this.typeName = type.name;
+    }
 }
-
-class NameResourceReference extends ResourceReference {
-    readonly resourceName: string;
-    constructor(resourceName: string) {
-        super();
+class ResourceReference extends TemplateReference {
+    readonly resourceName?: string;
+    constructor(resourceName?: string) {
+        super(ResourceReference);
         this.resourceName = resourceName;
     }
 }
-class AttributeResourceReference extends ResourceReference {
-    readonly resourceName: string;
-    readonly attributeName: string;
-    constructor(resourceName: string, attributeName: string) {
-        super();
+class ParameterReference extends TemplateReference {
+    readonly parameterName?: string;
+    constructor(parameterName?: string) {
+        super(ParameterReference);
+        this.parameterName = parameterName;
+    }
+}
+class ResourceAttributeReference extends TemplateReference {
+    readonly resourceName?: string;
+    readonly attributeName?: string;
+    constructor(resourceName?: string, attributeName?: string) {
+        super(ResourceAttributeReference);
         this.resourceName = resourceName;
         this.attributeName = attributeName;
     }
@@ -78,20 +67,20 @@ class AttributeResourceReference extends ResourceReference {
 
 abstract class AwsResource {
     readonly typeName: string;
-    resourceReference?: ResourceReference;
-    constructor(type: new () => AwsResource) {
+    readonly templateReference?: TemplateReference;
+    constructor(type: new () => AwsResource, templateReference?: TemplateReference) {
         this.typeName = type.name;
+        this.templateReference = templateReference;
     }
 }
 
 class DynamoDbTableCrudResource extends AwsResource {
     
-    tableName?: ConfigurationValue;
+    tableName?: EnvironmentVariable;
     documentClient?: DocumentClient;
 
-    constructor(tableArn?: ResourceReference, tableName?: ConfigurationValue, documentClient?: DocumentClient) {
-        super(DynamoDbTableCrudResource);
-        this.resourceReference = tableArn;
+    constructor(tableName?: EnvironmentVariable, documentClient?: DocumentClient) {
+        super(DynamoDbTableCrudResource, tableName?.templateReference);
         this.tableName = tableName;
         this.documentClient = documentClient;
     }
@@ -99,36 +88,34 @@ class DynamoDbTableCrudResource extends AwsResource {
 
 class SNSTopicPublishResource extends AwsResource {
     
-    topicArn?: ConfigurationValue;
+    topicArn?: EnvironmentVariable;
     sns?: SNS;
 
-    constructor(topicName?: ResourceReference, topicArn?: ConfigurationValue, sns?: SNS) {
-        super(SNSTopicPublishResource);
-        this.resourceReference = topicName;
+    constructor(topicName?: TemplateReference, topicArn?: EnvironmentVariable, sns?: SNS) {
+        super(SNSTopicPublishResource, topicName);
         this.topicArn = topicArn;
         this.sns = sns;
     }
 }
 
-class HandlerBuilder {
-    handlerType: new () => Handler;
-    initialise: (handler: Handler) => void;
+interface IHandlerInitialiser {
+    (handler: Handler): void;
 }
 
 class HandlerFactory {
 
-    private readonly builderMap = new Map<string, HandlerBuilder>();
+    private readonly initialisers = new Map<string, IHandlerInitialiser>();
 
-    register<T extends Handler>(type: new () => T, initialise: (handler: T) => void): HandlerFactory {
-        this.builderMap.set(type.name, { handlerType: type, initialise: (initialise as (handler: Handler) => void)});
+    addInitialiser<T extends Handler>(type: new () => T, initialiser: (handler: T) => void): HandlerFactory {
+        this.initialisers.set(type.name, initialiser);
         return this;
     }
 
     build<T extends Handler>(type: new () => T): T {
-        const builder = this.builderMap.get(type.name);
-        if (builder === undefined) throw new Error('builder === undefined');
-        const handler = new builder.handlerType() as T;
-        builder.initialise(handler);
+        const initialiser = this.initialisers.get(type.name);
+        if (initialiser === undefined) throw new Error('initialiser === undefined');
+        const handler = new type();
+        initialiser(handler);
         return handler;
     }
 }
@@ -170,17 +157,27 @@ class TableHandler extends Handler {
             }
         };
 
-        this.resources.exchangeTopic.sns.publish(params);
-        
+        this.resources.exchangeTopic.sns.publish(params);        
     }
 }
 
 describe('Ad-hoc tests', () => {
 
-    it.only('test handler reflection', () => {
+    it('can be unit tested', () => {
         
-        process.env.FLOW_RESULT_TABLE_NAME = 'MyTable';
-        process.env.FLOW_EXCHANGE_TOPIC_ARN = 'MyTopic';
+        const tableHandler = new TableHandler;
+        
+        tableHandler.resources.flowResultTable.tableName = new MockEnvironmentVariable('MyTable');
+        tableHandler.resources.flowResultTable.documentClient = new DocumentClient;
+
+        tableHandler.resources.exchangeTopic.topicArn = new MockEnvironmentVariable('MyTopicArn');
+        tableHandler.resources.exchangeTopic.sns = new SNS;
+        
+        tableHandler.handle();
+    });
+    
+
+    it('can be reflected upon and exercised', () => {
         
         const documentClient = new DocumentClient;
         const sns = new SNS;
@@ -190,33 +187,35 @@ describe('Ad-hoc tests', () => {
             exchangeTopic: 'FlowExchangeTopic',
         };
 
-        const resourceReferences = {
-            flowResultTable: new NameResourceReference(resourceNames.flowResultTable),
-            exchangeTopic: new NameResourceReference(resourceNames.exchangeTopic),
-            exchangeTopicName: new AttributeResourceReference(resourceNames.exchangeTopic, 'TopicName'),
+        const templateReferences = {
+            flowResultTable: new ResourceReference(resourceNames.flowResultTable),
+            exchangeTopicArn: new ResourceReference(resourceNames.exchangeTopic),
+            exchangeTopicName: new ResourceAttributeReference(resourceNames.exchangeTopic, 'TopicName'),
         };
 
         const environmentVariables = {
-            flowResultTableName: new EnvironmentVariableValue('FLOW_RESULT_TABLE_NAME', resourceReferences.flowResultTable),
-            exchangeTopicArn: new EnvironmentVariableValue('FLOW_EXCHANGE_TOPIC_ARN', resourceReferences.exchangeTopic),
+            flowResultTableName: 
+                new EnvironmentVariable('FLOW_RESULT_TABLE_NAME', templateReferences.flowResultTable),
+            exchangeTopicArn: 
+                new EnvironmentVariable('FLOW_EXCHANGE_TOPIC_ARN', templateReferences.exchangeTopicArn),
         };
 
-        const resources = {
+        const awsResources = {
             flowResultTable: 
                 new DynamoDbTableCrudResource(
-                    resourceReferences.flowResultTable, environmentVariables.flowResultTableName, documentClient),
+                    environmentVariables.flowResultTableName, documentClient),
             exchangeTopic:
                 new SNSTopicPublishResource(
-                    resourceReferences.exchangeTopicName, environmentVariables.exchangeTopicArn, sns),
+                    templateReferences.exchangeTopicName, environmentVariables.exchangeTopicArn, sns),
         };
 
-        // Register the handlers
-
         const handlerFactory = new HandlerFactory()
-            .register(TableHandler, handler => { 
-                handler.resources.flowResultTable = resources.flowResultTable;
-                handler.resources.exchangeTopic = resources.exchangeTopic;
+            .addInitialiser(TableHandler, handler => { 
+                handler.resources.flowResultTable = awsResources.flowResultTable;
+                handler.resources.exchangeTopic = awsResources.exchangeTopic;
             });
+
+        // Get a handler and inspect the resources
 
         const handler = handlerFactory.build(TableHandler);
         
@@ -224,6 +223,11 @@ describe('Ad-hoc tests', () => {
             console.log(JSON.stringify(handler.resources));
         }
 
+        // Exercise the handler
+        
+        process.env.FLOW_RESULT_TABLE_NAME = 'MyTable';
+        process.env.FLOW_EXCHANGE_TOPIC_ARN = 'MyTopicArn';
+        
         handler.handle();
     });
 });
