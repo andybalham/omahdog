@@ -17,9 +17,11 @@
   "license": "ISC",
   "dependencies": {
     "@types/aws-lambda": "^8.10.48",
+    "@types/deep-equal": "^1.0.1",
     "@types/node": "^13.11.1",
     "@types/uuid": "^7.0.2",
     "@types/yaml": "^1.9.7",
+    "deep-equal": "^2.0.3",
     "uuid": "^7.0.3",
     "yaml": "^1.10.0"
   },

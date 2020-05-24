@@ -1,3 +1,5 @@
+import deepEqual from 'deep-equal';
+
 class DocumentClient {
     put(params: any): void {}
 }
@@ -7,7 +9,6 @@ class SNS {
 }
 
 class EnvironmentVariable {
-    
     readonly variableName: string;
     readonly templateReference: TemplateReference;
 
@@ -16,6 +17,14 @@ class EnvironmentVariable {
         this.templateReference = resourceReference;
     }
 
+    isEqualTo(target: EnvironmentVariable | undefined): boolean {
+        const isEqualTo =
+            (target !== undefined)
+            && (this.variableName === target.variableName)
+            && this.templateReference.isEqualTo(target.templateReference);
+        return isEqualTo;
+    }
+    
     get value(): string | undefined {
         return process.env[this.variableName];
     }
@@ -28,6 +37,10 @@ class MockEnvironmentVariable implements EnvironmentVariable {
     constructor(mockValue?: string) {
         this.mockValue = mockValue;
     }
+    
+    isEqualTo(target: EnvironmentVariable): boolean {
+        throw new Error('Method not implemented.');
+    }
 
     get value(): string | undefined {
         return this.mockValue;
@@ -39,6 +52,8 @@ abstract class TemplateReference {
     constructor(type: new () => TemplateReference) {
         this.typeName = type.name;
     }
+    abstract get instance(): any;
+    abstract isEqualTo(target: TemplateReference | undefined): boolean;
 }
 class ResourceReference extends TemplateReference {
     readonly resourceName?: string;
@@ -46,12 +61,28 @@ class ResourceReference extends TemplateReference {
         super(ResourceReference);
         this.resourceName = resourceName;
     }
+    get instance(): any { return { 'Ref': this.resourceName }; }
+    isEqualTo(target: TemplateReference | undefined): boolean {
+        const isEqualTo =
+            (target !== undefined)
+            && (target.typeName === this.typeName)
+            && ((target as ResourceReference).resourceName === this.resourceName);
+        return isEqualTo;
+    }
 }
 class ParameterReference extends TemplateReference {
     readonly parameterName?: string;
     constructor(parameterName?: string) {
         super(ParameterReference);
         this.parameterName = parameterName;
+    }
+    get instance(): any { return { 'Ref': this.parameterName }; }
+    isEqualTo(target: TemplateReference | undefined): boolean {
+        const isEqualTo =
+            (target !== undefined)
+            && (target.typeName === this.typeName)
+            && ((target as ParameterReference).parameterName === this.parameterName);
+        return isEqualTo;
     }
 }
 class ResourceAttributeReference extends TemplateReference {
@@ -62,15 +93,33 @@ class ResourceAttributeReference extends TemplateReference {
         this.resourceName = resourceName;
         this.attributeName = attributeName;
     }
+    get instance(): any { return { 'Fn:Attr': [ this.resourceName, this.attributeName] }; }
+    isEqualTo(target: TemplateReference): boolean {
+        const isEqualTo =
+            (target !== undefined)
+            && (target.typeName === this.typeName)
+            && ((target as ResourceAttributeReference).resourceName === this.resourceName)
+            && ((target as ResourceAttributeReference).attributeName === this.attributeName);
+        return isEqualTo;
+    }
 }
+interface IResource {
+    typeName: string;
+    getPolicy(): any;
+}
+abstract class AwsResource implements IResource {
 
-abstract class AwsResource {
     readonly typeName: string;
     readonly templateReference?: TemplateReference;
+    
     constructor(type: new () => AwsResource, templateReference?: TemplateReference) {
         this.typeName = type.name;
         this.templateReference = templateReference;
     }
+
+    abstract isEqualTo(target: AwsResource): boolean;
+
+    abstract getPolicy(): any;
 }
 class DynamoDbTableCrudResource extends AwsResource {
     
@@ -81,6 +130,26 @@ class DynamoDbTableCrudResource extends AwsResource {
         super(DynamoDbTableCrudResource, tableName?.templateReference);
         this.tableName = tableName;
         this.documentClient = documentClient;
+    }
+
+    getPolicy(): any {
+        return {
+            DynamoDBCrudPolicy: { 'TableName' : this.templateReference?.instance }
+        };
+    }
+
+    isEqualTo(target: AwsResource): boolean {
+        
+        const targetTableName = (target as DynamoDbTableCrudResource).tableName;
+
+        const isEqualTo =
+            (target.typeName === this.typeName)
+            && (target.templateReference !== undefined)
+            && (target.templateReference.isEqualTo(this.templateReference))
+            && (targetTableName !== undefined)
+            && (targetTableName.isEqualTo(this.tableName));
+
+        return isEqualTo;
     }
 }
 class SNSTopicPublishResource extends AwsResource {
@@ -93,17 +162,39 @@ class SNSTopicPublishResource extends AwsResource {
         this.topicArn = topicArn;
         this.sns = sns;
     }
+
+    getPolicy(): any {
+        return {
+            SNSPublishMessagePolicy: { 'TopicName' : this.templateReference?.instance }
+        };
+    }
+
+    isEqualTo(target: AwsResource): boolean {
+        
+        const targetTopArn = (target as SNSTopicPublishResource).topicArn;
+
+        const isEqualTo =
+            (target.typeName === this.typeName)
+            && (target.templateReference !== undefined)
+            && (target.templateReference.isEqualTo(this.templateReference))
+            && (targetTopArn !== undefined)
+            && (targetTopArn.isEqualTo(this.topicArn));
+
+        return isEqualTo;
+    }
 }
 
+interface IHandlerType {
+    new (): IHandler;
+}
 interface IHandler {
     handle(): void;
+    getHandlerTypes(requestRouter: RequestRouter): IHandlerType[];
 }
-interface IHandlerInitialiser {
-    (handler: IHandler): void;
-}
+
 class HandlerFactory {
 
-    private readonly initialisers = new Map<string, IHandlerInitialiser>();
+    private readonly initialisers = new Map<string, (handler: any) => void>();
 
     addInitialiser<T extends IHandler>(type: new () => T, initialiser: (handler: T) => void): HandlerFactory {
         this.initialisers.set(type.name, initialiser);
@@ -111,20 +202,30 @@ class HandlerFactory {
     }
 
     build<T extends IHandler>(type: new () => T): T {
-        const initialiser = this.initialisers.get(type.name);
-        if (initialiser === undefined) throw new Error('initialiser === undefined');
+        
         const handler = new type();
-        initialiser(handler);
+
+        const initialiser = this.initialisers.get(type.name);
+        
+        if (initialiser !== undefined) {
+            initialiser(handler);
+        }
+        
         return handler;
     }
 }
 
+class RequestRouter {}
+
 class ExampleHandler implements IHandler {
 
-    // TODO 23May20: How can a composite handler return a union of all resources in use?
     resources = {
         flowResultTable: new DynamoDbTableCrudResource,
         exchangeTopic: new SNSTopicPublishResource,
+    }
+
+    getHandlerTypes(requestRouter: RequestRouter): IHandlerType[] { 
+        return [ ExampleHandler ]; 
     }
 
     handle(): void {
@@ -154,6 +255,17 @@ class ExampleHandler implements IHandler {
         };
 
         this.resources.exchangeTopic.sns.publish(params);        
+    }
+}
+
+class CompositeHandler implements IHandler {
+
+    getHandlerTypes(requestRouter: RequestRouter): IHandlerType[] { 
+        return [ ExampleHandler, ExampleHandler ]; 
+    }
+
+    handle(): void {
+        throw new Error('Method not implemented.');
     }
 }
 
@@ -206,6 +318,10 @@ class ActivityFunctions {
 
 describe('Handler tests', () => {
 
+    it('can union resources', () => {
+        
+    });
+    
     it('can be unit tested', () => {
         
         const tableHandler = new ExampleHandler;
@@ -220,7 +336,7 @@ describe('Handler tests', () => {
     });
     
 
-    it('can be reflected upon and exercised', () => {
+    it.only('can be reflected upon and exercised', () => {
         
         const documentClient = new DocumentClient;
         const sns = new SNS;
@@ -260,17 +376,46 @@ describe('Handler tests', () => {
 
         // Get a handler and inspect the resources
 
-        const handler = handlerFactory.build(ExampleHandler);
+        const exampleHandler = handlerFactory.build(ExampleHandler);
         
-        if ('resources' in handler) {
-            console.log(JSON.stringify(handler.resources));
+        if ('resources' in exampleHandler) {
+            console.log(JSON.stringify(exampleHandler.resources));
         }
+
+        const compositeHandler = handlerFactory.build(CompositeHandler);
+
+        const compositeHandlerTypes = compositeHandler.getHandlerTypes(new RequestRouter);
+        
+        const resourceList: IResource[] = [];
+
+        compositeHandlerTypes.forEach(handlerType => {
+
+            const handler: any = handlerFactory.build(handlerType);
+
+            // TODO 24May20: We also need to check each handler for triggers, that result in events
+
+            if (handler.resources !== undefined) {
+                for (const resourceName in handler.resources) {
+                    if (Object.prototype.hasOwnProperty.call(handler.resources, resourceName)) {
+                        
+                        const resource = handler.resources[resourceName];
+                        const resourcePolicy = resource.getPolicy();
+    
+                        if (!resourceList.some(r => deepEqual(r.getPolicy(), resourcePolicy))) {
+                            resourceList.push(resource);
+                        } else {
+                            console.log('Duplicate');
+                        }           
+                    }
+                }        
+            }
+        });
 
         // Exercise the handler
         
         process.env.FLOW_RESULT_TABLE_NAME = 'MyTable';
         process.env.FLOW_EXCHANGE_TOPIC_ARN = 'MyTopicArn';
         
-        handler.handle();
+        exampleHandler.handle();
     });
 });
