@@ -16,14 +16,6 @@ class EnvironmentVariable {
         this.variableName = variableName;
         this.templateReference = resourceReference;
     }
-
-    isEqualTo(target: EnvironmentVariable | undefined): boolean {
-        const isEqualTo =
-            (target !== undefined)
-            && (this.variableName === target.variableName)
-            && this.templateReference.isEqualTo(target.templateReference);
-        return isEqualTo;
-    }
     
     get value(): string | undefined {
         return process.env[this.variableName];
@@ -37,10 +29,6 @@ class MockEnvironmentVariable implements EnvironmentVariable {
     constructor(mockValue?: string) {
         this.mockValue = mockValue;
     }
-    
-    isEqualTo(target: EnvironmentVariable): boolean {
-        throw new Error('Method not implemented.');
-    }
 
     get value(): string | undefined {
         return this.mockValue;
@@ -53,7 +41,6 @@ abstract class TemplateReference {
         this.typeName = type.name;
     }
     abstract get instance(): any;
-    abstract isEqualTo(target: TemplateReference | undefined): boolean;
 }
 class ResourceReference extends TemplateReference {
     readonly resourceName?: string;
@@ -62,13 +49,6 @@ class ResourceReference extends TemplateReference {
         this.resourceName = resourceName;
     }
     get instance(): any { return { 'Ref': this.resourceName }; }
-    isEqualTo(target: TemplateReference | undefined): boolean {
-        const isEqualTo =
-            (target !== undefined)
-            && (target.typeName === this.typeName)
-            && ((target as ResourceReference).resourceName === this.resourceName);
-        return isEqualTo;
-    }
 }
 class ParameterReference extends TemplateReference {
     readonly parameterName?: string;
@@ -77,13 +57,6 @@ class ParameterReference extends TemplateReference {
         this.parameterName = parameterName;
     }
     get instance(): any { return { 'Ref': this.parameterName }; }
-    isEqualTo(target: TemplateReference | undefined): boolean {
-        const isEqualTo =
-            (target !== undefined)
-            && (target.typeName === this.typeName)
-            && ((target as ParameterReference).parameterName === this.parameterName);
-        return isEqualTo;
-    }
 }
 class ResourceAttributeReference extends TemplateReference {
     readonly resourceName?: string;
@@ -94,14 +67,6 @@ class ResourceAttributeReference extends TemplateReference {
         this.attributeName = attributeName;
     }
     get instance(): any { return { 'Fn:Attr': [ this.resourceName, this.attributeName] }; }
-    isEqualTo(target: TemplateReference): boolean {
-        const isEqualTo =
-            (target !== undefined)
-            && (target.typeName === this.typeName)
-            && ((target as ResourceAttributeReference).resourceName === this.resourceName)
-            && ((target as ResourceAttributeReference).attributeName === this.attributeName);
-        return isEqualTo;
-    }
 }
 interface IResource {
     typeName: string;
@@ -116,8 +81,6 @@ abstract class AwsResource implements IResource {
         this.typeName = type.name;
         this.templateReference = templateReference;
     }
-
-    abstract isEqualTo(target: AwsResource): boolean;
 
     abstract getPolicy(): any;
 }
@@ -137,20 +100,6 @@ class DynamoDbTableCrudResource extends AwsResource {
             DynamoDBCrudPolicy: { 'TableName' : this.templateReference?.instance }
         };
     }
-
-    isEqualTo(target: AwsResource): boolean {
-        
-        const targetTableName = (target as DynamoDbTableCrudResource).tableName;
-
-        const isEqualTo =
-            (target.typeName === this.typeName)
-            && (target.templateReference !== undefined)
-            && (target.templateReference.isEqualTo(this.templateReference))
-            && (targetTableName !== undefined)
-            && (targetTableName.isEqualTo(this.tableName));
-
-        return isEqualTo;
-    }
 }
 class SNSTopicPublishResource extends AwsResource {
     
@@ -167,20 +116,6 @@ class SNSTopicPublishResource extends AwsResource {
         return {
             SNSPublishMessagePolicy: { 'TopicName' : this.templateReference?.instance }
         };
-    }
-
-    isEqualTo(target: AwsResource): boolean {
-        
-        const targetTopArn = (target as SNSTopicPublishResource).topicArn;
-
-        const isEqualTo =
-            (target.typeName === this.typeName)
-            && (target.templateReference !== undefined)
-            && (target.templateReference.isEqualTo(this.templateReference))
-            && (targetTopArn !== undefined)
-            && (targetTopArn.isEqualTo(this.topicArn));
-
-        return isEqualTo;
     }
 }
 
@@ -255,6 +190,62 @@ class ExampleHandler implements IHandler {
         };
 
         this.resources.exchangeTopic.sns.publish(params);        
+    }
+}
+
+interface ITrigger {
+    getEvent(): any;
+}
+abstract class AwsTrigger implements ITrigger {    
+    abstract getEvent(): any;
+}
+class SNSTrigger extends AwsTrigger {
+    // TODO 24May20: Can make the 
+    constructor(filterPolicy?: any) {
+        super();
+    }
+    getEvent(): any {
+        return { };
+    }
+}
+
+class ExampleProxyHandler implements IHandler {
+
+    resources = {
+        proxyTopic: new SNSTopicPublishResource
+    }
+
+    // TODO 24May20: Sometimes a function would want to send, but not receive. Perhaps there needs to be two separate handlers?
+
+    triggers = {
+        proxyResponse: new SNSTrigger({
+            MessageType: [ `${this.typeName}.Response` ]
+        })
+    }
+
+    get typeName(): string {
+        // TODO 24May20: This would be sub-classed, to return the correct type
+        return ExampleProxyHandler.name;
+    }
+
+    getHandlerTypes(requestRouter: RequestRouter): IHandlerType[] { 
+        return [ ExampleProxyHandler ]; 
+    }
+
+    handle(): void {
+
+        if (this.resources.proxyTopic.sns === undefined) throw new Error('this.resources.exchangeTopic.sns === undefined');
+        if (this.resources.proxyTopic.topicArn === undefined) throw new Error('this.resources.exchangeTopic.topicArn === undefined');
+
+        const params = {
+            Message: JSON.stringify('message'),
+            TopicArn: this.resources.proxyTopic.topicArn.value,
+            MessageAttributes: {
+                MessageType: { DataType: 'String', StringValue: 'Response' }
+            }
+        };
+
+        this.resources.proxyTopic.sns.publish(params);        
     }
 }
 
