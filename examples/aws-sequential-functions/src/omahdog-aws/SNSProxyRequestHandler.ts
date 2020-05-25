@@ -4,7 +4,7 @@ import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 
 // TODO 10May20: Make this SNSProxy and use SNS directly?
-export class ActivityRequestHandlerMessageProxy<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
+export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
     private readonly requestTypeName: string;
     private readonly exchangeMessagePublisher?: IExchangeMessagePublisher;

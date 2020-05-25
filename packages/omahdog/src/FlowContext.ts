@@ -189,23 +189,24 @@ export class AsyncResponse {
 
 export class HandlerFactory {
 
-    private readonly _handlerInstantiators = new Map<string, () => IActivityRequestHandlerBase>();
+    private readonly initialisers = new Map<string, (handler: any) => void>();
 
-    register<T extends IActivityRequestHandlerBase>(HandlerType: new () => T, handlerInstantiator: () => T): HandlerFactory {
+    addInitialiser<T extends IActivityRequestHandlerBase>(HandlerType: new () => T, initialiser: (handler: T) => void): HandlerFactory {
 
-        this._handlerInstantiators.set(HandlerType.name, handlerInstantiator);
+        this.initialisers.set(HandlerType.name, initialiser);
         return this;
     }    
 
-    newHandler<T extends IActivityRequestHandlerBase>(HandlerType: new () => T): IActivityRequestHandlerBase {
+    newHandler<T extends IActivityRequestHandlerBase>(type: new () => T): IActivityRequestHandlerBase {
 
-        const instantiator = this._handlerInstantiators.get(HandlerType.name);
+        const handler = new type();
 
-        if (instantiator === undefined) {
-            return new HandlerType();
+        const initialiser = this.initialisers.get(type.name);
+        
+        if (initialiser !== undefined) {
+            initialiser(handler);
         }
-
-        const handler = instantiator();
+        
         return handler;
     }
 }

@@ -1,5 +1,11 @@
 # TODO
 
+* Generate SAM template from an 'application' class
+  * I don't know whether this is a viable aim
+  * Perhaps we could have a CLI to aid in the boilerplate code
+  * [Handlebars.js](https://handlebarsjs.com/)
+  * [Mustache.js](https://github.com/janl/mustache.js)
+
 * Implement 'add number' flows using Step Functions
   * [ResultPath](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-resultpath.html)
   * [Input and Output Processing in Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-input-output-filtering.html)
@@ -12,12 +18,6 @@
 * Look at wrapping all AWS services in our own services
 
 * [Set up Lambda proxy integrations in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html)
-
-* Generate SAM template from an 'application' class
-  * I don't know whether this is a viable aim
-  * Perhaps we could have a CLI to aid in the boilerplate code
-  * [Handlebars.js](https://handlebarsjs.com/)
-  * [Mustache.js](https://github.com/janl/mustache.js)
 
 * Look at layers and stacks
 

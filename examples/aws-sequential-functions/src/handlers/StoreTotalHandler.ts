@@ -4,33 +4,30 @@ import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalEx
 
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import uuid = require('uuid');
+import { DynamoDbTableCrudResource } from '../omahdog-aws/AwsResources';
 
 export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
 
-    private readonly _documentClient?: DocumentClient;
-    private readonly _tableName?: string;
-
-    constructor(documentClient?: DocumentClient, tableName?: string) {
-        this._documentClient = documentClient;
-        this._tableName = tableName;
+    resources = {
+        flowResultTable: new DynamoDbTableCrudResource,
     }
 
-    async handle(_flowContext: FlowContext, request: StoreTotalRequest): Promise<StoreTotalResponse> {
+    async handle(flowContext: FlowContext, request: StoreTotalRequest): Promise<StoreTotalResponse> {
 
-        if (this._documentClient === undefined) throw new Error('this._documentClient === undefined');
-        if (this._tableName === undefined) throw new Error('this._tableName === undefined');
+        if (this.resources.flowResultTable.documentClient === undefined) throw new Error('this.resources.flowResultTable.documentClient === undefined');
+        if (this.resources.flowResultTable.tableName === undefined) throw new Error('this.resources.flowResultTable.tableName === undefined');
 
         const id = uuid.v4();
 
         const params: any = {
-            TableName: this._tableName,
+            TableName: this.resources.flowResultTable.tableName.value,
             Item: {
                 id: id,
                 result: request
             }
         };
 
-        await this._documentClient.put(params).promise();
+        await this.resources.flowResultTable.documentClient.put(params).promise();
 
         return { id: id };
     }

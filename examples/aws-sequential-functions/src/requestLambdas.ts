@@ -8,7 +8,8 @@ import { DeadLetterQueueHandler } from './omahdog-aws/DeadLetterQueueHandler';
 import { LambdaActivityRequestHandler } from './omahdog-aws/LambdaActivityRequestHandler';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 
-import { requestRouter, handlerFactory } from './requestConfiguration';
+import { requestRouter } from './requestRouter';
+import { handlerFactory } from './handlerFactory';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';

@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 
-export abstract class LambdaApiController {
+export abstract class ApiControllerFunction {
 
     private readonly apiControllerRoutes: ApiControllerRoutes;
     private readonly requestRouter: RequestRouter;
@@ -79,7 +79,7 @@ class ApiControllerRoute {
     httpMethod: string;
     resource: string;
     handlerType: new () => IActivityRequestHandlerBase;
-    getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: any | null) => any;
+    getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: string | null) => any;
     getAPIGatewayProxyResult?: (response: any) => APIGatewayProxyResult
 }
 
@@ -96,7 +96,7 @@ export class ApiControllerRoutes {
             httpMethod: 'GET',
             resource: resource,
             handlerType: handlerType,
-            getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: any | null): any => {
+            getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: string | null): any => {
                 return getRequest(pathParameters, queryStringParameters);
             },
             getAPIGatewayProxyResult: getAPIGatewayProxyResult        
@@ -117,8 +117,8 @@ export class ApiControllerRoutes {
             httpMethod: 'POST',
             resource: resource,
             handlerType: handlerType,
-            getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: any | null): any => {
-                return getRequest(pathParameters, body);
+            getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: string | null): any => {
+                return getRequest(pathParameters, (body === null) ? null : JSON.parse(body));
             },
             getAPIGatewayProxyResult: getAPIGatewayProxyResult        
         };

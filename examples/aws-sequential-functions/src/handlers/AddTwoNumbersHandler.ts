@@ -7,13 +7,10 @@ import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalEx
 
 export class AddTwoNumbersHandler extends FlowRequestHandler<AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersState> {
     
-    private readonly _totalDescription: string;
+    totalDescription = 'Total';
 
-    constructor(totalDescription?: string) {
-        
+    constructor() {        
         super(AddTwoNumbersHandler, AddTwoNumbersResponse, AddTwoNumbersState);
-
-        this._totalDescription = totalDescription ?? 'Total';
     }
 
     buildFlow(flowBuilder: FlowBuilder<AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersState>): 
@@ -34,7 +31,7 @@ export class AddTwoNumbersHandler extends FlowRequestHandler<AddTwoNumbersReques
 
             .perform('Store_total', StoreTotalRequest, StoreTotalResponse,
                 (req, state) => { 
-                    req.description = this._totalDescription; 
+                    req.description = this.totalDescription; 
                     req.total = state.total;
                     req.startTime = state.startTime;
                     req.endTime = new Date();

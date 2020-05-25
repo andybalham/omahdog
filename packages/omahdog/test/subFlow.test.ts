@@ -16,11 +16,6 @@ describe('Handlers', () => {
             .register(ParentFlowRequest, ParentFlowResponse, ParentFlowHandler)
             .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
         ;
-        flowContext.handlerFactory
-            .register(SyncSumActivityHandler, () => new SyncSumActivityHandler)
-            .register(ParentFlowHandler, () => new ParentFlowHandler)
-            .register(ChildFlowHandler, () => new ChildFlowHandler)
-        ;
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -34,16 +29,18 @@ describe('Handlers', () => {
         expect((response as ParentFlowResponse).total).to.be.equal(666);
     });
 
-    it('returns the total of the inputs when activity invoked asynchronously', async () => {
+    it.only('returns the total of the inputs when activity invoked asynchronously', async () => {
 
-        const asyncActivityHandler = new AsyncActivityHandler();
+        let asyncRequestJSON = '';
 
         const asyncRequestRouter = new RequestRouter()
             .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
             .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
             ;
         const handlerFactory = new HandlerFactory()
-            .register(AsyncActivityHandler, () => asyncActivityHandler)
+            .addInitialiser(AsyncActivityHandler, handler => {
+                handler.outputRequest = (request): void => { asyncRequestJSON = JSON.stringify(request); };
+            })
             ;
 
         let flowContext = FlowContext.newContext(asyncRequestRouter, handlerFactory);
@@ -65,7 +62,7 @@ describe('Handlers', () => {
         // Feed in response01
 
         const response01 =
-            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncRequestJSON));
         
         flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
         
@@ -78,7 +75,7 @@ describe('Handlers', () => {
         // Feed in response02
 
         const response02 =
-            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncRequestJSON));
         
         flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
         
@@ -91,7 +88,7 @@ describe('Handlers', () => {
         // Feed in response03
 
         const response03 =
-            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncActivityHandler.requestJson));
+            await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncRequestJSON));
         
         flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
         
@@ -102,14 +99,11 @@ describe('Handlers', () => {
 
     it('throws an error when asynchronous error received', async () => {
 
-        const asyncActivityHandler = new AsyncActivityHandler();
-
         const asyncRequestRouter = new RequestRouter()
             .register(SumActivityRequest, SumActivityResponse, AsyncActivityHandler)
             .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
             ;
         const handlerFactory = new HandlerFactory()
-            .register(AsyncActivityHandler, () => asyncActivityHandler)
             ;
 
         let flowContext = FlowContext.newContext();
@@ -168,10 +162,10 @@ class SyncSumActivityHandler implements IActivityRequestHandler<SumActivityReque
 }
 
 class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
-    requestJson: string;
+    outputRequest: (request: any) => void;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
         const requestId = uuid.v4();
-        this.requestJson = JSON.stringify(request);
+        this.outputRequest(request);
         return flowContext.getAsyncResponse(requestId);
     }
 }

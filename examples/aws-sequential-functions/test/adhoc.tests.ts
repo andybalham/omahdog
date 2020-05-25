@@ -119,6 +119,53 @@ class SNSTopicPublishResource extends AwsResource {
     }
 }
 
+interface ITrigger {
+    typeName: string;
+    getEvent(): any;
+}
+abstract class AwsTrigger implements ITrigger {
+
+    readonly typeName: string;
+    
+    constructor(type: new () => AwsTrigger) {
+        this.typeName = type.name;
+    }
+
+    abstract getEvent(): any;
+}
+class SNSExchangeRequestTrigger extends AwsTrigger {
+
+    topicArn?: TemplateReference;
+    readonly filterPolicy?: any;
+
+    constructor(typeName?: string) {
+        super(SNSExchangeRequestTrigger);
+        this.filterPolicy = {
+            MessageType: [ `${typeName}.Request` ]
+        };
+    }
+
+    getEvent(): any {
+        return { };
+    }
+}
+class SNSExchangeResponseTrigger extends AwsTrigger {
+
+    topicArn?: TemplateReference;
+    readonly filterPolicy?: any;
+
+    constructor(typeName?: string) {
+        super(SNSExchangeResponseTrigger);
+        this.filterPolicy = {
+            MessageType: [ `${typeName}.Response` ]
+        };
+    }
+
+    getEvent(): any {
+        return { };
+    }
+}
+
 interface IHandlerType {
     new (): IHandler;
 }
@@ -159,6 +206,22 @@ class ExampleHandler implements IHandler {
         exchangeTopic: new SNSTopicPublishResource,
     }
 
+    triggers = {
+        exchangeRequest: new SNSExchangeRequestTrigger(this.requestTypeName),
+        exchangeResponse: new SNSExchangeResponseTrigger(this.handlerTypeName)
+    }
+
+    get handlerTypeName(): string {
+        // TODO 24May20: This would be sub-classed, to return the correct type
+        return ExampleHandler.name;
+    }
+
+    get requestTypeName(): string {
+        // TODO 24May20: This would be sub-classed, to return the correct type
+        return 'MyRequest';
+    }
+
+    // TODO 24May20: I don't like having to implement this on this class
     getHandlerTypes(requestRouter: RequestRouter): IHandlerType[] { 
         return [ ExampleHandler ]; 
     }
@@ -193,66 +256,46 @@ class ExampleHandler implements IHandler {
     }
 }
 
-interface ITrigger {
-    getEvent(): any;
-}
-abstract class AwsTrigger implements ITrigger {    
-    abstract getEvent(): any;
-}
-class SNSTrigger extends AwsTrigger {
-    // TODO 24May20: Can make the 
-    constructor(filterPolicy?: any) {
-        super();
-    }
-    getEvent(): any {
-        return { };
-    }
-}
-
-class ExampleProxyHandler implements IHandler {
+class ExampleMessageProxyHandler implements IHandler {
 
     resources = {
-        proxyTopic: new SNSTopicPublishResource
+        exchangeTopic: new SNSTopicPublishResource
     }
 
-    // TODO 24May20: Sometimes a function would want to send, but not receive. Perhaps there needs to be two separate handlers?
-
     triggers = {
-        proxyResponse: new SNSTrigger({
-            MessageType: [ `${this.typeName}.Response` ]
-        })
+        exchangeResponse: new SNSExchangeResponseTrigger(this.typeName)
     }
 
     get typeName(): string {
         // TODO 24May20: This would be sub-classed, to return the correct type
-        return ExampleProxyHandler.name;
+        return ExampleMessageProxyHandler.name;
     }
 
     getHandlerTypes(requestRouter: RequestRouter): IHandlerType[] { 
-        return [ ExampleProxyHandler ]; 
+        return [ ExampleMessageProxyHandler ]; 
     }
 
     handle(): void {
 
-        if (this.resources.proxyTopic.sns === undefined) throw new Error('this.resources.exchangeTopic.sns === undefined');
-        if (this.resources.proxyTopic.topicArn === undefined) throw new Error('this.resources.exchangeTopic.topicArn === undefined');
+        if (this.resources.exchangeTopic.sns === undefined) throw new Error('this.resources.exchangeTopic.sns === undefined');
+        if (this.resources.exchangeTopic.topicArn === undefined) throw new Error('this.resources.exchangeTopic.topicArn === undefined');
 
         const params = {
             Message: JSON.stringify('message'),
-            TopicArn: this.resources.proxyTopic.topicArn.value,
+            TopicArn: this.resources.exchangeTopic.topicArn.value,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: 'Response' }
             }
         };
 
-        this.resources.proxyTopic.sns.publish(params);        
+        this.resources.exchangeTopic.sns.publish(params);        
     }
 }
 
 class CompositeHandler implements IHandler {
 
     getHandlerTypes(requestRouter: RequestRouter): IHandlerType[] { 
-        return [ ExampleHandler, ExampleHandler ]; 
+        return [ ExampleHandler, ExampleHandler, ExampleMessageProxyHandler ]; 
     }
 
     handle(): void {
@@ -304,8 +347,6 @@ class ActivityFunctions {
     handleDeadLetterQueueMessage(event: any): any {
     }
 }
-
-
 
 describe('Handler tests', () => {
 
@@ -363,7 +404,14 @@ describe('Handler tests', () => {
             .addInitialiser(ExampleHandler, handler => { 
                 handler.resources.flowResultTable = awsResources.flowResultTable;
                 handler.resources.exchangeTopic = awsResources.exchangeTopic;
-            });
+                handler.triggers.exchangeRequest.topicArn = templateReferences.exchangeTopicArn;
+                handler.triggers.exchangeResponse.topicArn = templateReferences.exchangeTopicArn;
+            })
+            .addInitialiser(ExampleMessageProxyHandler, handler => { 
+                handler.resources.exchangeTopic = awsResources.exchangeTopic;
+                handler.triggers.exchangeResponse.topicArn = templateReferences.exchangeTopicArn;
+            })
+            ;
 
         // Get a handler and inspect the resources
 
@@ -377,7 +425,7 @@ describe('Handler tests', () => {
 
         const compositeHandlerTypes = compositeHandler.getHandlerTypes(new RequestRouter);
         
-        const resourceList: IResource[] = [];
+        const resourcePolicyList: IResource[] = [];
 
         compositeHandlerTypes.forEach(handlerType => {
 
@@ -389,11 +437,11 @@ describe('Handler tests', () => {
                 for (const resourceName in handler.resources) {
                     if (Object.prototype.hasOwnProperty.call(handler.resources, resourceName)) {
                         
-                        const resource = handler.resources[resourceName];
+                        const resource = handler.resources[resourceName] as IResource;
                         const resourcePolicy = resource.getPolicy();
     
-                        if (!resourceList.some(r => deepEqual(r.getPolicy(), resourcePolicy))) {
-                            resourceList.push(resource);
+                        if (!resourcePolicyList.some(p => deepEqual(p, resourcePolicy))) {
+                            resourcePolicyList.push(resourcePolicy);
                         } else {
                             console.log('Duplicate');
                         }           

@@ -7,13 +7,10 @@ import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalEx
 
 export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState> {
     
-    private readonly totalDescription: string;
+    totalDescription = 'Total';
 
-    constructor(totalDescription?: string) {
-        
+    constructor() {        
         super(AddThreeNumbersHandler, AddThreeNumbersResponse, AddThreeNumbersState);
-
-        this.totalDescription = totalDescription ?? 'Total';
     }
 
     buildFlow(flowBuilder: FlowBuilder<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState>): 

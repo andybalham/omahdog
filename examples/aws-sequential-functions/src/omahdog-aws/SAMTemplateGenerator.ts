@@ -8,7 +8,22 @@ export abstract class SAMTemplateGenerator {
     generate(workspaceFolderName: string, baseTemplateFileName: string, processedTemplateFileName: string): void {
 
         const baseTemplateFilePath = path.join(workspaceFolderName, baseTemplateFileName);
-        const baseTemplateContent = fs.readFileSync(baseTemplateFilePath, 'utf8');        
+        const baseTemplateContent = fs.readFileSync(baseTemplateFilePath, 'utf8');
+
+        const template = YAML.parse(baseTemplateContent);
+
+        const resources = template.Resources;
+
+        resources.MyFunction = {
+            Type: 'AWS::Serverless::Function'
+        };
+
+        const processedTemplateContent = YAML.stringify(template);
+        const processedTemplateFilePath = path.join(workspaceFolderName, processedTemplateFileName);
+        fs.writeFileSync(processedTemplateFilePath, processedTemplateContent);
+
+        return;
+
         const templateYaml = YAML.parseDocument(baseTemplateContent);
 
         // TODO 19May20: Process the template
@@ -31,8 +46,8 @@ export abstract class SAMTemplateGenerator {
         // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-sub.html
         // https://www.fischco.org/technica/2017/cloud-formation-sub/
 
-        const processedTemplateContent = templateYaml.toString();
-        const processedTemplateFilePath = path.join(workspaceFolderName, processedTemplateFileName);
-        fs.writeFileSync(processedTemplateFilePath, processedTemplateContent);
+        // const processedTemplateContent = templateYaml.toString();
+        // const processedTemplateFilePath = path.join(workspaceFolderName, processedTemplateFileName);
+        // fs.writeFileSync(processedTemplateFilePath, processedTemplateContent);
     }
 }
