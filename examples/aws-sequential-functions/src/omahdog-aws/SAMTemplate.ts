@@ -3,17 +3,23 @@ export abstract class ConfigurationValue {
 }
 
 export class EnvironmentVariable extends ConfigurationValue {
-    readonly variableName: string;
+    
     readonly templateReference: TemplateReference;
+    readonly variableName: string;
 
-    constructor(variableName: string, resourceReference: TemplateReference) {
+    constructor(resourceReference: TemplateReference, variableName?: string) {
         super();
-        this.variableName = variableName;
         this.templateReference = resourceReference;
+        this.variableName = variableName ?? this.generateVariableName();
     }
     
     get value(): string | undefined {
         return process.env[this.variableName];
+    }
+
+    private generateVariableName(): string {
+        // TODO 26May20: Generate a variable name, if one is not supplied
+        throw new Error('Implement this');
     }
 }
 

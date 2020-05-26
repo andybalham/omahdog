@@ -3,21 +3,21 @@ import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstan
 
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
-    private readonly _documentClient: DynamoDB.DocumentClient;
-    private readonly _tableName?: string;
+    private readonly documentClient: DynamoDB.DocumentClient;
+    private readonly tableName?: string;
 
     constructor(documentClient: DynamoDB.DocumentClient, tableName?: string) {
-        this._documentClient = documentClient;
-        this._tableName = tableName;        
+        this.documentClient = documentClient;
+        this.tableName = tableName;        
     }
 
     async store(instance: FunctionInstance): Promise<void> {
         
-        if (this._tableName === undefined) throw new Error('this._tableName is undefined');
+        if (this.tableName === undefined) throw new Error('this.tableName is undefined');
 
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
-            TableName: this._tableName,
+            TableName: this.tableName,
             Item: {
                 id: instance.flowInstance.instanceId,
                 callingContext: instance.callingContext,
@@ -28,21 +28,21 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await this._documentClient.put(params).promise();
+        await this.documentClient.put(params).promise();
     }
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
         
-        if (this._tableName === undefined) throw new Error('this._tableName is undefined');
+        if (this.tableName === undefined) throw new Error('this.tableName is undefined');
 
         const params = {
-            TableName: this._tableName,
+            TableName: this.tableName,
             Key: {
                 id: instanceId
             }
         };
 
-        const dynamoDbResult: any = await this._documentClient.get(params).promise();
+        const dynamoDbResult: any = await this.documentClient.get(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -64,16 +64,16 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async delete(instanceId: string): Promise<void> {
         
-        if (this._tableName === undefined) throw new Error('this._tableName is undefined');
+        if (this.tableName === undefined) throw new Error('this.tableName is undefined');
 
         const params = {
-            TableName: this._tableName,
+            TableName: this.tableName,
             Key: {
                 id: instanceId
             }
         };
 
-        await this._documentClient.delete(params).promise();
+        await this.documentClient.delete(params).promise();
     }
 }   
 

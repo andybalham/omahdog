@@ -1,23 +1,27 @@
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ExchangeRequestMessage } from './Exchange';
-import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
+import { SNSTopicPublishService } from './AwsServices';
+import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
 
 // TODO 10May20: Make this SNSProxy and use SNS directly?
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-    private readonly requestTypeName: string;
-    private readonly exchangeMessagePublisher?: IExchangeMessagePublisher;
+    services = {
+        requestTopic: new SNSTopicPublishService
+    }    
 
-    constructor(requestType: new() => TReq, _responseType: new() => TRes, exchangeMessagePublisher?: IExchangeMessagePublisher) {
+    private readonly requestTypeName: string;
+
+    constructor(requestType: new() => TReq) {
         this.requestTypeName = requestType.name;
-        this.exchangeMessagePublisher = exchangeMessagePublisher;
     }
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
         
-        if (this.exchangeMessagePublisher === undefined) throw new Error('this._exchangeMessagePublisher === undefined');
-        
+        if (this.services.requestTopic.sns === undefined) throw new Error('this.services.requestTopic.sns === undefined');
+        if (this.services.requestTopic.topicArn === undefined) throw new Error('this.services.requestTopic.topicArn === undefined');
+
         const requestId = uuid.v4();
         
         const message: ExchangeRequestMessage = 
@@ -31,7 +35,9 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
                 request: request
             };
 
-        await this.exchangeMessagePublisher.publishRequest(this.requestTypeName, message);
+        const publisher = new SNSExchangeMessagePublisher(this.services.requestTopic.sns, this.services.requestTopic.topicArn);
+
+        await publisher.publishRequest(this.requestTypeName, message);
 
         return flowContext.getAsyncResponse(requestId);
     }
