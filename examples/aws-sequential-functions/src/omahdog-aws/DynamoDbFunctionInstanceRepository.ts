@@ -3,6 +3,8 @@ import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstan
 
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
+    // TODO 27May20: Should we allow resources to have resources? E.g. A resource wrapper such as this?
+
     private readonly documentClient: DynamoDB.DocumentClient;
     private readonly tableName?: string;
 

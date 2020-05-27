@@ -15,7 +15,7 @@ Parameters:
         
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 6
     CodeUri: dist/
     Runtime: nodejs12.x
 

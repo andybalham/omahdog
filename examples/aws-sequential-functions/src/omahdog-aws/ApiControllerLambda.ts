@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 
-export abstract class ApiControllerFunction {
+export abstract class ApiControllerLambda {
 
     private readonly apiControllerRoutes: ApiControllerRoutes;
     private readonly requestRouter: RequestRouter;

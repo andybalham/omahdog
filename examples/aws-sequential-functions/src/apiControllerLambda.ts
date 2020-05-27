@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
-import { ApiControllerFunction, ApiControllerRoutes } from './omahdog-aws/ApiControllerFunction';
+import { ApiControllerLambda, ApiControllerRoutes } from './omahdog-aws/ApiControllerLambda';
 
 import { requestRouter } from './requestRouter';
 import { handlerFactory } from './handlerFactory';
@@ -9,7 +9,7 @@ import { AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy } from './messag
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 
-class AddNumbersApiController extends ApiControllerFunction {
+class AddNumbersApiController extends ApiControllerLambda {
 
     constructor() { super(requestRouter, handlerFactory); }
 
