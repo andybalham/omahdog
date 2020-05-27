@@ -15,7 +15,9 @@ describe('AddThreeNumbersHandler tests', () => {
             .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler);
 
         const handlerFactory = new HandlerFactory()
-            .register(AddThreeNumbersHandler, () => new AddThreeNumbersHandler('The answer to life, the universe, and everything'));
+            .addInitialiser(AddThreeNumbersHandler, handler => {
+                handler.totalDescription = 'The answer to life, the universe, and everything';
+            });
 
         const flowContext = FlowContext.newContext(requestRouter, handlerFactory);
 

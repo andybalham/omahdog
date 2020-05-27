@@ -15,6 +15,7 @@ export abstract class AwsService {
     abstract getPolicy(): any;
 }
 
+// TODO 27May20: Rename back to Resource
 export class DynamoDbTableCrudService extends AwsService {
     
     private readonly tableNameValue?: ConfigurationValue;

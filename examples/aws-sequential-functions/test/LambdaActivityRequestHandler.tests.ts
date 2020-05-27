@@ -22,14 +22,9 @@ class TestResponse {
 
 class TestActivityRequestHandler implements IActivityRequestHandler<TestRequest, TestResponse>, IResumableRequestHandler {
 
-    private readonly request?: TestRequest;
-    private readonly response?: () => TestResponse | AsyncResponse;
+    request?: TestRequest;
+    response?: () => TestResponse | AsyncResponse;
     
-    constructor(request?: TestRequest, response?: () => TestResponse | AsyncResponse) {
-        this.request = request;
-        this.response = response;
-    }
-
     async handle(flowContext: FlowContext, request: TestRequest): Promise<TestResponse | AsyncResponse> {                
         expect(request).to.deep.equal(this.request);
         if (this.response === undefined) throw new Error('this.response === undefined');
@@ -71,7 +66,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.request = request;
+                handler.response = (): TestResponse => response;
+            });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -134,7 +132,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.request = request;
+                handler.response = (): AsyncResponse => response;
+            });
         const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -197,7 +198,9 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(undefined, () => response));
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.response = (): TestResponse => response;
+            });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -278,8 +281,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => 
-                new TestActivityRequestHandler(request, () => { throw new Error('Something went bandy!'); }));
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.request = request;
+                handler.response = (): TestResponse => {throw new Error('Something went bandy!');};
+            });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -340,8 +345,9 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => 
-                new TestActivityRequestHandler(undefined, () => { throw new Error('Something went bandy!'); }));
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.response = (): TestResponse => {throw new Error('Something went bandy!');};
+            });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -424,7 +430,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.request = request;
+                handler.response = (): TestResponse => response;
+            });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -479,8 +488,11 @@ describe('LambdaActivityRequestHandler tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .register(TestActivityRequestHandler, () => new TestActivityRequestHandler(request, () => response));
-        const sns = new AWS.SNS();        
+            .addInitialiser(TestActivityRequestHandler, handler => {
+                handler.request = request;
+                handler.response = (): AsyncResponse => response;
+            });
+        const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher

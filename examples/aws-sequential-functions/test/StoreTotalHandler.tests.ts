@@ -5,6 +5,8 @@ import { expect } from 'chai';
 import { FlowContext } from '../src/omahdog/FlowContext';
 import { StoreTotalRequest } from '../src/exchanges/StoreTotalExchange';
 import { StoreTotalHandler } from '../src/handlers/StoreTotalHandler';
+import { DynamoDbTableCrudService } from '../src/omahdog-aws/AwsServices';
+import { ConstantValue } from '../src/omahdog-aws/SAMTemplate';
 
 describe('StoreTotalHandler tests', () => {
 
@@ -32,7 +34,10 @@ describe('StoreTotalHandler tests', () => {
 
         const client = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
 
-        const response = await new StoreTotalHandler(client, expectedTableName).handle(FlowContext.newContext(), request);
+        const handler = new StoreTotalHandler();
+        handler.services.flowResultTable = new DynamoDbTableCrudService(undefined, new ConstantValue(expectedTableName), client);
+
+        const response = await handler.handle(FlowContext.newContext(), request);
 
         expect(response).to.not.be.undefined;
 
