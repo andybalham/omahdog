@@ -3,13 +3,21 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { ApiControllerLambda, ApiControllerRoutes } from './omahdog-aws/ApiControllerLambda';
 
 import { requestRouter } from './requestRouter';
-import { handlerFactory } from './handlerFactory';
+import { handlerFactory } from './lambdaApplication';
 import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy } from './lambdaProxies';
 import { AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy } from './messageProxies';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 
-class AddNumbersApiController extends ApiControllerLambda {
+export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {}
+
+class Parameters { [name: string]: string }
+
+function parseOptionalInt(intString: string | undefined, defaultValue = 0): number  {
+    return (intString === undefined) ? defaultValue : parseInt(intString);
+}
+
+export class AddNumbersApiController extends ApiControllerLambda {
 
     constructor() { super(requestRouter, handlerFactory); }
 
@@ -18,15 +26,15 @@ class AddNumbersApiController extends ApiControllerLambda {
             .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy,
                 (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null): AddTwoNumbersRequest => {
                     return {
-                        x: (queryStringParameters?.x == undefined) ? 0 : parseInt(queryStringParameters.x),
-                        y: (queryStringParameters?.y == undefined) ? 0 : parseInt(queryStringParameters.y),
+                        x: parseOptionalInt(queryStringParameters?.x),
+                        y: parseOptionalInt(queryStringParameters?.y),
                     };
                 })
             .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy,
                 (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null): AddTwoNumbersRequest => {
                     return {
-                        x: (pathParameters?.x == undefined) ? 0 : parseInt(pathParameters.x),
-                        y: (pathParameters?.y == undefined) ? 0 : parseInt(pathParameters.y),
+                        x: parseOptionalInt(pathParameters?.x),
+                        y: parseOptionalInt(pathParameters?.y),
                     };
                 })
             .addPost('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy,
@@ -37,9 +45,9 @@ class AddNumbersApiController extends ApiControllerLambda {
             .addGet('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersLambdaProxy,
                 (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null): AddThreeNumbersRequest => {
                     return {
-                        a: (queryStringParameters?.a == undefined) ? 0 : parseInt(queryStringParameters.a),
-                        b: (queryStringParameters?.b == undefined) ? 0 : parseInt(queryStringParameters.b),
-                        c: (queryStringParameters?.c == undefined) ? 0 : parseInt(queryStringParameters.c),
+                        a: parseOptionalInt(queryStringParameters?.a),
+                        b: parseOptionalInt(queryStringParameters?.b),
+                        c: parseOptionalInt(queryStringParameters?.c),
                     };
                 })
             .addPost('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersMessageProxy,
@@ -53,5 +61,5 @@ class AddNumbersApiController extends ApiControllerLambda {
 const apiController = new AddNumbersApiController;
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    return apiController.handle(event);
+    return await apiController.handle(event);
 };

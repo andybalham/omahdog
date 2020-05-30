@@ -3,20 +3,19 @@ import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
-import { LambdaInvokeService } from './AwsServices';
+import { LambdaInvokeResource } from './AwsResources';
 
 export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
-    services = {
-        lambda: new LambdaInvokeService
+    resources = {
+        lambda: new LambdaInvokeResource
     }    
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
         
-        if (this.services.lambda.functionName === undefined) throw new Error('this.services.lambda.functionName === undefined');
-        if (this.services.lambda.fn === undefined) throw new Error('this.services.lambda.client === undefined');
+        this.resources.lambda.throwErrorIfInvalid();
         
-        const functionName = this.services.lambda.functionName;
+        const functionName = this.resources.lambda.functionName;
 
         console.log(`Lambda proxy for ${functionName} called with: ${JSON.stringify(request)}`);
 
@@ -34,7 +33,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             };
 
         const invocationRequest: Lambda.Types.InvocationRequest = {
-            FunctionName: functionName,
+            FunctionName: functionName ?? '<Unknown>',
             InvocationType: 'RequestResponse',
             Payload: JSON.stringify(message)            
         };
@@ -44,7 +43,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             
             console.log(`invocationRequest: ${JSON.stringify(invocationRequest)}`);
             
-            invokeResult = await this.services.lambda.fn.invoke(invocationRequest).promise();
+            invokeResult = await this.resources.lambda.client?.invoke(invocationRequest).promise();
             
             console.log(`invokeResult: ${JSON.stringify(invokeResult)}`);
 
@@ -53,16 +52,16 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             throw new Error('Error calling fn.invoke');
         }
 
-        if (invokeResult.FunctionError !== undefined) {
+        if (invokeResult?.FunctionError !== undefined) {
             console.error(`Error invoking function ${functionName}: ${JSON.stringify(invokeResult)}`);
             throw new Error(`Error invoking function ${functionName}`);
         }
 
-        if (typeof invokeResult.Payload === undefined) {
+        if (typeof invokeResult?.Payload === undefined) {
             return flowContext.getAsyncResponse(requestId);
         }
 
-        if (typeof invokeResult.Payload !== 'string') {
+        if (typeof invokeResult?.Payload !== 'string') {
             throw new Error('typeof invokeResult.Payload !== \'string\'');
         }
 

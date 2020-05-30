@@ -1,3 +1,60 @@
+import { IActivityRequestHandlerBase } from '../omahdog/FlowContext';
+import { ApiControllerRoutes } from './ApiControllerLambda';
+
+// ------------------------------------------------------------------------------------------------------------------
+export abstract class LambdaBase{
+    resourceName: string;
+    functionNameTemplate: string;
+    constructor(type: new () => any) {
+        this.resourceName = `${type.name}Function`;
+    }
+}
+export class RequestHandlerLambda extends LambdaBase {
+    constructor(requestHandlerType: new () => IActivityRequestHandlerBase, initialise?: (lambda: RequestHandlerLambda) => void) {
+        super(requestHandlerType);
+        if (initialise !== undefined) {
+            initialise(this);            
+        }
+    }
+}
+export class ApiControllerLambda extends LambdaBase {
+    restApiId: TemplateReference;
+    constructor(apiControllerType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void) {
+        super(apiControllerType);
+        if (initialise !== undefined) {
+            initialise(this);            
+        }
+    }
+}
+
+export class LambdaApplication {
+
+    exchangeMessagePublisher?: any;
+    functionInstanceRepository?: any;
+    defaultFunctionNamePrefix: string;
+
+    constructor(requestRouter: any, handlerFactory: any, initialise: (LambdaApplication: LambdaApplication) => void) {
+        initialise(this);
+    }
+
+    addApiController(lambda: ApiControllerLambda): LambdaApplication {
+        return this;
+    }
+
+    addRequestHandler(lambda: RequestHandlerLambda): LambdaApplication {
+        return this;
+    }
+
+    async handleRequestEvent(handlerType: new () => IActivityRequestHandlerBase, event: any): Promise<any> {
+        throw new Error('Method not implemented.');
+    }
+
+    async handleApiEvent(apiControllerRoutesType: new () => ApiControllerRoutes, event: any): Promise<any> {
+        throw new Error('Method not implemented.');
+    }
+}
+// ------------------------------------------------------------------------------------------------------------------
+
 export abstract class ConfigurationValue {
     abstract get value(): string | undefined;
 }
@@ -42,6 +99,15 @@ export abstract class TemplateReference {
         this.typeName = type.name;
     }
     abstract get instance(): any;
+}
+
+export class FunctionReference extends TemplateReference {
+    readonly resourceName?: string;
+    constructor(lambda?: LambdaBase) {
+        super(ResourceReference);
+        this.resourceName = lambda?.resourceName;
+    }
+    get instance(): any { return { 'Ref': this.resourceName }; }
 }
 
 export class ResourceReference extends TemplateReference {

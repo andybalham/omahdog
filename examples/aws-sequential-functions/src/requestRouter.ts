@@ -11,7 +11,7 @@ import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { LambdaProxyRequestHandler } from './omahdog-aws/LambdaProxyRequestHandler';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { ResourceReference, EnvironmentVariable } from './omahdog-aws/SAMTemplate';
-import { DynamoDbTableCrudService } from './omahdog-aws/AwsServices';
+import { DynamoDBCrudResource } from './omahdog-aws/AwsResources';
 
 // export const requestRouter = new RequestRouter()
 //     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)

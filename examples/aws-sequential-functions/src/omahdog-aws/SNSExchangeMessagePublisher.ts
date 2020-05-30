@@ -5,10 +5,10 @@ import { ExchangeResponseMessage, ExchangeCallingContext, ExchangeRequestMessage
 // TODO 03May20: Have a set of tests for this
 export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
     
-    private readonly sns: SNS;
+    private readonly sns?: SNS;
     private readonly exchangeTopicArn?: string;
 
-    constructor (sns: SNS, exchangeTopicArn?: string) {
+    constructor (sns?: SNS, exchangeTopicArn?: string) {
         this.sns = sns;
         this.exchangeTopicArn = exchangeTopicArn;
     }

@@ -2,13 +2,19 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 
-export abstract class ApiControllerLambda {
+export abstract class LambdaFunction {
+    functionName: string;
+}
 
-    private readonly apiControllerRoutes: ApiControllerRoutes;
+export abstract class ApiControllerLambda extends LambdaFunction {
+
+    apiControllerRoutes: ApiControllerRoutes;
     private readonly requestRouter: RequestRouter;
     private readonly handlerFactory: HandlerFactory;
 
     constructor(requestRouter: RequestRouter, handlerFactory: HandlerFactory) {
+
+        super();
 
         this.requestRouter = requestRouter;
         this.handlerFactory = handlerFactory;

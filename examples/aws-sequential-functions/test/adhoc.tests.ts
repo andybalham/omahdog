@@ -368,7 +368,7 @@ describe('Handler tests', () => {
     });
     
 
-    it.only('can be reflected upon and exercised', () => {
+    it('can be reflected upon and exercised', () => {
         
         const documentClient = new DocumentClient;
         const sns = new SNS;

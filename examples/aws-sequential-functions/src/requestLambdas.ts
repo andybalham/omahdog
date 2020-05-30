@@ -9,19 +9,23 @@ import { LambdaActivityRequestHandler } from './omahdog-aws/LambdaActivityReques
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 
 import { requestRouter } from './requestRouter';
-import { handlerFactory } from './handlerFactory';
+import { handlerFactory } from './lambdaApplication';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { LambdaExchangeWireTap } from './omahdog-aws/LambdaExchangeWireTap';
-import { ActivityRequestHandlerLambda } from './omahdog-aws/ActivityRequestHandlerLambda';
-import { IActivityRequestHandlerBase } from './omahdog/FlowContext';
+import { DynamoDBCrudResource } from './omahdog-aws/AwsResources';
+import { EnvironmentVariable, ResourceReference } from './omahdog-aws/SAMTemplate';
 
 const documentClient = new DynamoDB.DocumentClient();
 const sns = new SNS();
 
-const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(documentClient, process.env.FLOW_INSTANCE_TABLE_NAME);
+const functionInstanceRepository = 
+    new DynamoDbFunctionInstanceRepository(repository => {
+        repository.resources.functionInstanceTable = new DynamoDBCrudResource(
+            undefined, new EnvironmentVariable(new ResourceReference('FunctionInstanceTable'), 'FLOW_INSTANCE_TABLE_NAME'), documentClient);
+    });
 const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, process.env.FLOW_EXCHANGE_TOPIC_ARN);
 
 const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(exchangeMessagePublisher);
@@ -34,30 +38,14 @@ export const exchangeWireTapHandler = async (event: SNSEvent): Promise<void> => 
     await exchangeWireTapLambda.handle(event);
 };
 
-// TODO 27May20: Do we need a Lambda factory, i.e. to inject the resources?
-class LambdaFactory {
-    constructor(s: string) {}
-    buildHandler(handlerType: new () => IActivityRequestHandlerBase): ActivityRequestHandlerLambda {
-        throw new Error('Implement this');
-    }
-}
-const lambdaFactory: any = new LambdaFactory('requestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository');
-lambdaFactory
-    .registerController('AddNumbersApiController')
-    .registerHandler(AddThreeNumbersHandler, (lambda: any) => {
-        // TODO 27May20: Do we need this opportunity to initialise?
-    });
-
-export const addThreeNumbersHandler = async (event: SNSEvent | ExchangeRequestMessage): Promise<void | ExchangeResponseMessage> => {
-    const addThreeNumbersHandlerLambda = lambdaFactory.buildHandler(AddThreeNumbersHandler);
-    return await addThreeNumbersHandlerLambda.handle(event);
-};
-
-
 const lambdaActivityRequestHandlerInstance = 
     new LambdaActivityRequestHandler(
         requestRouter, handlerFactory, exchangeMessagePublisher, functionInstanceRepository);
 
+export const addThreeNumbersHandler = async (event: SNSEvent | ExchangeRequestMessage): Promise<void | ExchangeResponseMessage> => {
+    return await lambdaActivityRequestHandlerInstance.handle(AddThreeNumbersHandler, event);
+};
+        
 export const addTwoNumbersHandler = async (event: SNSEvent | ExchangeRequestMessage): Promise<void | ExchangeResponseMessage> => {
     return await lambdaActivityRequestHandlerInstance.handle(AddTwoNumbersHandler, event);
 };

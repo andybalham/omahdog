@@ -1,25 +1,47 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
+import { DynamoDBCrudResource, IResource } from './AwsResources';
 
-export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
+// TODO 30May20: IFunctionInstanceRepository should implement IResource
+export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository, IResource {
     
     // TODO 27May20: Should we allow resources to have resources? E.g. A resource wrapper such as this?
+    resources: {
+        functionInstanceTable?: DynamoDBCrudResource;
+    }
 
-    private readonly documentClient: DynamoDB.DocumentClient;
-    private readonly tableName?: string;
+    constructor(initialise: (resource: DynamoDbFunctionInstanceRepository) => void) {
+        initialise(this);
+    }
 
-    constructor(documentClient: DynamoDB.DocumentClient, tableName?: string) {
-        this.documentClient = documentClient;
-        this.tableName = tableName;        
+    validate(): string[] {
+
+        const errorMessages: string[] = [];
+
+        if (this.resources.functionInstanceTable === undefined) {
+            errorMessages.push('this.resources.functionInstanceTable === undefined');
+        } else {
+            errorMessages.concat(this.resources.functionInstanceTable.validate());
+        }
+
+        return errorMessages;
+    }
+    
+    throwErrorIfInvalid(): void {
+        const errorMessages = this.validate();
+        if (errorMessages.length > 0) {
+            // TODO 30May20: Look at a more informative error
+            throw new Error('DynamoDbFunctionInstanceRepository is not valid');
+        }
     }
 
     async store(instance: FunctionInstance): Promise<void> {
         
-        if (this.tableName === undefined) throw new Error('this.tableName is undefined');
+        this.throwErrorIfInvalid();
 
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
-            TableName: this.tableName,
+            TableName: this.resources.functionInstanceTable?.tableName ?? '<unknown>',
             Item: {
                 id: instance.flowInstance.instanceId,
                 callingContext: instance.callingContext,
@@ -30,21 +52,21 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await this.documentClient.put(params).promise();
+        await this.resources.functionInstanceTable?.client?.put(params).promise();
     }
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
         
-        if (this.tableName === undefined) throw new Error('this.tableName is undefined');
+        this.throwErrorIfInvalid();
 
         const params = {
-            TableName: this.tableName,
+            TableName: this.resources.functionInstanceTable?.tableName ?? '<unknown>',
             Key: {
                 id: instanceId
             }
         };
 
-        const dynamoDbResult: any = await this.documentClient.get(params).promise();
+        const dynamoDbResult: any = await this.resources.functionInstanceTable?.client?.get(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -66,16 +88,16 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async delete(instanceId: string): Promise<void> {
         
-        if (this.tableName === undefined) throw new Error('this.tableName is undefined');
+        this.throwErrorIfInvalid();
 
         const params = {
-            TableName: this.tableName,
+            TableName: this.resources.functionInstanceTable?.tableName ?? '<unknown>',
             Key: {
                 id: instanceId
             }
         };
 
-        await this.documentClient.delete(params).promise();
+        await this.resources.functionInstanceTable?.client?.delete(params).promise();
     }
 }   
 
