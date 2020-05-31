@@ -3,15 +3,12 @@ import { RequestRouter } from './omahdog/FlowContext';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
+import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
-import { SumNumbersLambdaProxy, StoreTotalLambdaProxy } from './lambdaProxies';
-import { SumNumbersMessageProxy, StoreTotalMessageProxy } from './messageProxies';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
-import { LambdaProxyRequestHandler } from './omahdog-aws/LambdaProxyRequestHandler';
-import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
-import { ResourceReference, EnvironmentVariable } from './omahdog-aws/SAMTemplate';
-import { DynamoDBCrudResource } from './omahdog-aws/AwsResources';
+import { SumNumbersLambdaProxy, StoreTotalLambdaProxy } from './lambdaProxies';
+import { SumNumbersMessageProxy, StoreTotalMessageProxy } from './messageProxies';
 
 // export const requestRouter = new RequestRouter()
 //     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)

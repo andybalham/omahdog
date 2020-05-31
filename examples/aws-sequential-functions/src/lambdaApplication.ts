@@ -66,10 +66,10 @@ const awsResources = {
 };
 
 // TODO 31May20: How can we group such resources as below?
-const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
+export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
     repository.resources.functionInstanceTable = awsResources.functionInstanceTable;
 });
-const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
+export const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
     publisher.resources.exchangeTopic = awsResources.flowExchangeTopic;
 });
 
