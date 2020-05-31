@@ -9,7 +9,7 @@ import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy } from './lambdaProxies';
-import { AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy } from './messageProxies';
+import { AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, SumNumbersMessageProxy, StoreTotalMessageProxy } from './messageProxies';
 import { requestRouter } from './requestRouter';
 import { AddNumbersApiControllerRoutes } from './apiControllerLambda';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
@@ -18,26 +18,15 @@ import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 
 // TODO 04May20: Is there any way we can lazy load these? What is the overhead of them being created for *each* function?
 
-const lambdas = {
-    addNumbersApiController: 
-        new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
-            lambda.restApiId = new ResourceReference('ApiGateway');
-        }),
-    addThreeNumbersHandler: new RequestHandlerLambda(AddThreeNumbersHandler),
-    addTwoNumbersHandler: new RequestHandlerLambda(AddTwoNumbersHandler),
-    sumNumbersHandler: new RequestHandlerLambda(SumNumbersHandler),
-    storeTotalHandler: new RequestHandlerLambda(StoreTotalHandler),
-}; 
-
 const templateReferences = {
     flowExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
     flowExchangeTopicArn: new ResourceReference('FlowExchangeTopic'),
 
-    // TODO 30May20: These might go, if they are only used once
-    addTwoNumbersFunction: new FunctionReference(lambdas.addTwoNumbersHandler),
-    addThreeNumbersFunction: new FunctionReference(lambdas.addThreeNumbersHandler),
-    sumNumbersFunction: new FunctionReference(lambdas.sumNumbersHandler),
-    storeTotalFunction: new FunctionReference(lambdas.storeTotalHandler),
+    addTwoNumbersFunction: new FunctionReference(AddTwoNumbersHandler),
+    addThreeNumbersFunction: new FunctionReference(AddThreeNumbersHandler),
+    sumNumbersFunction: new FunctionReference(SumNumbersHandler),
+    storeTotalFunction: new FunctionReference(StoreTotalHandler),
+
     flowResultTable: new ResourceReference('FlowResultTable'),
     functionInstanceTable: new ResourceReference('FunctionInstanceTable'),
 };
@@ -57,7 +46,12 @@ const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
 const snsClient = new SNS();
 
-const resources = {
+const awsResources = {
+    functionInstanceTable: new DynamoDBCrudResource(
+        templateReferences.functionInstanceTable, environmentVariables.functionInstanceTableName, dynamoDbClient),    
+    flowExchangeTopic: new SNSPublishMessageResource(
+        templateReferences.flowExchangeTopicName, environmentVariables.flowExchangeTopicArn, snsClient),
+
     sumNumbersFunction: new LambdaInvokeResource(
         templateReferences.sumNumbersFunction, environmentVariables.sumNumbersFunctionName, lambdaClient),
     storeTotalFunction: new LambdaInvokeResource(
@@ -67,65 +61,69 @@ const resources = {
     addThreeNumbersFunction: new LambdaInvokeResource(
         templateReferences.addThreeNumbersFunction, environmentVariables.addThreeNumbersFunctionName, lambdaClient),
 
-    functionInstanceTable: new DynamoDBCrudResource(
-        templateReferences.functionInstanceTable, environmentVariables.functionInstanceTableName, dynamoDbClient),    
-    flowExchangeTopic: new SNSPublishMessageResource(
-        templateReferences.flowExchangeTopicName, environmentVariables.flowExchangeTopicArn, snsClient),
-
     flowResultTable: new DynamoDBCrudResource(
         templateReferences.flowResultTable, environmentVariables.flowResultTableName, dynamoDbClient),    
 };
 
+// TODO 31May20: How can we group such resources as below?
+const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
+    repository.resources.functionInstanceTable = awsResources.functionInstanceTable;
+});
+const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
+    publisher.resources.exchangeTopic = awsResources.flowExchangeTopic;
+});
+
 export const handlerFactory = new HandlerFactory()
 
     .addInitialiser(StoreTotalHandler, handler => {
-        handler.resources.flowResultTable = resources.flowResultTable;
+        handler.resources.flowResultTable = awsResources.flowResultTable;
     })
 
     .addInitialiser(SumNumbersLambdaProxy, handler => {
-        handler.resources.lambda = resources.sumNumbersFunction;
+        handler.resources.lambda = awsResources.sumNumbersFunction;
     })
     .addInitialiser(StoreTotalLambdaProxy, handler => {
-        handler.resources.lambda = resources.storeTotalFunction;
+        handler.resources.lambda = awsResources.storeTotalFunction;
     })
     .addInitialiser(AddTwoNumbersLambdaProxy, handler => {
-        handler.resources.lambda = resources.addTwoNumbersFunction;
+        handler.resources.lambda = awsResources.addTwoNumbersFunction;
     })
     .addInitialiser(AddThreeNumbersLambdaProxy, handler => {
-        handler.resources.lambda = resources.addThreeNumbersFunction;
+        handler.resources.lambda = awsResources.addThreeNumbersFunction;
     })
     
-    // TODO 30May20: In this case, we wouldn't actually have a trigger, as the API isn't able to wait for a response
     .addInitialiser(AddTwoNumbersMessageProxy, handler => {
-        handler.resources.requestTopic = resources.flowExchangeTopic;
-        // TODO 30May20: The proxy needs to declare that it requires a trigger, however the event needs a filter that refers to the containing handler, e.g. AddThreeNumbersHandler:Response
-        handler.triggers.responseTopic = resources.flowExchangeTopic;
+        handler.resources.requestPublisher = exchangeMessagePublisher;
     })
     .addInitialiser(AddThreeNumbersMessageProxy, handler => {
-        handler.resources.requestTopic = resources.flowExchangeTopic;
+        handler.resources.requestPublisher = exchangeMessagePublisher;
+    })
+    .addInitialiser(StoreTotalMessageProxy, handler => {
+        handler.resources.requestPublisher = exchangeMessagePublisher;
+        // TODO 31May20: The following would need to cause the right MessageType filter to generate, e.g. AddThreeNumbersHandler:Response
+        // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
     })
     ;
 
-// TODO 30May20: Should we set the following centrally or per function?
+const lambdas = {
+    addNumbersApiController: new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
+        lambda.restApiId = new ResourceReference('ApiGateway');
+    }),
+    
+    // TODO 31May20: The following two need triggers for requests
+    addThreeNumbersHandler: new RequestHandlerLambda(templateReferences.addThreeNumbersFunction),
+    addTwoNumbersHandler: new RequestHandlerLambda(templateReferences.addTwoNumbersFunction),
 
-const functionInstanceRepository = 
-    new DynamoDbFunctionInstanceRepository(repository => {
-        repository.resources.functionInstanceTable = resources.functionInstanceTable;
-    });
-const exchangeMessagePublisher = new SNSExchangeMessagePublisher(snsClient, process.env.FLOW_EXCHANGE_TOPIC_ARN);
-        
+    sumNumbersHandler: new RequestHandlerLambda(templateReferences.sumNumbersFunction),
+    storeTotalHandler: new RequestHandlerLambda(templateReferences.storeTotalFunction),
+}; 
+    
 export const lambdaApplication = 
     new LambdaApplication(requestRouter, handlerFactory, app => {
         
         // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?
         app.defaultFunctionNamePrefix = '${ApplicationName}-';
 
-        // TODO 30May20: This should be set on each handler that publishes
-        app.exchangeMessagePublisher = exchangeMessagePublisher;
-
-        // TODO 30May20: This should only be necessary when there is a trigger on a handler
-        app.functionInstanceRepository = functionInstanceRepository;
-        
         app
             .addApiController(lambdas.addNumbersApiController)
             .addRequestHandler(lambdas.addThreeNumbersHandler)

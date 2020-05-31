@@ -15,7 +15,7 @@ import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { LambdaExchangeWireTap } from './omahdog-aws/LambdaExchangeWireTap';
-import { DynamoDBCrudResource } from './omahdog-aws/AwsResources';
+import { DynamoDBCrudResource, SNSPublishMessageResource } from './omahdog-aws/AwsResources';
 import { EnvironmentVariable, ResourceReference } from './omahdog-aws/SAMTemplate';
 
 const documentClient = new DynamoDB.DocumentClient();
@@ -26,7 +26,11 @@ const functionInstanceRepository =
         repository.resources.functionInstanceTable = new DynamoDBCrudResource(
             undefined, new EnvironmentVariable(new ResourceReference('FunctionInstanceTable'), 'FLOW_INSTANCE_TABLE_NAME'), documentClient);
     });
-const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, process.env.FLOW_EXCHANGE_TOPIC_ARN);
+const exchangeMessagePublisher = 
+    new SNSExchangeMessagePublisher(publisher => {        
+        publisher.resources.exchangeTopic = new SNSPublishMessageResource(
+            undefined, new EnvironmentVariable(new ResourceReference('FlowExchangeTopicArn'), 'FLOW_EXCHANGE_TOPIC_ARN'), sns);
+    });
 
 const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(exchangeMessagePublisher);
 export const deadLetterQueueHandler = async (event: SNSEvent): Promise<void> => {

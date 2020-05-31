@@ -1,37 +1,29 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
-import { DynamoDBCrudResource, IResource } from './AwsResources';
+import { DynamoDBCrudResource } from './AwsResources';
 
 // TODO 30May20: IFunctionInstanceRepository should implement IResource
-export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository, IResource {
+export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
-    // TODO 27May20: Should we allow resources to have resources? E.g. A resource wrapper such as this?
-    resources: {
-        functionInstanceTable?: DynamoDBCrudResource;
+    resources = {
+        functionInstanceTable: new DynamoDBCrudResource
     }
 
-    constructor(initialise: (resource: DynamoDbFunctionInstanceRepository) => void) {
-        initialise(this);
+    constructor(initialise?: (resource: DynamoDbFunctionInstanceRepository) => void) {
+        if (initialise !== undefined) initialise(this);
     }
 
     validate(): string[] {
-
         const errorMessages: string[] = [];
-
-        if (this.resources.functionInstanceTable === undefined) {
-            errorMessages.push('this.resources.functionInstanceTable === undefined');
-        } else {
-            errorMessages.concat(this.resources.functionInstanceTable.validate());
-        }
-
+        this.resources.functionInstanceTable.validate().forEach(message => 
+            errorMessages.push(`${DynamoDbFunctionInstanceRepository.name}: ${message}`));
         return errorMessages;
     }
     
     throwErrorIfInvalid(): void {
         const errorMessages = this.validate();
         if (errorMessages.length > 0) {
-            // TODO 30May20: Look at a more informative error
-            throw new Error('DynamoDbFunctionInstanceRepository is not valid');
+            throw new Error(`${DynamoDbFunctionInstanceRepository.name} is not valid:\n${errorMessages.join('\n')}`);
         }
     }
 
@@ -41,7 +33,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
 
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
-            TableName: this.resources.functionInstanceTable?.tableName ?? '<unknown>',
+            TableName: this.getFunctionInstanceTableName(),
             Item: {
                 id: instance.flowInstance.instanceId,
                 callingContext: instance.callingContext,
@@ -60,7 +52,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         this.throwErrorIfInvalid();
 
         const params = {
-            TableName: this.resources.functionInstanceTable?.tableName ?? '<unknown>',
+            TableName: this.getFunctionInstanceTableName(),
             Key: {
                 id: instanceId
             }
@@ -91,13 +83,17 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         this.throwErrorIfInvalid();
 
         const params = {
-            TableName: this.resources.functionInstanceTable?.tableName ?? '<unknown>',
+            TableName: this.getFunctionInstanceTableName(),
             Key: {
                 id: instanceId
             }
         };
 
         await this.resources.functionInstanceTable?.client?.delete(params).promise();
+    }
+
+    private getFunctionInstanceTableName(): string {
+        return this.resources.functionInstanceTable?.tableName ?? '<unknown>';
     }
 }   
 

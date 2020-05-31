@@ -11,7 +11,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
     triggers: any;
 
     resources = {
-        requestTopic: new SNSPublishMessageResource
+        requestPublisher: new SNSExchangeMessagePublisher
     }
 
     private readonly requestTypeName: string;
@@ -22,7 +22,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
         
-        this.resources.requestTopic.throwErrorIfInvalid();
+        this.resources.requestPublisher.throwErrorIfInvalid();
 
         const requestId = uuid.v4();
         
@@ -37,11 +37,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
                 request: request
             };
 
-        const publisher = 
-            new SNSExchangeMessagePublisher(
-                this.resources.requestTopic.client, this.resources.requestTopic.topicArn);
-
-        await publisher.publishRequest(this.requestTypeName, message);
+        await this.resources.requestPublisher.publishRequest(this.requestTypeName, message);
 
         return flowContext.getAsyncResponse(requestId);
     }

@@ -63,15 +63,15 @@ Resources:
       Environment:
         Variables:
           STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalHandlerFunction
-          ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersHandlerFunction
+          # ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersHandlerFunction
           ADD_TWO_NUMBERS_FUNCTION_NAME: !Ref AddTwoNumbersHandlerFunction
           FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
       Policies:
         # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
         - LambdaInvokePolicy:
             FunctionName: !Ref StoreTotalHandlerFunction
-        - LambdaInvokePolicy:
-            FunctionName: !Ref AddThreeNumbersHandlerFunction
+        # - LambdaInvokePolicy:
+        #     FunctionName: !Ref AddThreeNumbersHandlerFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref AddTwoNumbersHandlerFunction
         - SNSPublishMessagePolicy:

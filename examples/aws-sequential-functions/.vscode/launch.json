@@ -40,6 +40,7 @@
             "request": "launch",
             "name": "Mocha Tests",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "smartStep": true,
             "args": [
                 "--require",
                 "ts-node/register",

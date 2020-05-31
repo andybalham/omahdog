@@ -18,12 +18,17 @@ import { DynamoDBCrudResource } from './omahdog-aws/AwsResources';
 //     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalHandler)
 //     ;
 
-export const requestRouter = new RequestRouter()
-    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
-    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalLambdaProxy)
-    ;
+// export const requestRouter = new RequestRouter()
+//     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
+//     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalLambdaProxy)
+//     ;
 
 // export const requestRouter = new RequestRouter()
 //     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersMessageProxy)
 //     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)
 //     ;
+
+export const requestRouter = new RequestRouter()
+    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)
+    ;

@@ -1,11 +1,7 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
 import { ConfigurationValue, TemplateReference } from './SAMTemplate';
-
-export interface IResource {
-    validate(): string[];
-    throwErrorIfInvalid(): void;
-}
+import { IResource } from './IResource';
 
 export abstract class AwsResource implements IResource {
 

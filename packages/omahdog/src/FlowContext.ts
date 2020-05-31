@@ -191,6 +191,7 @@ export class HandlerFactory {
 
     private readonly initialisers = new Map<string, (handler: any) => void>();
 
+    // TODO 31May20: Rename to configure()? addConfiguration()?
     addInitialiser<T extends IActivityRequestHandlerBase>(HandlerType: new () => T, initialiser: (handler: T) => void): HandlerFactory {
 
         this.initialisers.set(HandlerType.name, initialiser);

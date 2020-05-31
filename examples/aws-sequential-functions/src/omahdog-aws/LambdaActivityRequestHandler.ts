@@ -100,6 +100,11 @@ export class LambdaActivityRequestHandler {
             }
         }
     
+        const responseMessage: ExchangeResponseMessage = {
+            callingContext: callingContext,
+            response: response
+        };
+    
         if ('AsyncResponse' in response) {
     
             const functionInstance: FunctionInstance = {
@@ -112,29 +117,25 @@ export class LambdaActivityRequestHandler {
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
             await this.functionInstanceRepository.store(functionInstance);
-    
+
         } else {
 
-            const responseMessage: ExchangeResponseMessage = {
-                callingContext: callingContext,
-                response: response
-            };
-
-            if (!isDirectRequest) {    
+            if (!isDirectRequest) {
                 await this.exchangeMessagePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
             }
-    
+
             if (resumeCount > 0) {
                 // TODO 18May20: Perhaps we want to leave a trace, could have a TTL on the table
                 console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
                 await this.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
             }
-
-            if (isDirectRequest && (resumeCount === 0)) {
-                console.log(`return: ${JSON.stringify(responseMessage)}`);
-                return responseMessage;
-            } 
+    
         }
+
+        if (isDirectRequest) {
+            console.log(`return: ${JSON.stringify(responseMessage)}`);
+            return responseMessage;
+        } 
     }
 }
  

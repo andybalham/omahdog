@@ -5,13 +5,15 @@ import { ApiControllerRoutes } from './ApiControllerLambda';
 export abstract class LambdaBase{
     resourceName: string;
     functionNameTemplate: string;
-    constructor(type: new () => any) {
-        this.resourceName = `${type.name}Function`;
+    constructor(type?: new () => any) {
+        this.resourceName = `${type?.name}Function`;
     }
 }
 export class RequestHandlerLambda extends LambdaBase {
-    constructor(requestHandlerType: new () => IActivityRequestHandlerBase, initialise?: (lambda: RequestHandlerLambda) => void) {
-        super(requestHandlerType);
+    constructor(functionReference: FunctionReference, initialise?: (lambda: RequestHandlerLambda) => void) {
+
+        super(functionReference.requestHandlerType);
+
         if (initialise !== undefined) {
             initialise(this);            
         }
@@ -102,12 +104,12 @@ export abstract class TemplateReference {
 }
 
 export class FunctionReference extends TemplateReference {
-    readonly resourceName?: string;
-    constructor(lambda?: LambdaBase) {
-        super(ResourceReference);
-        this.resourceName = lambda?.resourceName;
+    readonly requestHandlerType?: new () => IActivityRequestHandlerBase;
+    constructor(requestHandlerType?: new () => IActivityRequestHandlerBase) {
+        super(FunctionReference);
+        this.requestHandlerType = requestHandlerType;
     }
-    get instance(): any { return { 'Ref': this.resourceName }; }
+    get instance(): any { return { 'Ref': `${this.requestHandlerType?.name}Function` }; }
 }
 
 export class ResourceReference extends TemplateReference {

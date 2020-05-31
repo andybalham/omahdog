@@ -16,6 +16,7 @@ export abstract class FlowRequestHandlerBase implements IResumableRequestHandler
     abstract resume(flowContext: FlowContext): Promise<any>;
 }
 
+// TODO 31May20: Rename this CompositeRequestHandler
 export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequestHandlerBase implements IActivityRequestHandler<TReq, TRes> {
 
     private readonly ResponseType: new () => TRes;

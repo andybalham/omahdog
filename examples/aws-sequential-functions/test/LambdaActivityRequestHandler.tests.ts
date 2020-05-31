@@ -11,6 +11,8 @@ import SNS, { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
 import { IResumableRequestHandler } from '../src/omahdog/FlowRequestHandler';
+import { SNSPublishMessageResource } from '../src/omahdog-aws/AwsResources';
+import { ConstantValue } from '../src/omahdog-aws/SAMTemplate';
 
 class TestRequest {
     input: number
@@ -73,8 +75,11 @@ describe('LambdaActivityRequestHandler tests', () => {
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
-        // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        // TODO 03May20: Mock out the IExchangeMessagePublisher?
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -140,7 +145,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -205,7 +213,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
         
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -289,7 +300,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -352,7 +366,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -438,7 +455,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -496,7 +516,10 @@ describe('LambdaActivityRequestHandler tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(sns, exchangeTopicArn);
+        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+            publisher.resources.exchangeTopic = 
+                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+        });
 
         const lambdaHandlerSut = 
             new LambdaActivityRequestHandler(
@@ -525,7 +548,12 @@ describe('LambdaActivityRequestHandler tests', () => {
         
         // Assert
         
-        expect(responseMessage).to.be.undefined;
+        expect(responseMessage).to.not.be.undefined;
+
+        if (responseMessage !== undefined) {
+            expect((responseMessage as ExchangeResponseMessage).callingContext).to.deep.equal(requestMessage.callingContext);
+            expect((responseMessage as ExchangeResponseMessage).response.AsyncResponse).to.be.true;
+        }
 
         expect(functionInstance).to.not.be.undefined;
 
