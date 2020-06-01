@@ -1,32 +1,69 @@
 import { SNSEvent } from 'aws-lambda';
-import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 
-import { FlowContext, AsyncResponse, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
+import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
+import { LambdaBase, FunctionReference } from './SAMTemplate';
+import { IResource } from './IResource';
 
-export class ActivityRequestHandlerLambda {
-
-    // TODO 27May20: The following two will be resources
-    exchangeMessagePublisher: IExchangeMessagePublisher;
+class RequestHandlerLambdaResources {
+    responsePublisher: IExchangeMessagePublisher;
     functionInstanceRepository: IFunctionInstanceRepository;
+}
 
-    private readonly handlerType: new () => IActivityRequestHandlerBase;
-    private readonly requestRouter: RequestRouter;
-    private readonly handlerFactory: HandlerFactory;
+export class RequestHandlerLambda extends LambdaBase implements IResource {
 
-    constructor(handlerType: new () => IActivityRequestHandlerBase, requestRouter: RequestRouter, handlerFactory: HandlerFactory) {
+    resources = new RequestHandlerLambdaResources
 
-        this.handlerType = handlerType;        
-        this.requestRouter = requestRouter;
-        this.handlerFactory = handlerFactory;
+    readonly handlerType: new () => IActivityRequestHandlerBase;
+
+    constructor(functionReference: FunctionReference, initialise?: (lambda: RequestHandlerLambda) => void) {
+
+        super(`${functionReference.requestHandlerType?.name}Function`);
+
+        if (functionReference.requestHandlerType === undefined) throw new Error('functionReference.requestHandlerType === undefined');
+
+        this.handlerType = functionReference.requestHandlerType;
+        
+        if (initialise !== undefined) {
+            initialise(this);            
+        }
     }
 
-    async handle(event: SNSEvent | ExchangeRequestMessage): Promise<ExchangeResponseMessage | void> {
+    validate(): string[] {
+
+        const errorMessages: string[] = [];
+
+        if (this.resources.responsePublisher === undefined) {
+            errorMessages.push(`${RequestHandlerLambda.name}: responsePublisher === undefined`);
+        } else {
+            errorMessages.concat(this.resources.responsePublisher.validate());
+        }
+
+        // TODO 01Jun20: Can we work out if functionInstanceRepository is required?
+        if (this.resources.functionInstanceRepository === undefined) {
+            errorMessages.push(`${RequestHandlerLambda.name}: functionInstanceRepository === undefined`);
+        } else {
+            errorMessages.concat(this.resources.functionInstanceRepository.validate());
+        }
+
+        return errorMessages;
+    }
+    
+    throwErrorIfInvalid(): void {
+        const errorMessages = this.validate();
+        if (errorMessages.length > 0) {
+            throw new Error(`${RequestHandlerLambda.name} is not valid:\n${errorMessages.join('\n')}`);
+        }
+    }
+    
+    async handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
+
+        this.throwErrorIfInvalid();
 
         let message: ExchangeRequestMessage | ExchangeResponseMessage;
         let isDirectRequest: boolean;
@@ -63,7 +100,7 @@ export class ActivityRequestHandlerLambda {
     
             const flowContext = 
                 FlowContext.newCorrelatedContext(
-                    message.callingContext.flowCorrelationId, this.requestRouter, this.handlerFactory);
+                    message.callingContext.flowCorrelationId, requestRouter, handlerFactory);
     
             try {
                 response = await flowContext.handleRequest(this.handlerType, message.request);
@@ -74,7 +111,7 @@ export class ActivityRequestHandlerLambda {
     
         } else {
     
-            const functionInstance = await this.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
+            const functionInstance = await this.resources.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
@@ -91,7 +128,7 @@ export class ActivityRequestHandlerLambda {
     
             const flowInstance = functionInstance.flowInstance;
     
-            const flowContext = FlowContext.newResumeContext(flowInstance, this.requestRouter, this.handlerFactory);
+            const flowContext = FlowContext.newResumeContext(flowInstance, requestRouter, handlerFactory);
     
             try {
                 response = await flowContext.handleResponse(this.handlerType, message.response);
@@ -100,6 +137,11 @@ export class ActivityRequestHandlerLambda {
                 response = new ErrorResponse(error);
             }
         }
+    
+        const responseMessage: ExchangeResponseMessage = {
+            callingContext: callingContext,
+            response: response
+        };
     
         if ('AsyncResponse' in response) {
     
@@ -112,30 +154,26 @@ export class ActivityRequestHandlerLambda {
     
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
-            await this.functionInstanceRepository.store(functionInstance);
-    
+            await this.resources.functionInstanceRepository.store(functionInstance);
+
         } else {
 
-            const responseMessage: ExchangeResponseMessage = {
-                callingContext: callingContext,
-                response: response
-            };
-
-            if (!isDirectRequest) {    
-                await this.exchangeMessagePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
+            if (!isDirectRequest) {
+                await this.resources.responsePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
             }
-    
+
             if (resumeCount > 0) {
                 // TODO 18May20: Perhaps we want to leave a trace, could have a TTL on the table
                 console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
-                await this.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
+                await this.resources.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
             }
-
-            if (isDirectRequest && (resumeCount === 0)) {
-                console.log(`return: ${JSON.stringify(responseMessage)}`);
-                return responseMessage;
-            } 
+    
         }
+
+        if (isDirectRequest) {
+            console.log(`return: ${JSON.stringify(responseMessage)}`);
+            return responseMessage;
+        } 
     }
 }
  

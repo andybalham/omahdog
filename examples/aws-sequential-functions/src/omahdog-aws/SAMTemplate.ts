@@ -1,28 +1,25 @@
-import { IActivityRequestHandlerBase } from '../omahdog/FlowContext';
+import { IActivityRequestHandlerBase, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ApiControllerRoutes } from './ApiControllerLambda';
+import { RequestHandlerLambda } from './ActivityRequestHandlerLambda';
 
 // ------------------------------------------------------------------------------------------------------------------
 export abstract class LambdaBase{
-    resourceName: string;
+    
+    readonly resourceName: string;
     functionNameTemplate: string;
-    constructor(type?: new () => any) {
-        this.resourceName = `${type?.name}Function`;
-    }
-}
-export class RequestHandlerLambda extends LambdaBase {
-    constructor(functionReference: FunctionReference, initialise?: (lambda: RequestHandlerLambda) => void) {
 
-        super(functionReference.requestHandlerType);
-
-        if (initialise !== undefined) {
-            initialise(this);            
-        }
+    constructor(resourceName: string) {
+        this.resourceName = resourceName;
     }
 }
 export class ApiControllerLambda extends LambdaBase {
+
     restApiId: TemplateReference;
+
     constructor(apiControllerType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void) {
-        super(apiControllerType);
+
+        super(`${apiControllerType.name}Function`);
+
         if (initialise !== undefined) {
             initialise(this);            
         }
@@ -31,11 +28,16 @@ export class ApiControllerLambda extends LambdaBase {
 
 export class LambdaApplication {
 
-    exchangeMessagePublisher?: any;
-    functionInstanceRepository?: any;
     defaultFunctionNamePrefix: string;
 
-    constructor(requestRouter: any, handlerFactory: any, initialise: (LambdaApplication: LambdaApplication) => void) {
+    private readonly requestRouter: RequestRouter;
+    private readonly handlerFactory: HandlerFactory;
+
+    constructor(requestRouter: RequestRouter, handlerFactory: HandlerFactory, initialise: (LambdaApplication: LambdaApplication) => void) {
+        
+        this.requestRouter = requestRouter;
+        this.handlerFactory = handlerFactory;
+
         initialise(this);
     }
 
@@ -43,16 +45,23 @@ export class LambdaApplication {
         return this;
     }
 
+    async handleApiEvent(apiControllerRoutesType: new () => ApiControllerRoutes, event: any): Promise<any> {
+        throw new Error('Method not implemented.');
+    }
+
+    private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambda>();
+
     addRequestHandler(lambda: RequestHandlerLambda): LambdaApplication {
+        if (lambda.handlerType === undefined) throw new Error('lambda.requestHandlerType === undefined');
+        this.requestHandlerLambdas.set(lambda.handlerType.name, lambda);
         return this;
     }
 
     async handleRequestEvent(handlerType: new () => IActivityRequestHandlerBase, event: any): Promise<any> {
-        throw new Error('Method not implemented.');
-    }
-
-    async handleApiEvent(apiControllerRoutesType: new () => ApiControllerRoutes, event: any): Promise<any> {
-        throw new Error('Method not implemented.');
+        const requestHandlerLambda = this.requestHandlerLambdas.get(handlerType.name);
+        if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
+        const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
+        return response;
     }
 }
 // ------------------------------------------------------------------------------------------------------------------

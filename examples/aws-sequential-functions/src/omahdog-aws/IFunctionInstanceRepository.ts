@@ -1,7 +1,8 @@
 import { FlowInstance } from '../omahdog/FlowContext';
 import { ExchangeCallingContext } from './Exchange';
+import { IResource } from './IResource';
 
-export interface IFunctionInstanceRepository {
+export interface IFunctionInstanceRepository extends IResource {
 
     store(instance: FunctionInstance): Promise<void>;
     

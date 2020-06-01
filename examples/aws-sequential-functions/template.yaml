@@ -118,7 +118,7 @@ Resources:
   #   Type: AWS::Serverless::Function
   #   Properties:
   #     FunctionName: !Sub ${ApplicationName}-WireTapFunction
-  #     Handler: requestLambdas.exchangeWireTapHandler
+  #     Handler: lambdaApplication.exchangeWireTapHandler
   #     Events:
   #       ExchangeTopic:
   #         Type: SNS
@@ -133,7 +133,7 @@ Resources:
   #   Type: AWS::Serverless::Function
   #   Properties:
   #     FunctionName: !Sub ${ApplicationName}-DeadLetterQueueFunction
-  #     Handler: requestLambdas.deadLetterQueueHandler
+  #     Handler: lambdaApplication.deadLetterQueueHandler
   #     Policies:
   #       - SNSPublishMessagePolicy:
   #           TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -150,7 +150,7 @@ Resources:
   #   Type: AWS::Serverless::Function
   #   Properties:
   #     FunctionName: !Sub ${ApplicationName}-AddThreeNumbersHandlerFunction
-  #     Handler: requestLambdas.addThreeNumbersHandler
+  #     Handler: lambdaApplication.addThreeNumbersHandler
   #     Policies:
   #       - SNSPublishMessagePolicy:
   #           TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -183,7 +183,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ApplicationName}-AddTwoNumbersHandlerFunction
-      Handler: requestLambdas.addTwoNumbersHandler
+      Handler: lambdaApplication.addTwoNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -217,7 +217,7 @@ Resources:
     Properties:
       FunctionName: 
         Fn::Sub: ${ApplicationName}-SumNumbersHandlerFunction
-      Handler: requestLambdas.sumNumbersHandler
+      Handler: lambdaApplication.sumNumbersHandler
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: 
@@ -253,7 +253,7 @@ Resources:
       FunctionName: 
         Fn::Sub: ${ApplicationName}-StoreTotalHandlerFunction
       # The app definition can specify the module name, the method can be derived by convention
-      Handler: requestLambdas.storeTotalHandler
+      Handler: lambdaApplication.storeTotalHandler
       # The app definition will wire up environment variables to the function
       Environment:
         Variables:

@@ -2,7 +2,7 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { Lambda, SNS } from 'aws-sdk';
 
 import { HandlerFactory, IActivityRequestHandlerBase } from './omahdog/FlowContext';
-import { ResourceReference, EnvironmentVariable, ResourceAttributeReference, LambdaApplication, ApiControllerLambda, RequestHandlerLambda, FunctionReference } from './omahdog-aws/SAMTemplate';
+import { ResourceReference, EnvironmentVariable, ResourceAttributeReference, LambdaApplication, ApiControllerLambda, FunctionReference } from './omahdog-aws/SAMTemplate';
 import { DynamoDBCrudResource, LambdaInvokeResource, SNSPublishMessageResource } from './omahdog-aws/AwsResources';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
@@ -15,6 +15,7 @@ import { AddNumbersApiControllerRoutes } from './apiControllerLambda';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
+import { RequestHandlerLambda } from './omahdog-aws/ActivityRequestHandlerLambda';
 
 // TODO 04May20: Is there any way we can lazy load these? What is the overhead of them being created for *each* function?
 
@@ -65,7 +66,6 @@ const awsResources = {
         templateReferences.flowResultTable, environmentVariables.flowResultTableName, dynamoDbClient),    
 };
 
-// TODO 31May20: How can we group such resources as below?
 export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
     repository.resources.functionInstanceTable = awsResources.functionInstanceTable;
 });
@@ -94,9 +94,11 @@ export const handlerFactory = new HandlerFactory()
     
     .addInitialiser(AddTwoNumbersMessageProxy, handler => {
         handler.resources.requestPublisher = exchangeMessagePublisher;
+        // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
     })
     .addInitialiser(AddThreeNumbersMessageProxy, handler => {
         handler.resources.requestPublisher = exchangeMessagePublisher;
+        // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
     })
     .addInitialiser(StoreTotalMessageProxy, handler => {
         handler.resources.requestPublisher = exchangeMessagePublisher;
@@ -106,26 +108,42 @@ export const handlerFactory = new HandlerFactory()
     ;
 
 const lambdas = {
-    addNumbersApiController: new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
-        lambda.restApiId = new ResourceReference('ApiGateway');
-    }),
+    // addNumbersApiController: new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
+    //     lambda.restApiId = new ResourceReference('ApiGateway');
+    // }),
     
     // TODO 31May20: The following two need triggers for requests
-    addThreeNumbersHandler: new RequestHandlerLambda(templateReferences.addThreeNumbersFunction),
-    addTwoNumbersHandler: new RequestHandlerLambda(templateReferences.addTwoNumbersFunction),
+    addThreeNumbersHandler: new RequestHandlerLambda(templateReferences.addThreeNumbersFunction, lambda => {
+        // lambda.triggers.requestTopic = awsResources.flowExchangeTopic;
+        console.log(`lambda: ${lambda}`);
+        console.log(`lambda?.resources: ${lambda?.resources}`);
+        lambda.resources.responsePublisher = exchangeMessagePublisher;
+        lambda.resources.functionInstanceRepository = functionInstanceRepository;
+    }),
+    addTwoNumbersHandler: new RequestHandlerLambda(templateReferences.addTwoNumbersFunction, lambda => {
+        // lambda.triggers.requestTopic = awsResources.flowExchangeTopic;
+        lambda.resources.responsePublisher = exchangeMessagePublisher;
+        lambda.resources.functionInstanceRepository = functionInstanceRepository;
+    }),
 
-    sumNumbersHandler: new RequestHandlerLambda(templateReferences.sumNumbersFunction),
-    storeTotalHandler: new RequestHandlerLambda(templateReferences.storeTotalFunction),
+    sumNumbersHandler: new RequestHandlerLambda(templateReferences.sumNumbersFunction, lambda => {
+        lambda.resources.responsePublisher = exchangeMessagePublisher;
+        lambda.resources.functionInstanceRepository = functionInstanceRepository;
+    }),
+    storeTotalHandler: new RequestHandlerLambda(templateReferences.storeTotalFunction, lambda => {
+        lambda.resources.responsePublisher = exchangeMessagePublisher;
+        lambda.resources.functionInstanceRepository = functionInstanceRepository;
+    }),
 }; 
     
 export const lambdaApplication = 
-    new LambdaApplication(requestRouter, handlerFactory, app => {
+    new LambdaApplication(requestRouter, handlerFactory, application => {
         
         // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?
-        app.defaultFunctionNamePrefix = '${ApplicationName}-';
+        application.defaultFunctionNamePrefix = '${ApplicationName}-';
 
-        app
-            .addApiController(lambdas.addNumbersApiController)
+        application
+            // .addApiController(lambdas.addNumbersApiController)
             .addRequestHandler(lambdas.addThreeNumbersHandler)
             .addRequestHandler(lambdas.addTwoNumbersHandler)
             .addRequestHandler(lambdas.sumNumbersHandler)
@@ -140,6 +158,18 @@ export const lambdaApplication =
 
 export const addThreeNumbersHandler = async (event: any): Promise<any> => {
     return await lambdaApplication.handleRequestEvent(AddThreeNumbersHandler, event);
+};
+
+export const addTwoNumbersHandler = async (event: any): Promise<any> => {
+    return await lambdaApplication.handleRequestEvent(AddTwoNumbersHandler, event);
+};
+
+export const sumNumbersHandler = async (event: any): Promise<any> => {
+    return await lambdaApplication.handleRequestEvent(SumNumbersHandler, event);
+};
+
+export const storeTotalHandler = async (event: any): Promise<any> => {
+    return await lambdaApplication.handleRequestEvent(StoreTotalHandler, event);
 };
 
 export const addNumbersApiControllerRoutes = async (event: any): Promise<any> => {

@@ -2,7 +2,6 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
 import { DynamoDBCrudResource } from './AwsResources';
 
-// TODO 30May20: IFunctionInstanceRepository should implement IResource
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
     resources = {
