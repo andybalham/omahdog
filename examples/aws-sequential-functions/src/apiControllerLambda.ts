@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 
-import { ApiControllerLambda, ApiControllerRoutes } from './omahdog-aws/ApiControllerLambda';
+import { ApiControllerLambda, ApiControllerRoutes, StringParameters } from './omahdog-aws/ApiControllerLambda';
 
 import { requestRouter } from './requestRouter';
 import { handlerFactory } from './lambdaApplication';
@@ -10,8 +10,6 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 
 export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {}
-
-class Parameters { [name: string]: string }
 
 function parseOptionalInt(intString: string | undefined, defaultValue = 0): number  {
     return (intString === undefined) ? defaultValue : parseInt(intString);
@@ -24,26 +22,26 @@ export class AddNumbersApiController extends ApiControllerLambda {
     configure(routes: ApiControllerRoutes): void {
         routes
             .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy,
-                (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null): AddTwoNumbersRequest => {
+                (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                     return {
                         x: parseOptionalInt(queryStringParameters?.x),
                         y: parseOptionalInt(queryStringParameters?.y),
                     };
                 })
             .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy,
-                (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null): AddTwoNumbersRequest => {
+                (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                     return {
                         x: parseOptionalInt(pathParameters?.x),
                         y: parseOptionalInt(pathParameters?.y),
                     };
                 })
             .addPost('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy,
-                (pathParameters: { [name: string]: string } | null, body: AddTwoNumbersRequest | null): AddTwoNumbersRequest => {
+                (pathParameters: StringParameters | null, body: AddTwoNumbersRequest | null): AddTwoNumbersRequest => {
                     return body ?? { x: 0, y: 0 };
                 })
                 
             .addGet('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersLambdaProxy,
-                (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null): AddThreeNumbersRequest => {
+                (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddThreeNumbersRequest => {
                     return {
                         a: parseOptionalInt(queryStringParameters?.a),
                         b: parseOptionalInt(queryStringParameters?.b),
@@ -51,7 +49,7 @@ export class AddNumbersApiController extends ApiControllerLambda {
                     };
                 })
             .addPost('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersMessageProxy,
-                (pathParameters: { [name: string]: string } | null, body: AddThreeNumbersRequest | null): AddThreeNumbersRequest => {
+                (pathParameters: StringParameters | null, body: AddThreeNumbersRequest | null): AddThreeNumbersRequest => {
                     return body ?? { a: 0, b: 0, c: 0 };
                 })
         ;

@@ -81,11 +81,13 @@ export abstract class ApiControllerLambda extends LambdaFunction {
     }
 }
 
+export class StringParameters { [name: string]: string }
+
 class ApiControllerRoute {
     httpMethod: string;
     resource: string;
     handlerType: new () => IActivityRequestHandlerBase;
-    getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: string | null) => any;
+    getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null) => any;
     getAPIGatewayProxyResult?: (response: any) => APIGatewayProxyResult
 }
 
@@ -95,14 +97,14 @@ export class ApiControllerRoutes {
 
     addGet<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(
         resource: string, requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
-        getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null) => TReq, 
+        getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null) => TReq, 
         getAPIGatewayProxyResult?: (response: TRes) => APIGatewayProxyResult): ApiControllerRoutes {
 
         const route: ApiControllerRoute = {
             httpMethod: 'GET',
             resource: resource,
             handlerType: handlerType,
-            getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: string | null): any => {
+            getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null): any => {
                 return getRequest(pathParameters, queryStringParameters);
             },
             getAPIGatewayProxyResult: getAPIGatewayProxyResult        
@@ -116,14 +118,14 @@ export class ApiControllerRoutes {
 
     addPost<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(
         resource: string, requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
-        getRequest: (pathParameters: { [name: string]: string } | null, body: TReq | null) => TReq, 
+        getRequest: (pathParameters: StringParameters | null, body: TReq | null) => TReq, 
         getAPIGatewayProxyResult?: (response: TRes) => APIGatewayProxyResult): ApiControllerRoutes {
 
         const route: ApiControllerRoute = {
             httpMethod: 'POST',
             resource: resource,
             handlerType: handlerType,
-            getRequest: (pathParameters: { [name: string]: string } | null, queryStringParameters: { [name: string]: string } | null, body: string | null): any => {
+            getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null): any => {
                 return getRequest(pathParameters, (body === null) ? null : JSON.parse(body));
             },
             getAPIGatewayProxyResult: getAPIGatewayProxyResult        

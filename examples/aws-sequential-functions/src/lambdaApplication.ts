@@ -108,15 +108,14 @@ export const handlerFactory = new HandlerFactory()
     ;
 
 const lambdas = {
-    // addNumbersApiController: new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
-    //     lambda.restApiId = new ResourceReference('ApiGateway');
-    // }),
+    // TODO 01Jun20: Why is AddNumbersApiControllerRoutes coming through as undefined?
+    addNumbersApiController: new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
+        lambda.restApiId = new ResourceReference('ApiGateway');
+    }),
     
     // TODO 31May20: The following two need triggers for requests
     addThreeNumbersHandler: new RequestHandlerLambda(templateReferences.addThreeNumbersFunction, lambda => {
         // lambda.triggers.requestTopic = awsResources.flowExchangeTopic;
-        console.log(`lambda: ${lambda}`);
-        console.log(`lambda?.resources: ${lambda?.resources}`);
         lambda.resources.responsePublisher = exchangeMessagePublisher;
         lambda.resources.functionInstanceRepository = functionInstanceRepository;
     }),

@@ -16,9 +16,12 @@ export class ApiControllerLambda extends LambdaBase {
 
     restApiId: TemplateReference;
 
-    constructor(apiControllerType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void) {
+    constructor(apiControllerType: new () => any, initialise?: (lambda: ApiControllerLambda) => void) {
 
-        super(`${apiControllerType.name}Function`);
+        // TODO 01Jun20: We shouldn't need the ?
+        super(`${apiControllerType?.name}Function`);
+
+        console.log(`${ApiControllerLambda.name}.resourceName: ${this.resourceName}`);
 
         if (initialise !== undefined) {
             initialise(this);            
