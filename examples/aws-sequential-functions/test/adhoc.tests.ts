@@ -1,4 +1,5 @@
 import deepEqual from 'deep-equal';
+import { expect } from 'chai';
 
 class DocumentClient {
     put(params: any): void {}
@@ -350,6 +351,16 @@ class ActivityFunctions {
 
 describe('Handler tests', () => {
 
+    it('can generate environment name', () => {
+        
+        function getEnvironmentName(mixedCaseValue: string): string {                    
+            const result = mixedCaseValue.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
+            return result;
+        }
+
+        expect(getEnvironmentName('MyRequestHandler')).to.equal('MY_REQUEST_HANDLER');
+    });
+    
     it('can union resources', () => {
         
     });

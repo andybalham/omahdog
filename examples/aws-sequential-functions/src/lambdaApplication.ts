@@ -2,7 +2,7 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { Lambda, SNS } from 'aws-sdk';
 
 import { HandlerFactory, IActivityRequestHandlerBase } from './omahdog/FlowContext';
-import { ResourceReference, EnvironmentVariable, ResourceAttributeReference, LambdaApplication, ApiControllerLambda, FunctionReference } from './omahdog-aws/SAMTemplate';
+import { ResourceReference, EnvironmentVariable, ResourceAttributeReference, LambdaApplication, FunctionReference } from './omahdog-aws/SAMTemplate';
 import { DynamoDBCrudResource, LambdaInvokeResource, SNSPublishMessageResource } from './omahdog-aws/AwsResources';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
@@ -11,85 +11,60 @@ import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy } from './lambdaProxies';
 import { AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, SumNumbersMessageProxy, StoreTotalMessageProxy } from './messageProxies';
 import { requestRouter } from './requestRouter';
-import { AddNumbersApiControllerRoutes } from './apiControllerLambda';
+import { AddNumbersApiControllerRoutes } from './AddNumbersApiControllerRoutes';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
-import { RequestHandlerLambda } from './omahdog-aws/ActivityRequestHandlerLambda';
-
-// TODO 04May20: Is there any way we can lazy load these? What is the overhead of them being created for *each* function?
-
-const templateReferences = {
-    flowExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
-    flowExchangeTopicArn: new ResourceReference('FlowExchangeTopic'),
-
-    addTwoNumbersFunction: new FunctionReference(AddTwoNumbersHandler),
-    addThreeNumbersFunction: new FunctionReference(AddThreeNumbersHandler),
-    sumNumbersFunction: new FunctionReference(SumNumbersHandler),
-    storeTotalFunction: new FunctionReference(StoreTotalHandler),
-
-    flowResultTable: new ResourceReference('FlowResultTable'),
-    functionInstanceTable: new ResourceReference('FunctionInstanceTable'),
-};
-
-// TODO 30May20: These will go eventually, as we will auto-generate the environment variable names
-const environmentVariables = {
-    sumNumbersFunctionName: new EnvironmentVariable(templateReferences.sumNumbersFunction, 'SUM_NUMBERS_FUNCTION_NAME'),
-    storeTotalFunctionName: new EnvironmentVariable(templateReferences.storeTotalFunction, 'STORE_TOTAL_FUNCTION_NAME'),
-    addTwoNumbersFunctionName: new EnvironmentVariable(templateReferences.addTwoNumbersFunction, 'ADD_TWO_NUMBERS_FUNCTION_NAME'),
-    addThreeNumbersFunctionName: new EnvironmentVariable(templateReferences.addThreeNumbersFunction, 'ADD_THREE_NUMBERS_FUNCTION_NAME'),
-    flowResultTableName: new EnvironmentVariable(templateReferences.flowResultTable, 'FLOW_RESULT_TABLE_NAME'),
-    functionInstanceTableName: new EnvironmentVariable(templateReferences.functionInstanceTable, 'FLOW_INSTANCE_TABLE_NAME'),
-    flowExchangeTopicArn: new EnvironmentVariable(templateReferences.flowExchangeTopicArn, 'FLOW_EXCHANGE_TOPIC_ARN')
-};
+import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
+import { ApiControllerLambda } from './omahdog-aws/ApiControllerLambda';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
 const snsClient = new SNS();
 
-const awsResources = {
-    functionInstanceTable: new DynamoDBCrudResource(
-        templateReferences.functionInstanceTable, environmentVariables.functionInstanceTableName, dynamoDbClient),    
-    flowExchangeTopic: new SNSPublishMessageResource(
-        templateReferences.flowExchangeTopicName, environmentVariables.flowExchangeTopicArn, snsClient),
-
-    sumNumbersFunction: new LambdaInvokeResource(
-        templateReferences.sumNumbersFunction, environmentVariables.sumNumbersFunctionName, lambdaClient),
-    storeTotalFunction: new LambdaInvokeResource(
-        templateReferences.storeTotalFunction, environmentVariables.storeTotalFunctionName, lambdaClient),
-    addTwoNumbersFunction: new LambdaInvokeResource(
-        templateReferences.addTwoNumbersFunction, environmentVariables.addTwoNumbersFunctionName, lambdaClient),
-    addThreeNumbersFunction: new LambdaInvokeResource(
-        templateReferences.addThreeNumbersFunction, environmentVariables.addThreeNumbersFunctionName, lambdaClient),
-
-    flowResultTable: new DynamoDBCrudResource(
-        templateReferences.flowResultTable, environmentVariables.flowResultTableName, dynamoDbClient),    
+const templateReferences = {
+    addNumbersApiGateway: new ResourceReference('ApiGateway'),
+    flowExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
+    flowExchangeTopicArn: new ResourceReference('FlowExchangeTopic'),
+    flowResultTable: new ResourceReference('FlowResultTable'),
+    flowInstanceTable: new ResourceReference('FlowInstanceTable'),
+    addTwoNumbersFunction: new FunctionReference(AddTwoNumbersHandler),
+    addThreeNumbersFunction: new FunctionReference(AddThreeNumbersHandler),
+    sumNumbersFunction: new FunctionReference(SumNumbersHandler),
+    storeTotalFunction: new FunctionReference(StoreTotalHandler),
 };
 
 export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
-    repository.resources.functionInstanceTable = awsResources.functionInstanceTable;
+    repository.resources.functionInstanceTable = new DynamoDBCrudResource(
+        templateReferences.flowInstanceTable, new EnvironmentVariable(templateReferences.flowInstanceTable), dynamoDbClient);
 });
 export const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
-    publisher.resources.exchangeTopic = awsResources.flowExchangeTopic;
+    publisher.resources.exchangeTopic = new SNSPublishMessageResource(
+        templateReferences.flowExchangeTopicName, new EnvironmentVariable(templateReferences.flowExchangeTopicArn), snsClient);
 });
 
 export const handlerFactory = new HandlerFactory()
 
     .addInitialiser(StoreTotalHandler, handler => {
-        handler.resources.flowResultTable = awsResources.flowResultTable;
+        handler.resources.flowResultTable = new DynamoDBCrudResource(
+            templateReferences.flowResultTable, new EnvironmentVariable(templateReferences.flowResultTable), dynamoDbClient);
     })
 
     .addInitialiser(SumNumbersLambdaProxy, handler => {
-        handler.resources.lambda = awsResources.sumNumbersFunction;
+        handler.resources.lambda = new LambdaInvokeResource(
+            templateReferences.sumNumbersFunction, new EnvironmentVariable(templateReferences.sumNumbersFunction), lambdaClient);
     })
     .addInitialiser(StoreTotalLambdaProxy, handler => {
-        handler.resources.lambda = awsResources.storeTotalFunction;
+        handler.resources.lambda = new LambdaInvokeResource(
+            templateReferences.storeTotalFunction, new EnvironmentVariable(templateReferences.storeTotalFunction), lambdaClient);
     })
     .addInitialiser(AddTwoNumbersLambdaProxy, handler => {
-        handler.resources.lambda = awsResources.addTwoNumbersFunction;
+        handler.resources.lambda = new LambdaInvokeResource(
+            templateReferences.addTwoNumbersFunction, new EnvironmentVariable(templateReferences.addTwoNumbersFunction), lambdaClient);
     })
     .addInitialiser(AddThreeNumbersLambdaProxy, handler => {
-        handler.resources.lambda = awsResources.addThreeNumbersFunction;
+        handler.resources.lambda = new LambdaInvokeResource(
+            templateReferences.addThreeNumbersFunction, new EnvironmentVariable(templateReferences.addThreeNumbersFunction), lambdaClient);
     })
     
     .addInitialiser(AddTwoNumbersMessageProxy, handler => {
@@ -109,9 +84,7 @@ export const handlerFactory = new HandlerFactory()
 
 const lambdas = {
     // TODO 01Jun20: Why is AddNumbersApiControllerRoutes coming through as undefined?
-    addNumbersApiController: new ApiControllerLambda(AddNumbersApiControllerRoutes, lambda => {
-        lambda.restApiId = new ResourceReference('ApiGateway');
-    }),
+    addNumbersApiController: new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes),
     
     // TODO 31May20: The following two need triggers for requests
     addThreeNumbersHandler: new RequestHandlerLambda(templateReferences.addThreeNumbersFunction, lambda => {
@@ -141,8 +114,12 @@ export const lambdaApplication =
         // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?
         application.defaultFunctionNamePrefix = '${ApplicationName}-';
 
+        // TODO 03Jun20: Should we be able to set defaults for these?
+        // lambda.resources.responsePublisher = exchangeMessagePublisher;
+        // lambda.resources.functionInstanceRepository = functionInstanceRepository;
+
         application
-            // .addApiController(lambdas.addNumbersApiController)
+            .addApiController(lambdas.addNumbersApiController)
             .addRequestHandler(lambdas.addThreeNumbersHandler)
             .addRequestHandler(lambdas.addTwoNumbersHandler)
             .addRequestHandler(lambdas.sumNumbersHandler)
@@ -154,6 +131,10 @@ export const lambdaApplication =
 
 // TODO 29May20: Could we generate the following from the LambdaApplication instance? What about imports?
 // TODO 29May20: Could we generate after a specific comment, e.g. // Generated Lambda handlers
+
+export const addNumbersApiControllerRoutes = async (event: any): Promise<any> => {
+    return await lambdaApplication.handleApiEvent(AddNumbersApiControllerRoutes, event);
+};
 
 export const addThreeNumbersHandler = async (event: any): Promise<any> => {
     return await lambdaApplication.handleRequestEvent(AddThreeNumbersHandler, event);
@@ -169,10 +150,6 @@ export const sumNumbersHandler = async (event: any): Promise<any> => {
 
 export const storeTotalHandler = async (event: any): Promise<any> => {
     return await lambdaApplication.handleRequestEvent(StoreTotalHandler, event);
-};
-
-export const addNumbersApiControllerRoutes = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleApiEvent(AddNumbersApiControllerRoutes, event);
 };
 
 // --------------------------------------------------------------------------------------------------------------

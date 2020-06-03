@@ -1,35 +1,35 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
+import { LambdaBase, TemplateReference } from './SAMTemplate';
 
-export abstract class LambdaFunction {
-    functionName: string;
-}
+export class ApiControllerLambda extends LambdaBase {
 
-export abstract class ApiControllerLambda extends LambdaFunction {
+    readonly apiGatewayReference: TemplateReference;
+    readonly apiControllerRoutesType: new () => ApiControllerRoutes;
 
-    apiControllerRoutes: ApiControllerRoutes;
-    private readonly requestRouter: RequestRouter;
-    private readonly handlerFactory: HandlerFactory;
+    constructor(apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void) {
 
-    constructor(requestRouter: RequestRouter, handlerFactory: HandlerFactory) {
+        // TODO 01Jun20: We shouldn't need the question mark
+        super(`${apiControllerRoutesType?.name}Function`);
 
-        super();
+        this.apiGatewayReference = apiGatewayReference;
+        this.apiControllerRoutesType = apiControllerRoutesType;
 
-        this.requestRouter = requestRouter;
-        this.handlerFactory = handlerFactory;
-        this.apiControllerRoutes = new ApiControllerRoutes();
+        console.log(`${ApiControllerLambda.name}.resourceName: ${this.resourceName}`);
 
-        this.configure(this.apiControllerRoutes);
+        if (initialise !== undefined) {
+            initialise(this);            
+        }
     }
 
-    abstract configure(routes: ApiControllerRoutes): void;
-
-    async handle(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    async handle(event: APIGatewayProxyEvent, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<APIGatewayProxyResult> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        const route = this.apiControllerRoutes.getRoute(event);
+        // TODO 03Jun20: Would we want to instantiate this each time?
+        const apiControllerRoutes = new this.apiControllerRoutesType;
+        const route = apiControllerRoutes.getRoute(event);
 
         // TODO 17May20: Throw a more meaningful error
         if (route === undefined) throw new Error('route === undefined');
@@ -38,7 +38,7 @@ export abstract class ApiControllerLambda extends LambdaFunction {
 
         console.log(`request: ${JSON.stringify(request)}`);
 
-        const flowContext = FlowContext.newContext(this.requestRouter, this.handlerFactory);
+        const flowContext = FlowContext.newContext(requestRouter, handlerFactory);
 
         const response: any | AsyncResponse | ErrorResponse = await flowContext.handleRequest(route.handlerType, request);
 
@@ -91,9 +91,13 @@ class ApiControllerRoute {
     getAPIGatewayProxyResult?: (response: any) => APIGatewayProxyResult
 }
 
-export class ApiControllerRoutes {
+export abstract class ApiControllerRoutes {
 
     private readonly routeMap = new Map<string, ApiControllerRoute>();
+
+    constructor(initialise: (routes: ApiControllerRoutes) => void) {
+        initialise(this);
+    }
 
     addGet<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(
         resource: string, requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 

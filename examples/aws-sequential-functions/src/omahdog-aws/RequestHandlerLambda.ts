@@ -17,7 +17,7 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
 
     resources = new RequestHandlerLambdaResources
 
-    readonly handlerType: new () => IActivityRequestHandlerBase;
+    readonly requestHandlerType: new () => IActivityRequestHandlerBase;
 
     constructor(functionReference: FunctionReference, initialise?: (lambda: RequestHandlerLambda) => void) {
 
@@ -25,7 +25,7 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
 
         if (functionReference.requestHandlerType === undefined) throw new Error('functionReference.requestHandlerType === undefined');
 
-        this.handlerType = functionReference.requestHandlerType;
+        this.requestHandlerType = functionReference.requestHandlerType;
         
         if (initialise !== undefined) {
             initialise(this);            
@@ -76,7 +76,7 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
             message = JSON.parse(snsMessage.Message);
         
             // TODO 02May20: Remove this temporary code
-            if (snsMessage.Message.includes('6666') && (this.handlerType.name === 'SumNumbersHandler')) {
+            if (snsMessage.Message.includes('6666') && (this.requestHandlerType.name === 'SumNumbersHandler')) {
                 throw new Error('Non-handler error in LambdaActivityRequestHandler!');
             }
                 
@@ -103,7 +103,7 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
                     message.callingContext.flowCorrelationId, requestRouter, handlerFactory);
     
             try {
-                response = await flowContext.handleRequest(this.handlerType, message.request);
+                response = await flowContext.handleRequest(this.requestHandlerType, message.request);
             } catch (error) {
                 console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);
@@ -131,7 +131,7 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
             const flowContext = FlowContext.newResumeContext(flowInstance, requestRouter, handlerFactory);
     
             try {
-                response = await flowContext.handleResponse(this.handlerType, message.response);
+                response = await flowContext.handleResponse(this.requestHandlerType, message.response);
             } catch (error) {
                 console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);

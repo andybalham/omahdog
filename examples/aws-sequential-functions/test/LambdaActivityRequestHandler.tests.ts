@@ -2,7 +2,7 @@ import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, Han
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { ErrorResponse } from '../src/omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from '../src/omahdog-aws/Exchange';
-import { LambdaActivityRequestHandler } from '../src/omahdog-aws/LambdaActivityRequestHandler';
+import { RequestHandlerLambda } from '../src/omahdog-aws/RequestHandlerLambda';
 import * as AWSMock from 'aws-sdk-mock';
 import AWS, { AWSError, Request as AWSRequest } from 'aws-sdk';
 import { IFunctionInstanceRepository, FunctionInstance } from '../src/omahdog-aws/IFunctionInstanceRepository';
@@ -12,7 +12,7 @@ import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
 import { IResumableRequestHandler } from '../src/omahdog/FlowRequestHandler';
 import { SNSPublishMessageResource } from '../src/omahdog-aws/AwsResources';
-import { ConstantValue } from '../src/omahdog-aws/SAMTemplate';
+import { ConstantValue, FunctionReference } from '../src/omahdog-aws/SAMTemplate';
 
 class TestRequest {
     input: number
@@ -39,7 +39,7 @@ class TestActivityRequestHandler implements IActivityRequestHandler<TestRequest,
     }
 }
 
-describe('LambdaActivityRequestHandler tests', () => {
+describe('RequestHandlerLambda tests', () => {
 
     beforeEach(() => {
         AWSMock.setSDKInstance(AWS);        
@@ -81,9 +81,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
 
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const requestMessage: ExchangeRequestMessage = {
             callingContext: {
@@ -97,7 +98,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(requestMessage));
+        await handlerLambdaSut.handle(getSNSEvent(requestMessage), requestRouter, handlerFactory);
         
         // Assert
         
@@ -150,9 +151,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
 
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const requestMessage: ExchangeRequestMessage = {
             callingContext: {
@@ -173,7 +175,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(requestMessage));
+        await handlerLambdaSut.handle(getSNSEvent(requestMessage), requestRouter, handlerFactory);
         
         // Assert
         
@@ -218,9 +220,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
         
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const responseMessage: ExchangeResponseMessage = {
             callingContext: {
@@ -250,7 +253,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         // Act
 
-        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(responseMessage));
+        await handlerLambdaSut.handle(getSNSEvent(responseMessage), requestRouter, handlerFactory);
         
         // Assert
         
@@ -305,9 +308,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
 
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const requestMessage: ExchangeRequestMessage = {
             callingContext: {
@@ -321,7 +325,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(requestMessage));
+        await handlerLambdaSut.handle(getSNSEvent(requestMessage), requestRouter, handlerFactory);
         
         // Assert
         
@@ -371,9 +375,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
 
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const responseMessage: ExchangeResponseMessage = {
             callingContext: {
@@ -403,7 +408,7 @@ describe('LambdaActivityRequestHandler tests', () => {
 
         // Act
 
-        await lambdaHandlerSut.handle(TestActivityRequestHandler, getSNSEvent(responseMessage));
+        await handlerLambdaSut.handle(getSNSEvent(responseMessage), requestRouter, handlerFactory);
         
         // Assert
         
@@ -460,9 +465,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
 
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const requestMessage: ExchangeRequestMessage = {
             callingContext: {
@@ -476,7 +482,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        const responseMessage = await lambdaHandlerSut.handle(TestActivityRequestHandler, requestMessage);
+        const responseMessage = await handlerLambdaSut.handle(requestMessage, requestRouter, handlerFactory);
         
         // Assert
         
@@ -521,9 +527,10 @@ describe('LambdaActivityRequestHandler tests', () => {
                 new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
         });
 
-        const lambdaHandlerSut = 
-            new LambdaActivityRequestHandler(
-                requestRouter, handlerFactory, exchangeMessagePublisher, flowInstanceRepository);
+        const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
+            lambda.resources.responsePublisher = exchangeMessagePublisher;
+            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+        });
 
         const requestMessage: ExchangeRequestMessage = {
             callingContext: {
@@ -544,7 +551,7 @@ describe('LambdaActivityRequestHandler tests', () => {
             
         // Act
 
-        const responseMessage = await lambdaHandlerSut.handle(TestActivityRequestHandler, requestMessage);
+        const responseMessage = await handlerLambdaSut.handle(requestMessage, requestRouter, handlerFactory);
         
         // Assert
         

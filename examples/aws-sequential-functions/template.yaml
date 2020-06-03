@@ -59,13 +59,13 @@ Resources:
     Type: AWS::Serverless::Function
     Properties: 
       FunctionName: !Sub ${ApplicationName}-ApiControllerFunction
-      Handler: apiControllerLambda.handler
+      Handler: lambdaApplication.addNumbersApiControllerRoutes
       Environment:
         Variables:
-          STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalHandlerFunction
-          # ADD_THREE_NUMBERS_FUNCTION_NAME: !Ref AddThreeNumbersHandlerFunction
-          ADD_TWO_NUMBERS_FUNCTION_NAME: !Ref AddTwoNumbersHandlerFunction
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+          STORE_TOTAL_HANDLER_FUNCTION: !Ref StoreTotalHandlerFunction
+          # ADD_THREE_NUMBERS_HANDLER_FUNCTION: !Ref AddThreeNumbersHandlerFunction
+          ADD_TWO_NUMBERS_HANDLER_FUNCTION: !Ref AddTwoNumbersHandlerFunction
+          FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
       Policies:
         # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
         - LambdaInvokePolicy:
@@ -139,7 +139,7 @@ Resources:
   #           TopicName: !GetAtt FlowExchangeTopic.TopicName
   #     Environment:
   #       Variables:
-  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
+  #         FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
   #     Events:
   #       DeadLetterQueueTopic:
   #         Type: SNS
@@ -165,10 +165,10 @@ Resources:
   #       TargetArn: !Ref FlowDeadLetterQueueTopic
   #     Environment:
   #       Variables:
-  #         FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-  #         FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-  #         SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersHandlerFunction
-  #         STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalHandlerFunction
+  #         FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
+  #         FLOW_INSTANCE_TABLE: !Ref FlowInstanceTable
+  #         SUM_NUMBERS_HANDLER_FUNCTION: !Ref SumNumbersHandlerFunction
+  #         STORE_TOTAL_HANDLER_FUNCTION: !Ref StoreTotalHandlerFunction
   #     Events:
   #       ExchangeTopic:
   #         Type: SNS
@@ -198,10 +198,10 @@ Resources:
         TargetArn: !Ref FlowDeadLetterQueueTopic
       Environment:
         Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: !Ref FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: !Ref FlowInstanceTable
-          SUM_NUMBERS_FUNCTION_NAME: !Ref SumNumbersHandlerFunction
-          STORE_TOTAL_FUNCTION_NAME: !Ref StoreTotalHandlerFunction
+          FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
+          FLOW_INSTANCE_TABLE: !Ref FlowInstanceTable
+          SUM_NUMBERS_HANDLER_FUNCTION: !Ref SumNumbersHandlerFunction
+          STORE_TOTAL_HANDLER_FUNCTION: !Ref StoreTotalHandlerFunction
       Events:
         ExchangeTopic:
           Type: SNS
@@ -231,9 +231,9 @@ Resources:
           Ref: FlowDeadLetterQueueTopic
       Environment:
         Variables:
-          FLOW_EXCHANGE_TOPIC_ARN: 
+          FLOW_EXCHANGE_TOPIC: 
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: 
+          FLOW_INSTANCE_TABLE: 
             Ref: FlowInstanceTable
       Events:
         ExchangeTopic:
@@ -258,12 +258,12 @@ Resources:
       Environment:
         Variables:
           # These will be inferred from the sub-classing of LambdaActivityRequestHandler
-          FLOW_EXCHANGE_TOPIC_ARN: 
+          FLOW_EXCHANGE_TOPIC: 
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE_NAME: 
+          FLOW_INSTANCE_TABLE: 
             Ref: FlowInstanceTable
           # This will be inferred from the wiring up of the DynamoDb resource access
-          FLOW_RESULT_TABLE_NAME: 
+          FLOW_RESULT_TABLE: 
             Ref: FlowResultTable
       Policies:
         # LambdaActivityRequestHandler will say it needs the following two resources
