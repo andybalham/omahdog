@@ -1,6 +1,6 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
-import { ConfigurationValue, TemplateReference } from './SAMTemplate';
+import { ConfigurationValue, TemplateReference, EnvironmentVariable, ResourceAttributeReference, ResourceReference } from './SAMTemplate';
 import { IResource } from './IResource';
 
 export abstract class AwsResource implements IResource {
@@ -31,10 +31,17 @@ export class DynamoDBCrudResource extends AwsResource {
     private readonly tableNameValue?: ConfigurationValue;
     readonly client?: DocumentClient;
 
-    constructor(tableReference?: TemplateReference, tableNameValue?: ConfigurationValue, client?: DocumentClient) {
+    constructor(tableReference?: TemplateReference, client?: DocumentClient, tableNameValue?: ConfigurationValue) {
+        
         super(DynamoDBCrudResource, tableReference);
-        this.tableNameValue = tableNameValue;
+        
         this.client = client;
+
+        if (tableReference === undefined) {
+            this.tableNameValue = tableNameValue;    
+        } else {
+            this.tableNameValue = tableNameValue ?? new EnvironmentVariable(tableReference);            
+        }
     }
 
     get tableName(): string | undefined {
@@ -60,10 +67,20 @@ export class SNSPublishMessageResource extends AwsResource {
     private readonly topicArnValue?: ConfigurationValue;
     readonly client?: SNS;
 
-    constructor(topicReference?: TemplateReference, topicArnValue?: ConfigurationValue, client?: SNS) {
-        super(SNSPublishMessageResource, topicReference);
-        this.topicArnValue = topicArnValue;
+    constructor(topicNameReference?: TemplateReference, client?: SNS, topicArnValue?: ConfigurationValue) {
+        
+        super(SNSPublishMessageResource, topicNameReference);
+        
         this.client = client;
+
+        if ((topicNameReference === undefined)
+            || (topicNameReference.typeName !== 'ResourceAttributeReference')) {
+            this.topicArnValue = topicArnValue;
+        } else {
+            this.topicArnValue = 
+                topicArnValue ?? 
+                    new EnvironmentVariable(new ResourceReference((topicNameReference as ResourceAttributeReference).resourceName));
+        }
     }
 
     get topicArn(): string | undefined {
@@ -89,10 +106,17 @@ export class LambdaInvokeResource extends AwsResource {
     private readonly functionNameValue?: ConfigurationValue;
     readonly client?: Lambda;
 
-    constructor(functionReference?: TemplateReference, functionNameValue?: ConfigurationValue, client?: Lambda) {
+    constructor(functionReference?: TemplateReference, client?: Lambda, functionNameValue?: ConfigurationValue) {
+        
         super(DynamoDBCrudResource, functionReference);
-        this.functionNameValue = functionNameValue;
+
         this.client = client;
+
+        if (functionReference === undefined) {
+            this.functionNameValue = functionNameValue;
+        } else {
+            this.functionNameValue = functionNameValue ?? new EnvironmentVariable(functionReference);
+        }
     }
     
     get functionName(): string | undefined {

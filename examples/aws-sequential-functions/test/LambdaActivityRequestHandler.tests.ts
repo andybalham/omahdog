@@ -78,7 +78,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher?
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
@@ -148,7 +148,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
@@ -217,7 +217,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
         
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
@@ -305,7 +305,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
@@ -372,7 +372,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
@@ -462,7 +462,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
@@ -524,7 +524,7 @@ describe('RequestHandlerLambda tests', () => {
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, new ConstantValue(exchangeTopicArn), sns);
+                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {

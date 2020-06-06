@@ -1,7 +1,6 @@
 import { ApiControllerRoutes, StringParameters } from './omahdog-aws/ApiControllerLambda';
 
-import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy } from './lambdaProxies';
-import { AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy } from './messageProxies';
+import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy } from './handlerProxies';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 

@@ -8,10 +8,9 @@ import { DynamoDBCrudResource, LambdaInvokeResource, SNSPublishMessageResource }
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
-import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy } from './lambdaProxies';
-import { AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, SumNumbersMessageProxy, StoreTotalMessageProxy } from './messageProxies';
+import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy,AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
 import { requestRouter } from './requestRouter';
-import { AddNumbersApiControllerRoutes } from './AddNumbersApiControllerRoutes';
+import { AddNumbersApiControllerRoutes } from './apiControllerRoutes';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
@@ -25,46 +24,39 @@ const snsClient = new SNS();
 const templateReferences = {
     addNumbersApiGateway: new ResourceReference('ApiGateway'),
     flowExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
-    flowExchangeTopicArn: new ResourceReference('FlowExchangeTopic'),
     flowResultTable: new ResourceReference('FlowResultTable'),
     flowInstanceTable: new ResourceReference('FlowInstanceTable'),
+
     addTwoNumbersFunction: new FunctionReference(AddTwoNumbersHandler),
     addThreeNumbersFunction: new FunctionReference(AddThreeNumbersHandler),
     sumNumbersFunction: new FunctionReference(SumNumbersHandler),
     storeTotalFunction: new FunctionReference(StoreTotalHandler),
 };
 
-export const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
-    repository.resources.functionInstanceTable = new DynamoDBCrudResource(
-        templateReferences.flowInstanceTable, new EnvironmentVariable(templateReferences.flowInstanceTable), dynamoDbClient);
-});
 export const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
-    publisher.resources.exchangeTopic = new SNSPublishMessageResource(
-        templateReferences.flowExchangeTopicName, new EnvironmentVariable(templateReferences.flowExchangeTopicArn), snsClient);
+    publisher.resources.exchangeTopic = new SNSPublishMessageResource(templateReferences.flowExchangeTopicName, snsClient);
+});
+const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
+    repository.resources.functionInstanceTable = new DynamoDBCrudResource(templateReferences.flowInstanceTable, dynamoDbClient);
 });
 
-export const handlerFactory = new HandlerFactory()
+const handlerFactory = new HandlerFactory()
 
     .addInitialiser(StoreTotalHandler, handler => {
-        handler.resources.flowResultTable = new DynamoDBCrudResource(
-            templateReferences.flowResultTable, new EnvironmentVariable(templateReferences.flowResultTable), dynamoDbClient);
+        handler.resources.flowResultTable = new DynamoDBCrudResource(templateReferences.flowResultTable, dynamoDbClient);
     })
 
     .addInitialiser(SumNumbersLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(
-            templateReferences.sumNumbersFunction, new EnvironmentVariable(templateReferences.sumNumbersFunction), lambdaClient);
+        handler.resources.lambda = new LambdaInvokeResource(templateReferences.sumNumbersFunction, lambdaClient);
     })
     .addInitialiser(StoreTotalLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(
-            templateReferences.storeTotalFunction, new EnvironmentVariable(templateReferences.storeTotalFunction), lambdaClient);
+        handler.resources.lambda = new LambdaInvokeResource(templateReferences.storeTotalFunction, lambdaClient);
     })
     .addInitialiser(AddTwoNumbersLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(
-            templateReferences.addTwoNumbersFunction, new EnvironmentVariable(templateReferences.addTwoNumbersFunction), lambdaClient);
+        handler.resources.lambda = new LambdaInvokeResource(templateReferences.addTwoNumbersFunction, lambdaClient);
     })
     .addInitialiser(AddThreeNumbersLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(
-            templateReferences.addThreeNumbersFunction, new EnvironmentVariable(templateReferences.addThreeNumbersFunction), lambdaClient);
+        handler.resources.lambda = new LambdaInvokeResource(templateReferences.addThreeNumbersFunction, lambdaClient);
     })
     
     .addInitialiser(AddTwoNumbersMessageProxy, handler => {
@@ -127,30 +119,3 @@ export const lambdaApplication =
         ;
     });
 
-// --------------------------------------------------------------------------------------------------------------
-
-// TODO 29May20: Could we generate the following from the LambdaApplication instance? What about imports?
-// TODO 29May20: Could we generate after a specific comment, e.g. // Generated Lambda handlers
-
-export const addNumbersApiControllerRoutes = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleApiEvent(AddNumbersApiControllerRoutes, event);
-};
-
-export const addThreeNumbersHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(AddThreeNumbersHandler, event);
-};
-
-export const addTwoNumbersHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(AddTwoNumbersHandler, event);
-};
-
-export const sumNumbersHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(SumNumbersHandler, event);
-};
-
-export const storeTotalHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(StoreTotalHandler, event);
-};
-
-// --------------------------------------------------------------------------------------------------------------
-    

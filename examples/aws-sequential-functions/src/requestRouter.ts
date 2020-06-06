@@ -7,8 +7,7 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
-import { SumNumbersLambdaProxy, StoreTotalLambdaProxy } from './lambdaProxies';
-import { SumNumbersMessageProxy, StoreTotalMessageProxy } from './messageProxies';
+import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, SumNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
 
 // export const requestRouter = new RequestRouter()
 //     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)
