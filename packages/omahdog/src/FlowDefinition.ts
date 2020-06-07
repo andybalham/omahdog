@@ -30,14 +30,14 @@ export class ActivityFlowStep<TReq, TRes, TState> extends FlowStep {
 
         super(FlowStepType.Activity, stepName);
 
-        this.RequestType = RequestType;
-        this.ResponseType = ResponseType;
+        this.requestType = RequestType;
+        this.responseType = ResponseType;
         this.bindRequest = bindRequest;
         this.bindState = bindState;
     }
 
-    readonly RequestType?: new () => TReq;
-    readonly ResponseType?: new () => TRes;
+    readonly requestType?: new () => TReq;
+    readonly responseType?: new () => TRes;
     readonly bindRequest?: (request: TReq, state: TState) => void;
     readonly bindState?: (response: TRes, state: TState) => void;
 }

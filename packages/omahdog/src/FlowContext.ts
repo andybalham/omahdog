@@ -162,6 +162,10 @@ export interface IActivityRequestHandlerBase {
     handle(flowContext: FlowContext, request: any): Promise<any>;
 }
 
+export interface ICompositeRequestHandler {
+    getSubRequestTypes(): (new () => any)[];
+}
+
 export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHandlerBase {
     handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
 }

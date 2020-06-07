@@ -1,18 +1,19 @@
 import fs = require('fs');
 import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
-import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse } from './FlowContext';
+import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse, ICompositeRequestHandler } from './FlowContext';
 import { ErrorResponse } from './FlowExchanges';
 
 export interface IResumableRequestHandler {
     resume(flowContext: FlowContext): Promise<any>;
 }
 
-export abstract class FlowRequestHandlerBase implements IResumableRequestHandler {
+export abstract class FlowRequestHandlerBase implements IResumableRequestHandler, ICompositeRequestHandler {
     readonly typeName: string;
     constructor(typeName: string) {
         this.typeName = typeName;
     }
+    abstract getSubRequestTypes(): (new () => any)[];
     abstract resume(flowContext: FlowContext): Promise<any>;
 }
 
@@ -165,6 +166,22 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
         }
 
         return response;
+    }
+
+    getSubRequestTypes(): (new () => any)[] {
+        
+        const subRequestTypes = new Map<string, new () => any>();
+
+        this.flowDefinition.steps.forEach(step => {            
+            
+            const requestType = (step as any).requestType;
+
+            if (requestType !== undefined) {
+                subRequestTypes.set(requestType.name, requestType);
+            }
+        });
+        
+        return Array.from(subRequestTypes.values());
     }
 
     async resume(flowContext: FlowContext): Promise<TRes | AsyncResponse> {

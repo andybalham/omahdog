@@ -12,9 +12,9 @@ import { ApiControllerLambda } from './omahdog-aws/ApiControllerLambda';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy,AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
 import { AddNumbersApiControllerRoutes, requestRouter } from './routing';
-import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -73,7 +73,7 @@ const handlerFactory = new HandlerFactory()
     })
     ;
     
-export const lambdaApplication = 
+export const addNumbersApplication = 
     new LambdaApplication(requestRouter, handlerFactory, application => {
         
         // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?

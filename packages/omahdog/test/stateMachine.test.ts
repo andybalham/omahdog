@@ -63,7 +63,7 @@ describe('Handlers', () => {
         expect((flowResponse as DipCreationResponse).result).to.equal(DipCreationResult.DipCreated);
     });
 
-    it('can be run with handlers', async () => {
+    it.only('can be run with handlers', async () => {
 
         const flowContext = FlowContext.newContext();
 

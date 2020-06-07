@@ -2,7 +2,7 @@ import { SNSEvent } from 'aws-lambda';
 
 import { DeadLetterQueueHandler } from './omahdog-aws/DeadLetterQueueHandler';
 
-import { addNumbersExchangeMessagePublisher, lambdaApplication } from './lambdaApplication';
+import { addNumbersExchangeMessagePublisher, addNumbersApplication } from './lambdaApplication';
 import { LambdaExchangeWireTap } from './omahdog-aws/LambdaExchangeWireTap';
 import { AddNumbersApiControllerRoutes } from './routing';
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
@@ -26,23 +26,23 @@ export const exchangeWireTapHandler = async (event: SNSEvent): Promise<void> => 
 // TODO 29May20: Could we generate after a specific comment, e.g. // Generated Lambda handlers
 
 export const addNumbersApiControllerRoutes = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleApiEvent(AddNumbersApiControllerRoutes, event);
+    return await addNumbersApplication.handleApiEvent(AddNumbersApiControllerRoutes, event);
 };
 
 export const addThreeNumbersHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(AddThreeNumbersHandler, event);
+    return await addNumbersApplication.handleRequestEvent(AddThreeNumbersHandler, event);
 };
 
 export const addTwoNumbersHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(AddTwoNumbersHandler, event);
+    return await addNumbersApplication.handleRequestEvent(AddTwoNumbersHandler, event);
 };
 
 export const sumNumbersHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(SumNumbersHandler, event);
+    return await addNumbersApplication.handleRequestEvent(SumNumbersHandler, event);
 };
 
 export const storeTotalHandler = async (event: any): Promise<any> => {
-    return await lambdaApplication.handleRequestEvent(StoreTotalHandler, event);
+    return await addNumbersApplication.handleRequestEvent(StoreTotalHandler, event);
 };
 
 // --------------------------------------------------------------------------------------------------------------

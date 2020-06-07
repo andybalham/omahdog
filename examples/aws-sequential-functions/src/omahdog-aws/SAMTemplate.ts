@@ -1,13 +1,14 @@
-import { IActivityRequestHandlerBase, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
+import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
+
+import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
+
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
 import { RequestHandlerLambda } from './RequestHandlerLambda';
-import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
 import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './IFunctionInstanceRepository';
 
-// ------------------------------------------------------------------------------------------------------------------
-export abstract class LambdaBase{
+export abstract class LambdaBase {
     
     readonly resourceName: string;
     functionNameTemplate: string;
@@ -23,6 +24,9 @@ export class LambdaApplication {
     defaultResponsePublisher: IExchangeMessagePublisher;
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
 
+    private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
+    private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambda>();
+
     private readonly requestRouter: RequestRouter;
     private readonly handlerFactory: HandlerFactory;
 
@@ -32,9 +36,51 @@ export class LambdaApplication {
         this.handlerFactory = handlerFactory;
 
         initialise(this);
-    }
+    }    
+    
+    // TODO 07Jun20: We will eventually pass in the base template for verification
+    validate(): string[] {
+        
+        const errors: string[] = [];
 
-    private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
+        // TODO 07Jun20: Iterate over the api controllers, as they would be when handling events
+
+        this.requestHandlerLambdas.forEach((handlerLambda: RequestHandlerLambda, handlerTypeName: string) => {
+
+            const requestHandlerLambda = this.getRequestHandlerLambda(handlerTypeName);
+
+            // TODO 07Jun20: We need to accumulate all the handlers that could be used
+
+            const requestHandler = this.handlerFactory.newHandler(requestHandlerLambda.requestHandlerType);
+
+            if ('getSubRequestTypes' in requestHandler) {
+
+                const subRequestTypes = (requestHandler as ICompositeRequestHandler).getSubRequestTypes();
+
+                subRequestTypes.forEach(subRequestType => {
+                    
+                    const subHandlerType = this.requestRouter.getHandlerType(subRequestType);                    
+
+                    // TODO 07Jun20: We need to recurse at this point
+                    console.log();                
+
+                });
+
+                console.log();                
+            }
+
+            // TODO 07Jun20: We need to check the resources of the lambda
+
+            // TODO 07Jun20: We need to validate all the resources in all the handlers
+
+            if ('resources' in requestHandler) {                
+                console.log();
+            }
+
+        });
+
+        return errors;
+    }
 
     addApiController(lambda: ApiControllerLambda): LambdaApplication {
         if (lambda.apiControllerRoutesType === undefined) throw new Error('lambda.apiControllerRoutesType === undefined');
@@ -49,8 +95,6 @@ export class LambdaApplication {
         return response;
     }
 
-    private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambda>();
-
     addRequestHandler(lambda: RequestHandlerLambda): LambdaApplication {
         if (lambda.requestHandlerType === undefined) throw new Error('lambda.requestHandlerType === undefined');
         this.requestHandlerLambdas.set(lambda.requestHandlerType.name, lambda);
@@ -59,8 +103,16 @@ export class LambdaApplication {
 
     async handleRequestEvent(handlerType: new () => IActivityRequestHandlerBase, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
         
-        const requestHandlerLambda = this.requestHandlerLambdas.get(handlerType.name);
-        
+        const requestHandlerLambda = this.getRequestHandlerLambda(handlerType.name);
+
+        const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
+        return response;
+    }
+
+    private getRequestHandlerLambda(handlerTypeName: string): RequestHandlerLambda {
+
+        const requestHandlerLambda = this.requestHandlerLambdas.get(handlerTypeName);
+
         if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
 
         if (requestHandlerLambda.resources.responsePublisher === undefined) {
@@ -71,11 +123,9 @@ export class LambdaApplication {
             requestHandlerLambda.resources.functionInstanceRepository = this.defaultFunctionInstanceRepository;
         }
 
-        const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
-        return response;
+        return requestHandlerLambda;
     }
 }
-// ------------------------------------------------------------------------------------------------------------------
 
 // TODO 03Jun20: Can we have a value that comes from SSM?
 // TODO 03Jun20: If we do, then we would have to infer the correct policy from 
