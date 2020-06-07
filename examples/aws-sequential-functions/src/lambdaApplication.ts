@@ -1,21 +1,20 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { Lambda, SNS } from 'aws-sdk';
 
-import { HandlerFactory, IActivityRequestHandlerBase } from './omahdog/FlowContext';
-import { ResourceReference, EnvironmentVariable, ResourceAttributeReference, LambdaApplication, FunctionReference } from './omahdog-aws/SAMTemplate';
+import { HandlerFactory } from './omahdog/FlowContext';
+import { ResourceReference, ResourceAttributeReference, LambdaApplication, FunctionReference } from './omahdog-aws/SAMTemplate';
 import { DynamoDBCrudResource, LambdaInvokeResource, SNSPublishMessageResource } from './omahdog-aws/AwsResources';
+import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
+import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
+import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
+import { ApiControllerLambda } from './omahdog-aws/ApiControllerLambda';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy,AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
-import { requestRouter } from './requestRouter';
-import { AddNumbersApiControllerRoutes } from './apiControllerRoutes';
-import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
-import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
+import { AddNumbersApiControllerRoutes, requestRouter } from './routing';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
-import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
-import { ApiControllerLambda } from './omahdog-aws/ApiControllerLambda';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -23,7 +22,7 @@ const snsClient = new SNS();
 
 const templateReferences = {
     addNumbersApiGateway: new ResourceReference('ApiGateway'),
-    flowExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
+    addNumbersExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
     flowResultTable: new ResourceReference('FlowResultTable'),
     flowInstanceTable: new ResourceReference('FlowInstanceTable'),
 
@@ -33,8 +32,8 @@ const templateReferences = {
     storeTotalFunction: new FunctionReference(StoreTotalHandler),
 };
 
-export const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
-    publisher.resources.exchangeTopic = new SNSPublishMessageResource(templateReferences.flowExchangeTopicName, snsClient);
+export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
+    publisher.resources.exchangeTopic = new SNSPublishMessageResource(templateReferences.addNumbersExchangeTopicName, snsClient);
 });
 const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
     repository.resources.functionInstanceTable = new DynamoDBCrudResource(templateReferences.flowInstanceTable, dynamoDbClient);
@@ -60,45 +59,19 @@ const handlerFactory = new HandlerFactory()
     })
     
     .addInitialiser(AddTwoNumbersMessageProxy, handler => {
-        handler.resources.requestPublisher = exchangeMessagePublisher;
+        handler.resources.requestPublisher = addNumbersExchangeMessagePublisher;
         // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
     })
     .addInitialiser(AddThreeNumbersMessageProxy, handler => {
-        handler.resources.requestPublisher = exchangeMessagePublisher;
+        handler.resources.requestPublisher = addNumbersExchangeMessagePublisher;
         // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
     })
     .addInitialiser(StoreTotalMessageProxy, handler => {
-        handler.resources.requestPublisher = exchangeMessagePublisher;
+        handler.resources.requestPublisher = addNumbersExchangeMessagePublisher;
         // TODO 31May20: The following would need to cause the right MessageType filter to generate, e.g. AddThreeNumbersHandler:Response
         // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
     })
     ;
-
-const lambdas = {
-    // TODO 01Jun20: Why is AddNumbersApiControllerRoutes coming through as undefined?
-    addNumbersApiController: new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes),
-    
-    // TODO 31May20: The following two need triggers for requests
-    addThreeNumbersHandler: new RequestHandlerLambda(templateReferences.addThreeNumbersFunction, lambda => {
-        // lambda.triggers.requestTopic = awsResources.flowExchangeTopic;
-        lambda.resources.responsePublisher = exchangeMessagePublisher;
-        lambda.resources.functionInstanceRepository = functionInstanceRepository;
-    }),
-    addTwoNumbersHandler: new RequestHandlerLambda(templateReferences.addTwoNumbersFunction, lambda => {
-        // lambda.triggers.requestTopic = awsResources.flowExchangeTopic;
-        lambda.resources.responsePublisher = exchangeMessagePublisher;
-        lambda.resources.functionInstanceRepository = functionInstanceRepository;
-    }),
-
-    sumNumbersHandler: new RequestHandlerLambda(templateReferences.sumNumbersFunction, lambda => {
-        lambda.resources.responsePublisher = exchangeMessagePublisher;
-        lambda.resources.functionInstanceRepository = functionInstanceRepository;
-    }),
-    storeTotalHandler: new RequestHandlerLambda(templateReferences.storeTotalFunction, lambda => {
-        lambda.resources.responsePublisher = exchangeMessagePublisher;
-        lambda.resources.functionInstanceRepository = functionInstanceRepository;
-    }),
-}; 
     
 export const lambdaApplication = 
     new LambdaApplication(requestRouter, handlerFactory, application => {
@@ -106,16 +79,18 @@ export const lambdaApplication =
         // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?
         application.defaultFunctionNamePrefix = '${ApplicationName}-';
 
-        // TODO 03Jun20: Should we be able to set defaults for these?
-        // lambda.resources.responsePublisher = exchangeMessagePublisher;
-        // lambda.resources.functionInstanceRepository = functionInstanceRepository;
+        // TODO 07Jun20: Supply a defaultRequestTopic, so that the lambdas can be triggered
+        // application.defaultRequestTopic = awsResources.flowExchangeTopic;
+        application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
+        application.defaultFunctionInstanceRepository = functionInstanceRepository;
 
         application
-            .addApiController(lambdas.addNumbersApiController)
-            .addRequestHandler(lambdas.addThreeNumbersHandler)
-            .addRequestHandler(lambdas.addTwoNumbersHandler)
-            .addRequestHandler(lambdas.sumNumbersHandler)
-            .addRequestHandler(lambdas.storeTotalHandler)
+            .addApiController(new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes))
+
+            .addRequestHandler(new RequestHandlerLambda(templateReferences.addThreeNumbersFunction))
+            .addRequestHandler(new RequestHandlerLambda(templateReferences.addTwoNumbersFunction))
+            .addRequestHandler(new RequestHandlerLambda(templateReferences.sumNumbersFunction))
+            .addRequestHandler(new RequestHandlerLambda(templateReferences.storeTotalFunction))
         ;
     });
 

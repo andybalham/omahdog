@@ -3,6 +3,8 @@ import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda'
 import { RequestHandlerLambda } from './RequestHandlerLambda';
 import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
 import { ExchangeRequestMessage } from './Exchange';
+import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
+import { IFunctionInstanceRepository } from './IFunctionInstanceRepository';
 
 // ------------------------------------------------------------------------------------------------------------------
 export abstract class LambdaBase{
@@ -18,6 +20,8 @@ export abstract class LambdaBase{
 export class LambdaApplication {
 
     defaultFunctionNamePrefix: string;
+    defaultResponsePublisher: IExchangeMessagePublisher;
+    defaultFunctionInstanceRepository: IFunctionInstanceRepository;
 
     private readonly requestRouter: RequestRouter;
     private readonly handlerFactory: HandlerFactory;
@@ -54,8 +58,19 @@ export class LambdaApplication {
     }
 
     async handleRequestEvent(handlerType: new () => IActivityRequestHandlerBase, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
+        
         const requestHandlerLambda = this.requestHandlerLambdas.get(handlerType.name);
+        
         if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
+
+        if (requestHandlerLambda.resources.responsePublisher === undefined) {
+            requestHandlerLambda.resources.responsePublisher = this.defaultResponsePublisher;
+        }
+
+        if (requestHandlerLambda.resources.functionInstanceRepository === undefined) {
+            requestHandlerLambda.resources.functionInstanceRepository = this.defaultFunctionInstanceRepository;
+        }
+
         const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
         return response;
     }
@@ -162,7 +177,7 @@ export class ResourceAttributeReference extends TemplateReference {
         this.resourceName = resourceName;
         this.attributeName = attributeName;
     }
-    
+
     get name(): string | undefined { return `${this.resourceName}${this.attributeName}`; }
     get instance(): any { return { 'Fn:Attr': [ this.resourceName, this.attributeName] }; }
 }
