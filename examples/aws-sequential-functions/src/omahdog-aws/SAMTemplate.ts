@@ -7,6 +7,7 @@ import { RequestHandlerLambda } from './RequestHandlerLambda';
 import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './IFunctionInstanceRepository';
+import { IResource } from './IResource';
 
 export abstract class LambdaBase {
     
@@ -41,7 +42,7 @@ export class LambdaApplication {
     // TODO 07Jun20: We will eventually pass in the base template for verification
     validate(): string[] {
         
-        const errors: string[] = [];
+        let errors: string[] = [];
 
         // TODO 07Jun20: Iterate over the api controllers, as they would be when handling events
 
@@ -49,37 +50,83 @@ export class LambdaApplication {
 
             const requestHandlerLambda = this.getRequestHandlerLambda(handlerTypeName);
 
-            // TODO 07Jun20: We need to accumulate all the handlers that could be used
+            errors = errors.concat(this.validateResources(requestHandlerLambda, requestHandlerLambda.resourceName));
 
-            const requestHandler = this.handlerFactory.newHandler(requestHandlerLambda.requestHandlerType);
+            const handlers = this.getHandlers(requestHandlerLambda.requestHandlerType);
 
-            if ('getSubRequestTypes' in requestHandler) {
-
-                const subRequestTypes = (requestHandler as ICompositeRequestHandler).getSubRequestTypes();
-
-                subRequestTypes.forEach(subRequestType => {
-                    
-                    const subHandlerType = this.requestRouter.getHandlerType(subRequestType);                    
-
-                    // TODO 07Jun20: We need to recurse at this point
-                    console.log();                
-
-                });
-
-                console.log();                
-            }
-
-            // TODO 07Jun20: We need to check the resources of the lambda
-
-            // TODO 07Jun20: We need to validate all the resources in all the handlers
-
-            if ('resources' in requestHandler) {                
-                console.log();
-            }
-
+            handlers.forEach((handler, typeName) => {
+                errors = errors.concat(this.validateResources(handler, `${requestHandlerLambda.resourceName}.${typeName}`));
+            });
         });
 
         return errors;
+    }
+
+    private validateResources(targetObject: any, messagePrefix: string): string[] {
+        
+        let errorMessages: string[] = [];
+
+        if ('resources' in targetObject) {
+            
+            const resources = targetObject.resources;
+
+            for (const resourceProperty in resources) {
+                if (Object.prototype.hasOwnProperty.call(resources, resourceProperty)) {
+                    
+                    const resource: IResource = resources[resourceProperty];
+
+                    // TODO 08Jun20: We are assuming a validate
+                    const resourceErrorMessages = resource.validate();
+
+                    errorMessages = errorMessages.concat(resourceErrorMessages.map(message => `${messagePrefix}.resources.${resourceProperty}: ${message}`));
+
+                    // TODO 08Jun20: Do we need to recurse into the resource or is it the responsibility of the resource to recursively validate? YES
+                }
+            }
+        }
+
+        return errorMessages;
+    }
+
+    private getHandlers(requestHandlerType: new () => IActivityRequestHandlerBase): Map<string, IActivityRequestHandlerBase> {
+
+        const requestHandlers = new Map<string, IActivityRequestHandlerBase>();
+
+        const requestHandler = this.handlerFactory.newHandler(requestHandlerType);
+
+        requestHandlers.set(requestHandlerType.name, requestHandler);
+
+        const subHandlers = this.getSubHandlers(requestHandler);
+        
+        subHandlers.forEach((handler, typeName) => {
+            requestHandlers.set(typeName, handler);            
+        });
+        
+        return requestHandlers;
+    }
+
+    private getSubHandlers(requestHandler: IActivityRequestHandlerBase): Map<string, IActivityRequestHandlerBase> {
+
+        const subHandlers = new Map<string, IActivityRequestHandlerBase>();
+
+        if ('getSubRequestTypes' in requestHandler) {
+
+            const subRequestTypes = (requestHandler as ICompositeRequestHandler).getSubRequestTypes();
+
+            subRequestTypes.forEach(subRequestType => {
+                
+                const subHandlerType = this.requestRouter.getHandlerType(subRequestType);                    
+                const subHandler = this.handlerFactory.newHandler(subHandlerType);
+
+                subHandlers.set(subHandlerType.name, subHandler);
+
+                this.getSubHandlers(subHandler).forEach((handler, typeName) => {
+                    subHandlers.set(typeName, handler);                    
+                });
+            });
+        }
+
+        return subHandlers;
     }
 
     addApiController(lambda: ApiControllerLambda): LambdaApplication {

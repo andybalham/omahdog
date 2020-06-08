@@ -12,7 +12,7 @@ describe('Lambda application tests', () => {
 
         // Assert
 
-        console.log(`Errors:\n${errors.join('\n- ')}`);
+        console.log(`Errors:\n- ${errors.join('\n- ')}`);
     });
     
 });
