@@ -3,7 +3,7 @@ import { Lambda, SNS } from 'aws-sdk';
 
 import { HandlerFactory } from './omahdog/FlowContext';
 import { ResourceReference, ResourceAttributeReference, LambdaApplication, FunctionReference } from './omahdog-aws/SAMTemplate';
-import { DynamoDBCrudResource, LambdaInvokeResource, SNSPublishMessageResource } from './omahdog-aws/AwsResources';
+import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
 import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
@@ -33,43 +33,43 @@ const templateReferences = {
 };
 
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
-    publisher.resources.exchangeTopic = new SNSPublishMessageResource(templateReferences.addNumbersExchangeTopicName, snsClient);
+    publisher.services.exchangeTopic = new SNSPublishMessageService(templateReferences.addNumbersExchangeTopicName, snsClient);
 });
 const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
-    repository.resources.functionInstanceTable = new DynamoDBCrudResource(templateReferences.flowInstanceTable, dynamoDbClient);
+    repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.flowInstanceTable, dynamoDbClient);
 });
 
 const handlerFactory = new HandlerFactory()
 
     .addInitialiser(StoreTotalHandler, handler => {
-        handler.resources.flowResultTable = new DynamoDBCrudResource(templateReferences.flowResultTable, dynamoDbClient);
+        handler.services.flowResultTable = new DynamoDBCrudService(templateReferences.flowResultTable, dynamoDbClient);
     })
 
     .addInitialiser(SumNumbersLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(templateReferences.sumNumbersFunction, lambdaClient);
+        handler.services.lambda = new LambdaInvokeService(templateReferences.sumNumbersFunction, lambdaClient);
     })
     .addInitialiser(StoreTotalLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(templateReferences.storeTotalFunction, lambdaClient);
+        handler.services.lambda = new LambdaInvokeService(templateReferences.storeTotalFunction, lambdaClient);
     })
     .addInitialiser(AddTwoNumbersLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(templateReferences.addTwoNumbersFunction, lambdaClient);
+        handler.services.lambda = new LambdaInvokeService(templateReferences.addTwoNumbersFunction, lambdaClient);
     })
     .addInitialiser(AddThreeNumbersLambdaProxy, handler => {
-        handler.resources.lambda = new LambdaInvokeResource(templateReferences.addThreeNumbersFunction, lambdaClient);
+        handler.services.lambda = new LambdaInvokeService(templateReferences.addThreeNumbersFunction, lambdaClient);
     })
     
     .addInitialiser(AddTwoNumbersMessageProxy, handler => {
-        handler.resources.requestPublisher = addNumbersExchangeMessagePublisher;
-        // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
+        handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
+        // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
     .addInitialiser(AddThreeNumbersMessageProxy, handler => {
-        handler.resources.requestPublisher = addNumbersExchangeMessagePublisher;
-        // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
+        handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
+        // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
     .addInitialiser(StoreTotalMessageProxy, handler => {
-        handler.resources.requestPublisher = addNumbersExchangeMessagePublisher;
+        handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
         // TODO 31May20: The following would need to cause the right MessageType filter to generate, e.g. AddThreeNumbersHandler:Response
-        // handler.triggers.responseTopic = awsResources.flowExchangeTopic;
+        // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
     ;
     
@@ -80,7 +80,7 @@ export const addNumbersApplication =
         application.defaultFunctionNamePrefix = '${ApplicationName}-';
 
         // TODO 07Jun20: Supply a defaultRequestTopic, so that the lambdas can be triggered
-        // application.defaultRequestTopic = awsResources.flowExchangeTopic;
+        // application.defaultRequestTopic = awsServices.flowExchangeTopic;
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         application.defaultFunctionInstanceRepository = functionInstanceRepository;
 

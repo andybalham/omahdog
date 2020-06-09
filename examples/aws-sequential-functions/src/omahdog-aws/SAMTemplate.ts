@@ -5,9 +5,9 @@ import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, H
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
 import { RequestHandlerLambda } from './RequestHandlerLambda';
 import { ExchangeRequestMessage } from './Exchange';
-import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
-import { IFunctionInstanceRepository } from './IFunctionInstanceRepository';
-import { IResource } from './IResource';
+import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { FunctionInstanceRepository } from './FunctionInstanceRepository';
+import { IService } from './IService';
 
 export abstract class LambdaBase {
     
@@ -17,13 +17,17 @@ export abstract class LambdaBase {
     constructor(resourceName: string) {
         this.resourceName = resourceName;
     }
+
+    abstract validate(): string[];
+    
+    abstract throwErrorIfInvalid(): void;
 }
 
 export class LambdaApplication {
 
     defaultFunctionNamePrefix: string;
-    defaultResponsePublisher: IExchangeMessagePublisher;
-    defaultFunctionInstanceRepository: IFunctionInstanceRepository;
+    defaultResponsePublisher: ExchangeMessagePublisher;
+    defaultFunctionInstanceRepository: FunctionInstanceRepository;
 
     private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
     private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambda>();
@@ -50,37 +54,32 @@ export class LambdaApplication {
 
             const requestHandlerLambda = this.getRequestHandlerLambda(handlerTypeName);
 
-            errors = errors.concat(this.validateResources(requestHandlerLambda, requestHandlerLambda.resourceName));
+            errors = errors.concat(this.validateServices(requestHandlerLambda, requestHandlerLambda.resourceName));
 
             const handlers = this.getHandlers(requestHandlerLambda.requestHandlerType);
 
             handlers.forEach((handler, typeName) => {
-                errors = errors.concat(this.validateResources(handler, `${requestHandlerLambda.resourceName}.${typeName}`));
+                errors = errors.concat(this.validateServices(handler, `${requestHandlerLambda.resourceName}.${typeName}`));
             });
         });
 
         return errors;
     }
 
-    private validateResources(targetObject: any, messagePrefix: string): string[] {
+    private validateServices(targetObject: any, messagePrefix: string): string[] {
         
         let errorMessages: string[] = [];
 
-        if ('resources' in targetObject) {
+        if ('services' in targetObject) {
             
-            const resources = targetObject.resources;
+            const services = targetObject.services;
 
-            for (const resourceProperty in resources) {
-                if (Object.prototype.hasOwnProperty.call(resources, resourceProperty)) {
-                    
-                    const resource: IResource = resources[resourceProperty];
-
-                    // TODO 08Jun20: We are assuming a validate
-                    const resourceErrorMessages = resource.validate();
-
-                    errorMessages = errorMessages.concat(resourceErrorMessages.map(message => `${messagePrefix}.resources.${resourceProperty}: ${message}`));
-
-                    // TODO 08Jun20: Do we need to recurse into the resource or is it the responsibility of the resource to recursively validate? YES
+            for (const serviceName in services) {
+                if (Object.prototype.hasOwnProperty.call(services, serviceName)) {                    
+                    const service: IService = services[serviceName];
+                    const serviceErrorMessages = service.validate();
+                    errorMessages = errorMessages.concat(
+                        serviceErrorMessages.map(message => `${messagePrefix}.services.${serviceName}: ${message}`));
                 }
             }
         }
@@ -143,8 +142,19 @@ export class LambdaApplication {
     }
 
     addRequestHandler(lambda: RequestHandlerLambda): LambdaApplication {
+        
         if (lambda.requestHandlerType === undefined) throw new Error('lambda.requestHandlerType === undefined');
+        
+        if (lambda.services.responsePublisher.validate()[0] === 'null' && this.defaultResponsePublisher !== undefined) {
+            lambda.services.responsePublisher = this.defaultResponsePublisher;
+        }
+        
+        if (lambda.services.functionInstanceRepository.validate()[0] === 'null' && this.defaultFunctionInstanceRepository !== undefined) {
+            lambda.services.functionInstanceRepository = this.defaultFunctionInstanceRepository;
+        }
+
         this.requestHandlerLambdas.set(lambda.requestHandlerType.name, lambda);
+        
         return this;
     }
 
@@ -161,14 +171,6 @@ export class LambdaApplication {
         const requestHandlerLambda = this.requestHandlerLambdas.get(handlerTypeName);
 
         if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
-
-        if (requestHandlerLambda.resources.responsePublisher === undefined) {
-            requestHandlerLambda.resources.responsePublisher = this.defaultResponsePublisher;
-        }
-
-        if (requestHandlerLambda.resources.functionInstanceRepository === undefined) {
-            requestHandlerLambda.resources.functionInstanceRepository = this.defaultFunctionInstanceRepository;
-        }
 
         return requestHandlerLambda;
     }

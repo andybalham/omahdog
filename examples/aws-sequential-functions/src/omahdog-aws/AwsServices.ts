@@ -1,14 +1,14 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
 import { ConfigurationValue, TemplateReference, EnvironmentVariable, ResourceAttributeReference, ResourceReference } from './SAMTemplate';
-import { IResource } from './IResource';
+import { IService } from './IService';
 
-export abstract class AwsResource implements IResource {
+export abstract class AwsService implements IService {
 
     readonly typeName: string;
     readonly templateReference?: TemplateReference;
     
-    constructor(type: new () => AwsResource, templateReference?: TemplateReference) {
+    constructor(type: new () => AwsService, templateReference?: TemplateReference) {
         this.typeName = type.name;
         this.templateReference = templateReference;
     }
@@ -18,22 +18,21 @@ export abstract class AwsResource implements IResource {
     throwErrorIfInvalid(): void {
         const errorMessages = this.validate();
         if (errorMessages.length > 0) {
-            // TODO 30May20: Look at a more informative error
-            throw new Error(`${this.typeName} is not valid`);
+            throw new Error(`${this.typeName} is not valid:\n${errorMessages.join('\n')}`);
         }
     }
 
     abstract getPolicy(): any;
 }
 
-export class DynamoDBCrudResource extends AwsResource {
+export class DynamoDBCrudService extends AwsService {
     
     private readonly tableNameValue?: ConfigurationValue;
     readonly client?: DocumentClient;
 
     constructor(tableReference?: TemplateReference, client?: DocumentClient, tableNameValue?: ConfigurationValue) {
         
-        super(DynamoDBCrudResource, tableReference);
+        super(DynamoDBCrudService, tableReference);
         
         this.client = client;
 
@@ -62,14 +61,14 @@ export class DynamoDBCrudResource extends AwsResource {
     }
 }
 
-export class SNSPublishMessageResource extends AwsResource {
+export class SNSPublishMessageService extends AwsService {
     
     private readonly topicArnValue?: ConfigurationValue;
     readonly client?: SNS;
 
     constructor(topicNameReference?: TemplateReference, client?: SNS, topicArnValue?: ConfigurationValue) {
         
-        super(SNSPublishMessageResource, topicNameReference);
+        super(SNSPublishMessageService, topicNameReference);
         
         this.client = client;
 
@@ -101,14 +100,14 @@ export class SNSPublishMessageResource extends AwsResource {
     }
 }
 
-export class LambdaInvokeResource extends AwsResource {
+export class LambdaInvokeService extends AwsService {
 
     private readonly functionNameValue?: ConfigurationValue;
     readonly client?: Lambda;
 
     constructor(functionReference?: TemplateReference, client?: Lambda, functionNameValue?: ConfigurationValue) {
         
-        super(DynamoDBCrudResource, functionReference);
+        super(DynamoDBCrudService, functionReference);
 
         this.client = client;
 

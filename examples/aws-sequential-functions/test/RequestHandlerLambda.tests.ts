@@ -5,13 +5,13 @@ import { ExchangeRequestMessage, ExchangeResponseMessage } from '../src/omahdog-
 import { RequestHandlerLambda } from '../src/omahdog-aws/RequestHandlerLambda';
 import * as AWSMock from 'aws-sdk-mock';
 import AWS, { AWSError, Request as AWSRequest } from 'aws-sdk';
-import { IFunctionInstanceRepository, FunctionInstance } from '../src/omahdog-aws/IFunctionInstanceRepository';
+import { FunctionInstanceRepository, FunctionInstance } from '../src/omahdog-aws/FunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from '../src/omahdog-aws/SNSExchangeMessagePublisher';
 import SNS, { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
 import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
 import { IResumableRequestHandler } from '../src/omahdog/FlowRequestHandler';
-import { SNSPublishMessageResource } from '../src/omahdog-aws/AwsResources';
+import { SNSPublishMessageService } from '../src/omahdog-aws/AwsServices';
 import { ConstantValue, FunctionReference } from '../src/omahdog-aws/SAMTemplate';
 
 class TestRequest {
@@ -74,16 +74,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher?
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const requestMessage: ExchangeRequestMessage = {
@@ -144,16 +144,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const requestMessage: ExchangeRequestMessage = {
@@ -213,16 +213,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
         
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const responseMessage: ExchangeResponseMessage = {
@@ -301,16 +301,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const requestMessage: ExchangeRequestMessage = {
@@ -368,16 +368,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const responseMessage: ExchangeResponseMessage = {
@@ -458,16 +458,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const requestMessage: ExchangeRequestMessage = {
@@ -520,16 +520,16 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
-            publisher.resources.exchangeTopic = 
-                new SNSPublishMessageResource(undefined, sns, new ConstantValue(exchangeTopicArn));
+            publisher.services.exchangeTopic = 
+                new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
 
         const handlerLambdaSut = new RequestHandlerLambda(new FunctionReference(TestActivityRequestHandler), lambda => {
-            lambda.resources.responsePublisher = exchangeMessagePublisher;
-            lambda.resources.functionInstanceRepository = flowInstanceRepository;
+            lambda.services.responsePublisher = exchangeMessagePublisher;
+            lambda.services.functionInstanceRepository = flowInstanceRepository;
         });
 
         const requestMessage: ExchangeRequestMessage = {

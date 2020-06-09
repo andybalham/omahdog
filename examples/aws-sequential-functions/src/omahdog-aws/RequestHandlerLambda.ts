@@ -1,21 +1,18 @@
 import { SNSEvent } from 'aws-lambda';
 
 import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
-import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
+import { FunctionInstanceRepository, FunctionInstance } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
+import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { LambdaBase, FunctionReference } from './SAMTemplate';
-import { IResource } from './IResource';
 
-class RequestHandlerLambdaResources {
-    responsePublisher: IExchangeMessagePublisher;
-    functionInstanceRepository: IFunctionInstanceRepository;
-}
+export class RequestHandlerLambda extends LambdaBase {
 
-export class RequestHandlerLambda extends LambdaBase implements IResource {
-
-    resources = new RequestHandlerLambdaResources
+    services = {
+        responsePublisher: new ExchangeMessagePublisher,
+        functionInstanceRepository: new FunctionInstanceRepository
+    }
 
     readonly requestHandlerType: new () => IActivityRequestHandlerBase;
 
@@ -33,22 +30,9 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
     }
 
     validate(): string[] {
-
-        const errorMessages: string[] = [];
-
-        if (this.resources.responsePublisher === undefined) {
-            errorMessages.push(`${RequestHandlerLambda.name}: responsePublisher === undefined`);
-        } else {
-            errorMessages.concat(this.resources.responsePublisher.validate());
-        }
-
-        // TODO 01Jun20: Can we work out if functionInstanceRepository is required?
-        if (this.resources.functionInstanceRepository === undefined) {
-            errorMessages.push(`${RequestHandlerLambda.name}: functionInstanceRepository === undefined`);
-        } else {
-            errorMessages.concat(this.resources.functionInstanceRepository.validate());
-        }
-
+        let errorMessages: string[] = [];
+        errorMessages = errorMessages.concat(this.services.responsePublisher.validate().map(m => `services.responsePublisher: ${m}`));
+        errorMessages = errorMessages.concat(this.services.functionInstanceRepository.validate().map(m => `services.functionInstanceRepository: ${m}`));
         return errorMessages;
     }
     
@@ -111,7 +95,7 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
     
         } else {
     
-            const functionInstance = await this.resources.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
+            const functionInstance = await this.services.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
@@ -154,18 +138,18 @@ export class RequestHandlerLambda extends LambdaBase implements IResource {
     
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
-            await this.resources.functionInstanceRepository.store(functionInstance);
+            await this.services.functionInstanceRepository.store(functionInstance);
 
         } else {
 
             if (!isDirectRequest) {
-                await this.resources.responsePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
+                await this.services.responsePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
             }
 
             if (resumeCount > 0) {
                 // TODO 18May20: Perhaps we want to leave a trace, could have a TTL on the table
                 console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
-                await this.resources.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
+                await this.services.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
             }
     
         }

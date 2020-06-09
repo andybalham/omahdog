@@ -3,19 +3,19 @@ import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
-import { LambdaInvokeResource } from './AwsResources';
+import { LambdaInvokeService } from './AwsServices';
 
 export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
-    resources = {
-        lambda: new LambdaInvokeResource
+    services = {
+        lambda: new LambdaInvokeService
     }    
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
         
-        this.resources.lambda.throwErrorIfInvalid();
+        this.services.lambda.throwErrorIfInvalid();
         
-        const functionName = this.resources.lambda.functionName;
+        const functionName = this.services.lambda.functionName;
 
         console.log(`Lambda proxy for ${functionName} called with: ${JSON.stringify(request)}`);
 
@@ -43,7 +43,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             
             console.log(`invocationRequest: ${JSON.stringify(invocationRequest)}`);
             
-            invokeResult = await this.resources.lambda.client?.invoke(invocationRequest).promise();
+            invokeResult = await this.services.lambda.client?.invoke(invocationRequest).promise();
             
             console.log(`invokeResult: ${JSON.stringify(invokeResult)}`);
 

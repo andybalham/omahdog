@@ -1,7 +1,7 @@
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ExchangeRequestMessage } from './Exchange';
-import { SNSPublishMessageResource } from './AwsResources';
+import { SNSPublishMessageService } from './AwsServices';
 import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
 
 // TODO 10May20: Make this SNSProxy and use SNS directly?
@@ -10,7 +10,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
     // TODO 30May20: Need to be able to define that the root handler will need to subscribe for response events
     triggers: any;
 
-    resources = {
+    services = {
         requestPublisher: new SNSExchangeMessagePublisher
     }
 
@@ -22,7 +22,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
         
-        this.resources.requestPublisher.throwErrorIfInvalid();
+        this.services.requestPublisher.throwErrorIfInvalid();
 
         const requestId = uuid.v4();
         
@@ -37,7 +37,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
                 request: request
             };
 
-        await this.resources.requestPublisher.publishRequest(this.requestTypeName, message);
+        await this.services.requestPublisher.publishRequest(this.requestTypeName, message);
 
         return flowContext.getAsyncResponse(requestId);
     }

@@ -12,9 +12,9 @@ export abstract class SAMTemplateGenerator {
 
         const template = YAML.parse(baseTemplateContent);
 
-        const resources = template.Resources;
+        const services = template.Services;
 
-        resources.MyFunction = {
+        services.MyFunction = {
             Type: 'AWS::Serverless::Function'
         };
 
@@ -38,9 +38,9 @@ export abstract class SAMTemplateGenerator {
         
         console.log(parametersMap.toString());
 
-        const resourcesMap = templateYaml.get('Resources') as YAMLMap;
+        const servicesMap = templateYaml.get('Services') as YAMLMap;
 
-        resourcesMap.set('MyFunctionName', new Scalar('ApiStageName'));
+        servicesMap.set('MyFunctionName', new Scalar('ApiStageName'));
 
         // https://eemeli.org/yaml/#creating-documents
         // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-sub.html

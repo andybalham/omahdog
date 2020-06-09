@@ -6,7 +6,7 @@ import { FlowContext } from '../src/omahdog/FlowContext';
 import { StoreTotalRequest } from '../src/exchanges/StoreTotalExchange';
 import { StoreTotalHandler } from '../src/handlers/StoreTotalHandler';
 import { ConstantValue } from '../src/omahdog-aws/SAMTemplate';
-import { DynamoDBCrudResource } from '../src/omahdog-aws/AwsResources';
+import { DynamoDBCrudService } from '../src/omahdog-aws/AwsServices';
 
 describe('StoreTotalHandler tests', () => {
 
@@ -35,7 +35,7 @@ describe('StoreTotalHandler tests', () => {
         const client = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
 
         const handler = new StoreTotalHandler();
-        handler.resources.flowResultTable = new DynamoDBCrudResource(undefined, client, new ConstantValue(expectedTableName));
+        handler.services.flowResultTable = new DynamoDBCrudService(undefined, client, new ConstantValue(expectedTableName));
 
         const response = await handler.handle(FlowContext.newContext(), request);
 

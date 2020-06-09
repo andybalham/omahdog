@@ -1,11 +1,10 @@
-import DynamoDB from 'aws-sdk/clients/dynamodb';
-import { IFunctionInstanceRepository, FunctionInstance } from './IFunctionInstanceRepository';
-import { DynamoDBCrudResource } from './AwsResources';
+import { FunctionInstanceRepository, FunctionInstance } from './FunctionInstanceRepository';
+import { DynamoDBCrudService } from './AwsServices';
 
-export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
+export class DynamoDbFunctionInstanceRepository implements FunctionInstanceRepository {
     
-    resources = {
-        functionInstanceTable: new DynamoDBCrudResource
+    services = {
+        functionInstanceTable: new DynamoDBCrudService
     }
 
     constructor(initialise?: (resource: DynamoDbFunctionInstanceRepository) => void) {
@@ -13,9 +12,8 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     }
 
     validate(): string[] {
-        const errorMessages: string[] = [];
-        this.resources.functionInstanceTable.validate().forEach(message => 
-            errorMessages.push(`${DynamoDbFunctionInstanceRepository.name}: ${message}`));
+        let errorMessages: string[] = [];
+        errorMessages = errorMessages.concat(this.services.functionInstanceTable.validate().map(m => `services.functionInstanceTable: ${m}`));
         return errorMessages;
     }
     
@@ -43,7 +41,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await this.resources.functionInstanceTable?.client?.put(params).promise();
+        await this.services.functionInstanceTable?.client?.put(params).promise();
     }
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
@@ -57,7 +55,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        const dynamoDbResult: any = await this.resources.functionInstanceTable?.client?.get(params).promise();
+        const dynamoDbResult: any = await this.services.functionInstanceTable?.client?.get(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -88,11 +86,11 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await this.resources.functionInstanceTable?.client?.delete(params).promise();
+        await this.services.functionInstanceTable?.client?.delete(params).promise();
     }
 
     private getFunctionInstanceTableName(): string {
-        return this.resources.functionInstanceTable?.tableName ?? '<unknown>';
+        return this.services.functionInstanceTable?.tableName ?? '<unknown>';
     }
 }   
 

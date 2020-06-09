@@ -1,23 +1,23 @@
-import { IExchangeMessagePublisher } from './IExchangeMessagePublisher';
+import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import SNS, { PublishInput } from 'aws-sdk/clients/sns';
 import { ExchangeResponseMessage, ExchangeCallingContext, ExchangeRequestMessage } from './Exchange';
-import { SNSPublishMessageResource } from './AwsResources';
+import { SNSPublishMessageService } from './AwsServices';
 
 // TODO 03May20: Have a set of tests for this
-export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
+export class SNSExchangeMessagePublisher extends ExchangeMessagePublisher {
     
-    resources = {
-        exchangeTopic: new SNSPublishMessageResource
+    services = {
+        exchangeTopic: new SNSPublishMessageService
     }
 
     constructor(initialise?: (resource: SNSExchangeMessagePublisher) => void) {
+        super();
         if (initialise !== undefined) initialise(this);
     }
 
     validate(): string[] {
-        const errorMessages: string[] = [];
-        this.resources.exchangeTopic.validate().forEach(message => 
-            errorMessages.push(`${SNSExchangeMessagePublisher.name}: ${message}`));
+        let errorMessages: string[] = [];
+        errorMessages = errorMessages.concat(this.services.exchangeTopic.validate().map(m => `services.exchangeTopic: ${m}`));
         return errorMessages;
     }
     
@@ -45,7 +45,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
 
         try {
             console.log(`params: ${JSON.stringify(params)}`);                
-            const publishResponse = await this.resources.exchangeTopic.client?.publish(params).promise();    
+            const publishResponse = await this.services.exchangeTopic.client?.publish(params).promise();    
             console.log(`publishResponse.MessageId: ${publishResponse?.MessageId}`);                
         } catch (error) {
             console.error('Error calling this.sns.publish: ' + error.message);
@@ -67,12 +67,12 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
             }
         };
     
-        const publishResponse = await this.resources.exchangeTopic.client?.publish(params).promise();
+        const publishResponse = await this.services.exchangeTopic.client?.publish(params).promise();
         
         console.log(`publishResponse.MessageId: ${publishResponse?.MessageId}`);    
     }
     
     private getExchangeTopicArn(): string {
-        return this.resources.exchangeTopic.topicArn ?? 'undefined';
+        return this.services.exchangeTopic.topicArn ?? 'undefined';
     }
 }

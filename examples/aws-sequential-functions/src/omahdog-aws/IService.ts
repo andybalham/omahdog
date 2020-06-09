@@ -1,4 +1,4 @@
-export interface IResource {
+export interface IService {
     validate(): string[];
     throwErrorIfInvalid(): void;
 }

@@ -202,7 +202,7 @@ class RequestRouter {}
 
 class ExampleHandler implements IHandler {
 
-    resources = {
+    services = {
         flowResultTable: new DynamoDbTableCrudResource,
         exchangeTopic: new SNSTopicPublishResource,
     }
@@ -229,37 +229,37 @@ class ExampleHandler implements IHandler {
 
     handle(): void {
 
-        if (this.resources.flowResultTable.documentClient === undefined) throw new Error('this.resources.dynamoDbTable.documentClient === undefined');
-        if (this.resources.flowResultTable.tableName === undefined) throw new Error('this.resources.dynamoDbTable.tableName === undefined');
+        if (this.services.flowResultTable.documentClient === undefined) throw new Error('this.services.dynamoDbTable.documentClient === undefined');
+        if (this.services.flowResultTable.tableName === undefined) throw new Error('this.services.dynamoDbTable.tableName === undefined');
 
         const tableParams: any = {
-            TableName: this.resources.flowResultTable.tableName.value,
+            TableName: this.services.flowResultTable.tableName.value,
             Item: {
                 id: 'id',
                 result: 'result'
             }
         };
 
-        this.resources.flowResultTable.documentClient.put(tableParams);
+        this.services.flowResultTable.documentClient.put(tableParams);
 
-        if (this.resources.exchangeTopic.sns === undefined) throw new Error('this.resources.exchangeTopic.sns === undefined');
-        if (this.resources.exchangeTopic.topicArn === undefined) throw new Error('this.resources.exchangeTopic.topicArn === undefined');
+        if (this.services.exchangeTopic.sns === undefined) throw new Error('this.services.exchangeTopic.sns === undefined');
+        if (this.services.exchangeTopic.topicArn === undefined) throw new Error('this.services.exchangeTopic.topicArn === undefined');
 
         const params = {
             Message: JSON.stringify('message'),
-            TopicArn: this.resources.exchangeTopic.topicArn.value,
+            TopicArn: this.services.exchangeTopic.topicArn.value,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: 'Response' }
             }
         };
 
-        this.resources.exchangeTopic.sns.publish(params);        
+        this.services.exchangeTopic.sns.publish(params);        
     }
 }
 
 class ExampleMessageProxyHandler implements IHandler {
 
-    resources = {
+    services = {
         exchangeTopic: new SNSTopicPublishResource
     }
 
@@ -278,18 +278,18 @@ class ExampleMessageProxyHandler implements IHandler {
 
     handle(): void {
 
-        if (this.resources.exchangeTopic.sns === undefined) throw new Error('this.resources.exchangeTopic.sns === undefined');
-        if (this.resources.exchangeTopic.topicArn === undefined) throw new Error('this.resources.exchangeTopic.topicArn === undefined');
+        if (this.services.exchangeTopic.sns === undefined) throw new Error('this.services.exchangeTopic.sns === undefined');
+        if (this.services.exchangeTopic.topicArn === undefined) throw new Error('this.services.exchangeTopic.topicArn === undefined');
 
         const params = {
             Message: JSON.stringify('message'),
-            TopicArn: this.resources.exchangeTopic.topicArn.value,
+            TopicArn: this.services.exchangeTopic.topicArn.value,
             MessageAttributes: {
                 MessageType: { DataType: 'String', StringValue: 'Response' }
             }
         };
 
-        this.resources.exchangeTopic.sns.publish(params);        
+        this.services.exchangeTopic.sns.publish(params);        
     }
 }
 
@@ -310,20 +310,20 @@ class ActivityFunction {
     resourceName: string;
     // TODO 23May20: FunctionName, DeadLetterQueue
     triggers: Map<string, ActivityTrigger>;
-    resources: Map<string, AwsResource>;
+    services: Map<string, AwsResource>;
 }
 
 class ActivityFunctions {
 
-    // TODO 23May20: We need to return the triggers and resources for each function
+    // TODO 23May20: We need to return the triggers and services for each function
 
     triggers = {
         // TODO 23May20: Define SNS event, specifying topic, but with filter by convention
     }
 
-    // TODO 23May20: How can this be combined with the resources required by the handlers?
-    // TODO 23May20: The following resources are common to all functions
-    resources = {
+    // TODO 23May20: How can this be combined with the services required by the handlers?
+    // TODO 23May20: The following services are common to all functions
+    services = {
         flowInstanceTable: new DynamoDbTableCrudResource,
         exchangeTopic: new SNSTopicPublishResource,
     }
@@ -361,7 +361,7 @@ describe('Handler tests', () => {
         expect(getEnvironmentName('MyRequestHandler')).to.equal('MY_REQUEST_HANDLER');
     });
     
-    it('can union resources', () => {
+    it('can union services', () => {
         
     });
     
@@ -369,11 +369,11 @@ describe('Handler tests', () => {
         
         const tableHandler = new ExampleHandler;
         
-        tableHandler.resources.flowResultTable.tableName = new MockEnvironmentVariable('MyTable');
-        tableHandler.resources.flowResultTable.documentClient = new DocumentClient;
+        tableHandler.services.flowResultTable.tableName = new MockEnvironmentVariable('MyTable');
+        tableHandler.services.flowResultTable.documentClient = new DocumentClient;
 
-        tableHandler.resources.exchangeTopic.topicArn = new MockEnvironmentVariable('MyTopicArn');
-        tableHandler.resources.exchangeTopic.sns = new SNS;
+        tableHandler.services.exchangeTopic.topicArn = new MockEnvironmentVariable('MyTopicArn');
+        tableHandler.services.exchangeTopic.sns = new SNS;
         
         tableHandler.handle();
     });
@@ -402,7 +402,7 @@ describe('Handler tests', () => {
                 new EnvironmentVariable('FLOW_EXCHANGE_TOPIC_ARN', templateReferences.exchangeTopicArn),
         };
 
-        const awsResources = {
+        const awsServices = {
             flowResultTable: 
                 new DynamoDbTableCrudResource(
                     environmentVariables.flowResultTableName, documentClient),
@@ -413,23 +413,23 @@ describe('Handler tests', () => {
 
         const handlerFactory = new HandlerFactory()
             .addInitialiser(ExampleHandler, handler => { 
-                handler.resources.flowResultTable = awsResources.flowResultTable;
-                handler.resources.exchangeTopic = awsResources.exchangeTopic;
+                handler.services.flowResultTable = awsServices.flowResultTable;
+                handler.services.exchangeTopic = awsServices.exchangeTopic;
                 handler.triggers.exchangeRequest.topicArn = templateReferences.exchangeTopicArn;
                 handler.triggers.exchangeResponse.topicArn = templateReferences.exchangeTopicArn;
             })
             .addInitialiser(ExampleMessageProxyHandler, handler => { 
-                handler.resources.exchangeTopic = awsResources.exchangeTopic;
+                handler.services.exchangeTopic = awsServices.exchangeTopic;
                 handler.triggers.exchangeResponse.topicArn = templateReferences.exchangeTopicArn;
             })
             ;
 
-        // Get a handler and inspect the resources
+        // Get a handler and inspect the services
 
         const exampleHandler = handlerFactory.build(ExampleHandler);
         
-        if ('resources' in exampleHandler) {
-            console.log(JSON.stringify(exampleHandler.resources));
+        if ('services' in exampleHandler) {
+            console.log(JSON.stringify(exampleHandler.services));
         }
 
         const compositeHandler = handlerFactory.build(CompositeHandler);
@@ -444,11 +444,11 @@ describe('Handler tests', () => {
 
             // TODO 24May20: We also need to check each handler for triggers, that result in events
 
-            if (handler.resources !== undefined) {
-                for (const resourceName in handler.resources) {
-                    if (Object.prototype.hasOwnProperty.call(handler.resources, resourceName)) {
+            if (handler.services !== undefined) {
+                for (const resourceName in handler.services) {
+                    if (Object.prototype.hasOwnProperty.call(handler.services, resourceName)) {
                         
-                        const resource = handler.resources[resourceName] as IResource;
+                        const resource = handler.services[resourceName] as IResource;
                         const resourcePolicy = resource.getPolicy();
     
                         if (!resourcePolicyList.some(p => deepEqual(p, resourcePolicy))) {
