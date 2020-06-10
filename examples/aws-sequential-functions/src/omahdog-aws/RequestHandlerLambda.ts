@@ -1,18 +1,20 @@
 import { SNSEvent } from 'aws-lambda';
 
 import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
-import { FunctionInstanceRepository, FunctionInstance } from './FunctionInstanceRepository';
+import { NullFunctionInstanceRepository, FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
-import { LambdaBase, FunctionReference } from './SAMTemplate';
+import { IExchangeMessagePublisher, NullExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { LambdaBase, FunctionReference, validateServices, throwErrorIfInvalid } from './SAMTemplate';
+
+class RequestHandlerLambdaServices {
+    responsePublisher: IExchangeMessagePublisher
+    functionInstanceRepository: IFunctionInstanceRepository
+}
 
 export class RequestHandlerLambda extends LambdaBase {
 
-    services = {
-        responsePublisher: new ExchangeMessagePublisher,
-        functionInstanceRepository: new FunctionInstanceRepository
-    }
+    services: RequestHandlerLambdaServices
 
     readonly requestHandlerType: new () => IActivityRequestHandlerBase;
 
@@ -22,24 +24,15 @@ export class RequestHandlerLambda extends LambdaBase {
 
         if (functionReference.requestHandlerType === undefined) throw new Error('functionReference.requestHandlerType === undefined');
 
+        this.services = {
+            responsePublisher: new NullExchangeMessagePublisher,
+            functionInstanceRepository: new NullFunctionInstanceRepository
+        };
+
         this.requestHandlerType = functionReference.requestHandlerType;
         
         if (initialise !== undefined) {
             initialise(this);            
-        }
-    }
-
-    validate(): string[] {
-        let errorMessages: string[] = [];
-        errorMessages = errorMessages.concat(this.services.responsePublisher.validate().map(m => `services.responsePublisher: ${m}`));
-        errorMessages = errorMessages.concat(this.services.functionInstanceRepository.validate().map(m => `services.functionInstanceRepository: ${m}`));
-        return errorMessages;
-    }
-    
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${RequestHandlerLambda.name} is not valid:\n${errorMessages.join('\n')}`);
         }
     }
     
@@ -47,7 +40,7 @@ export class RequestHandlerLambda extends LambdaBase {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        this.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => RequestHandlerLambda.name);
 
         let message: ExchangeRequestMessage | ExchangeResponseMessage;
         let isDirectRequest: boolean;

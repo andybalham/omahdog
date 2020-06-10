@@ -5,9 +5,8 @@ import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, H
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
 import { RequestHandlerLambda } from './RequestHandlerLambda';
 import { ExchangeRequestMessage } from './Exchange';
-import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
-import { FunctionInstanceRepository } from './FunctionInstanceRepository';
-import { IService } from './IService';
+import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 
 export abstract class LambdaBase {
     
@@ -17,17 +16,46 @@ export abstract class LambdaBase {
     constructor(resourceName: string) {
         this.resourceName = resourceName;
     }
+}
 
-    abstract validate(): string[];
-    
-    abstract throwErrorIfInvalid(): void;
+export function validateServices(targetObject: any, errorPrefix = ''): string[] {
+        
+    let errorMessages: string[] = [];
+
+    if ('validate' in targetObject) {
+        
+        errorMessages = errorMessages.concat(targetObject.validate());
+
+    } else if ('services' in targetObject) {
+
+        const services = targetObject.services;
+
+        for (const serviceName in services) {
+                       
+            const serviceErrorPrefix = `${errorPrefix}.services.${serviceName}`;
+            const service = services[serviceName];
+            const serviceErrorMessages = validateServices(service, serviceErrorPrefix);
+
+            errorMessages = errorMessages.concat(
+                serviceErrorMessages.map(message => `${errorPrefix}.services.${serviceName}: ${message}`));
+        }
+    }
+
+    return errorMessages;
+}
+
+export function throwErrorIfInvalid(services: any, getPrefix: () => string): void {
+    const errorMessages = validateServices(services);
+    if (errorMessages.length > 0) {
+        throw new Error(`${getPrefix()} is not valid:\n${errorMessages.join('\n')}`);
+    }
 }
 
 export class LambdaApplication {
 
     defaultFunctionNamePrefix: string;
-    defaultResponsePublisher: ExchangeMessagePublisher;
-    defaultFunctionInstanceRepository: FunctionInstanceRepository;
+    defaultResponsePublisher: IExchangeMessagePublisher;
+    defaultFunctionInstanceRepository: IFunctionInstanceRepository;
 
     private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
     private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambda>();
@@ -53,38 +81,17 @@ export class LambdaApplication {
         this.requestHandlerLambdas.forEach((handlerLambda: RequestHandlerLambda, handlerTypeName: string) => {
 
             const requestHandlerLambda = this.getRequestHandlerLambda(handlerTypeName);
-
-            errors = errors.concat(this.validateServices(requestHandlerLambda, requestHandlerLambda.resourceName));
-
             const handlers = this.getHandlers(requestHandlerLambda.requestHandlerType);
 
+            errors = errors.concat(validateServices(requestHandlerLambda, requestHandlerLambda.resourceName));
+
             handlers.forEach((handler, typeName) => {
-                errors = errors.concat(this.validateServices(handler, `${requestHandlerLambda.resourceName}.${typeName}`));
+                const serviceErrors = validateServices(handler, `${requestHandlerLambda.resourceName}.${typeName}`);
+                errors = errors.concat(serviceErrors);
             });
         });
 
         return errors;
-    }
-
-    private validateServices(targetObject: any, messagePrefix: string): string[] {
-        
-        let errorMessages: string[] = [];
-
-        if ('services' in targetObject) {
-            
-            const services = targetObject.services;
-
-            for (const serviceName in services) {
-                if (Object.prototype.hasOwnProperty.call(services, serviceName)) {                    
-                    const service: IService = services[serviceName];
-                    const serviceErrorMessages = service.validate();
-                    errorMessages = errorMessages.concat(
-                        serviceErrorMessages.map(message => `${messagePrefix}.services.${serviceName}: ${message}`));
-                }
-            }
-        }
-
-        return errorMessages;
     }
 
     private getHandlers(requestHandlerType: new () => IActivityRequestHandlerBase): Map<string, IActivityRequestHandlerBase> {
@@ -145,11 +152,11 @@ export class LambdaApplication {
         
         if (lambda.requestHandlerType === undefined) throw new Error('lambda.requestHandlerType === undefined');
         
-        if (lambda.services.responsePublisher.validate()[0] === 'null' && this.defaultResponsePublisher !== undefined) {
+        if (lambda.services.responsePublisher.isNullImplementation && (this.defaultResponsePublisher !== undefined)) {
             lambda.services.responsePublisher = this.defaultResponsePublisher;
         }
         
-        if (lambda.services.functionInstanceRepository.validate()[0] === 'null' && this.defaultFunctionInstanceRepository !== undefined) {
+        if (lambda.services.functionInstanceRepository.isNullImplementation && (this.defaultFunctionInstanceRepository !== undefined)) {
             lambda.services.functionInstanceRepository = this.defaultFunctionInstanceRepository;
         }
 

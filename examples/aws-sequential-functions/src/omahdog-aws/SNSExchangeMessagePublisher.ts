@@ -1,39 +1,28 @@
-import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
-import SNS, { PublishInput } from 'aws-sdk/clients/sns';
-import { ExchangeResponseMessage, ExchangeCallingContext, ExchangeRequestMessage } from './Exchange';
+import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { PublishInput } from 'aws-sdk/clients/sns';
+import { ExchangeResponseMessage, ExchangeRequestMessage } from './Exchange';
 import { SNSPublishMessageService } from './AwsServices';
+import { throwErrorIfInvalid } from './SAMTemplate';
 
 // TODO 03May20: Have a set of tests for this
-export class SNSExchangeMessagePublisher extends ExchangeMessagePublisher {
+export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
     
+    isNullImplementation: boolean
+
     services = {
         exchangeTopic: new SNSPublishMessageService
     }
 
     constructor(initialise?: (resource: SNSExchangeMessagePublisher) => void) {
-        super();
         if (initialise !== undefined) initialise(this);
     }
-
-    validate(): string[] {
-        let errorMessages: string[] = [];
-        errorMessages = errorMessages.concat(this.services.exchangeTopic.validate().map(m => `services.exchangeTopic: ${m}`));
-        return errorMessages;
-    }
     
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${SNSExchangeMessagePublisher.name} is not valid:\n${errorMessages.join('\n')}`);
-        }
-    }
-
     async publishRequest(requestTypeName: string, message: ExchangeRequestMessage): Promise<void> {
 
         console.log(`Publishing message to exchangeTopicArn: ${this.getExchangeTopicArn()}`);
         console.log(`message: ${JSON.stringify(message)}`);
 
-        this.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => SNSExchangeMessagePublisher.name);
 
         const params: PublishInput = {
             Message: JSON.stringify(message),
@@ -57,7 +46,7 @@ export class SNSExchangeMessagePublisher extends ExchangeMessagePublisher {
 
         console.log(`message: ${JSON.stringify(message)}`);
 
-        this.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => SNSExchangeMessagePublisher.name);
 
         const params: PublishInput = {
             Message: JSON.stringify(message),

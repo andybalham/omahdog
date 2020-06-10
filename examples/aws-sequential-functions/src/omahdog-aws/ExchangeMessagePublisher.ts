@@ -1,19 +1,22 @@
 import { ExchangeResponseMessage, ExchangeRequestMessage } from './Exchange';
-import { IService } from './IService';
 
-export class ExchangeMessagePublisher implements IService {
+export interface IExchangeMessagePublisher {
+    isNullImplementation: boolean;
+    publishRequest(requestTypeName: string, message: ExchangeRequestMessage): Promise<void>;
+    publishResponse(flowTypeName: string, message: ExchangeResponseMessage): Promise<void>;
+}
 
+export class NullExchangeMessagePublisher implements IExchangeMessagePublisher {
+
+    isNullImplementation: boolean;
     async publishRequest(requestTypeName: string, message: ExchangeRequestMessage): Promise<void> {}
     async publishResponse(flowTypeName: string, message: ExchangeResponseMessage): Promise<void> {}
 
-    validate(): string[] {
-        return ['null'];
+    constructor() {
+        this.isNullImplementation = true;
     }
 
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${ExchangeMessagePublisher.name} is not valid:\n${errorMessages.join('\n')}`);
-        }
+    validate(): string[] {
+        return ['Is a null implementation'];
     }
 }

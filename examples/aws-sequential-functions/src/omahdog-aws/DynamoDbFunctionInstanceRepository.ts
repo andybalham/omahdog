@@ -1,8 +1,11 @@
-import { FunctionInstanceRepository, FunctionInstance } from './FunctionInstanceRepository';
+import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { DynamoDBCrudService } from './AwsServices';
+import { throwErrorIfInvalid } from './SAMTemplate';
 
-export class DynamoDbFunctionInstanceRepository implements FunctionInstanceRepository {
+export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
+    isNullImplementation: boolean;
+
     services = {
         functionInstanceTable: new DynamoDBCrudService
     }
@@ -10,23 +13,10 @@ export class DynamoDbFunctionInstanceRepository implements FunctionInstanceRepos
     constructor(initialise?: (resource: DynamoDbFunctionInstanceRepository) => void) {
         if (initialise !== undefined) initialise(this);
     }
-
-    validate(): string[] {
-        let errorMessages: string[] = [];
-        errorMessages = errorMessages.concat(this.services.functionInstanceTable.validate().map(m => `services.functionInstanceTable: ${m}`));
-        return errorMessages;
-    }
     
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${DynamoDbFunctionInstanceRepository.name} is not valid:\n${errorMessages.join('\n')}`);
-        }
-    }
-
     async store(instance: FunctionInstance): Promise<void> {
         
-        this.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => DynamoDbFunctionInstanceRepository.name);
 
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
@@ -46,7 +36,7 @@ export class DynamoDbFunctionInstanceRepository implements FunctionInstanceRepos
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
         
-        this.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => DynamoDbFunctionInstanceRepository.name);
 
         const params = {
             TableName: this.getFunctionInstanceTableName(),
@@ -77,7 +67,7 @@ export class DynamoDbFunctionInstanceRepository implements FunctionInstanceRepos
     
     async delete(instanceId: string): Promise<void> {
         
-        this.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => DynamoDbFunctionInstanceRepository.name);
 
         const params = {
             TableName: this.getFunctionInstanceTableName(),

@@ -81,6 +81,7 @@ export const addNumbersApplication =
 
         // TODO 07Jun20: Supply a defaultRequestTopic, so that the lambdas can be triggered
         // application.defaultRequestTopic = awsServices.flowExchangeTopic;
+
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         application.defaultFunctionInstanceRepository = functionInstanceRepository;
 

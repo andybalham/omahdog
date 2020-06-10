@@ -22,22 +22,12 @@ export class ApiControllerLambda extends LambdaBase {
         }
     }
 
-    validate(): string[] {
-        return [];
-    }
-
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${ApiControllerLambda.name} is not valid:\n${errorMessages.join('\n')}`);
-        }
-    }
-
     async handle(event: APIGatewayProxyEvent, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<APIGatewayProxyResult> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        this.throwErrorIfInvalid();
+        // TODO 10Jun20: What validation do we want to do?
+        // this.throwErrorIfInvalid();
 
         // TODO 03Jun20: Would we want to instantiate this each time?
         const apiControllerRoutes = new this.apiControllerRoutesType;

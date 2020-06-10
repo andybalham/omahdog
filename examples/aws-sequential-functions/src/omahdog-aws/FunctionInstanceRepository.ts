@@ -1,25 +1,26 @@
 import { FlowInstance } from '../omahdog/FlowContext';
 import { ExchangeCallingContext } from './Exchange';
-import { IService } from './IService';
 
-export class FunctionInstanceRepository implements IService {
+export interface IFunctionInstanceRepository {    
+    isNullImplementation: boolean;
+    store(instance: FunctionInstance): Promise<void>;    
+    retrieve(instanceId: string): Promise<FunctionInstance | undefined>;    
+    delete(instanceId: string): Promise<void>;
+}
 
-    async store(instance: FunctionInstance): Promise<void> {}
-    
-    async retrieve(instanceId: string): Promise<FunctionInstance | undefined> { return undefined; }
-    
+export class NullFunctionInstanceRepository implements IFunctionInstanceRepository {
+
+    isNullImplementation: boolean;
+
+    async store(instance: FunctionInstance): Promise<void> {}    
+    async retrieve(instanceId: string): Promise<FunctionInstance | undefined> { return undefined; }    
     async delete(instanceId: string): Promise<void> {}
 
-    validate(): string[] {
-        return ['null'];
+    constructor() {
+        this.isNullImplementation = true;
     }
 
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${FunctionInstanceRepository.name} is not valid:\n${errorMessages.join('\n')}`);
-        }
-    }
+    validate(): string[] { return ['Is a null implementation']; }
 }
 
 export class FunctionInstance {

@@ -1,9 +1,8 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
 import { ConfigurationValue, TemplateReference, EnvironmentVariable, ResourceAttributeReference, ResourceReference } from './SAMTemplate';
-import { IService } from './IService';
 
-export abstract class AwsService implements IService {
+export abstract class AwsService {
 
     readonly typeName: string;
     readonly templateReference?: TemplateReference;
@@ -14,14 +13,6 @@ export abstract class AwsService implements IService {
     }
 
     abstract validate(): string[];
-
-    throwErrorIfInvalid(): void {
-        const errorMessages = this.validate();
-        if (errorMessages.length > 0) {
-            throw new Error(`${this.typeName} is not valid:\n${errorMessages.join('\n')}`);
-        }
-    }
-
     abstract getPolicy(): any;
 }
 
