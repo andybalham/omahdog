@@ -1,13 +1,13 @@
 import { SNSEvent } from 'aws-lambda';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { ExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 
 export class DeadLetterQueueHandler {
     
-    private readonly _exchangeMessagePublisher: ExchangeMessagePublisher;
+    private readonly _exchangeMessagePublisher: IExchangeMessagePublisher;
 
-    constructor (exchangeMessagePublisher: ExchangeMessagePublisher) {
+    constructor (exchangeMessagePublisher: IExchangeMessagePublisher) {
         this._exchangeMessagePublisher = exchangeMessagePublisher;
     }
 

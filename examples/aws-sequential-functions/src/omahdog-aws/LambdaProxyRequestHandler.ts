@@ -4,6 +4,7 @@ import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { LambdaInvokeService } from './AwsServices';
+import { throwErrorIfInvalid } from './SAMTemplate';
 
 export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
@@ -13,7 +14,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
         
-        this.services.lambda.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => LambdaProxyRequestHandler.name);
         
         const functionName = this.services.lambda.functionName;
 

@@ -20,16 +20,16 @@ export abstract class FlowRequestHandlerBase implements IResumableRequestHandler
 // TODO 31May20: Rename this CompositeRequestHandler
 export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequestHandlerBase implements IActivityRequestHandler<TReq, TRes> {
 
-    private readonly ResponseType: new () => TRes;
-    private readonly StateType: new () => TState;
+    private readonly responseType: new () => TRes;
+    private readonly stateType: new () => TState;
     private readonly flowDefinition: FlowDefinition<TReq, TRes, TState>;
 
-    constructor(HandlerType: new () => FlowRequestHandler<TReq, TRes, TState>, ResponseType: new () => TRes, StateType: new () => TState) {
+    constructor(handlerType: new () => FlowRequestHandler<TReq, TRes, TState>, responseType: new () => TRes, StateType: new () => TState) {
 
-        super(HandlerType.name);
+        super(handlerType.name);
 
-        this.ResponseType = ResponseType;
-        this.StateType = StateType;
+        this.responseType = responseType;
+        this.stateType = StateType;
 
         this.flowDefinition = this.buildFlow(new FlowBuilder<TReq, TRes, TState>());
     }
@@ -157,7 +157,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
-        flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.StateType()));
+        flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.stateType()));
 
         const response = await this.performFlow(flowContext, this.flowDefinition, request);
 
@@ -279,7 +279,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
             return stepIndex as AsyncResponse;
         }
 
-        const response = new this.ResponseType();
+        const response = new this.responseType();
         if (!flowDefinition.bindResponse) throw new Error('flowDefinition.bindResponse is undefined');
         flowDefinition.bindResponse(response, flowContext.currentStackFrame.state);
 
@@ -365,13 +365,13 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
         let stepResponse: any;
 
-        if (step.RequestType === undefined) {
+        if (step.requestType === undefined) {
 
             stepResponse = undefined;
 
         } else {
 
-            const stepRequest = new step.RequestType();
+            const stepRequest = new step.requestType();
             step.bindRequest(stepRequest, flowContext.currentStackFrame.state);
 
             this.debugPreActivityRequest(step.name, stepRequest, flowContext.currentStackFrame.state);
@@ -383,8 +383,8 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
             stepResponse =
                 mockResponse === undefined
                     ? flowContext.isResume
-                        ? await flowContext.receiveResponse(step.RequestType, flowContext.asyncResponse)
-                        : await flowContext.sendRequest(step.RequestType, stepRequest)
+                        ? await flowContext.receiveResponse(step.requestType, flowContext.asyncResponse)
+                        : await flowContext.sendRequest(step.requestType, stepRequest)
                     : mockResponse;
 
             if ('AsyncResponse' in stepResponse) {

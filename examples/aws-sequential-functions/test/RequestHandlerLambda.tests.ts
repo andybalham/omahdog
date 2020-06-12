@@ -4,10 +4,10 @@ import { ErrorResponse } from '../src/omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from '../src/omahdog-aws/Exchange';
 import { RequestHandlerLambda } from '../src/omahdog-aws/RequestHandlerLambda';
 import * as AWSMock from 'aws-sdk-mock';
-import AWS, { AWSError, Request as AWSRequest } from 'aws-sdk';
-import { FunctionInstanceRepository, FunctionInstance } from '../src/omahdog-aws/FunctionInstanceRepository';
+import AWS, { Request as AWSRequest } from 'aws-sdk';
+import { FunctionInstance, IFunctionInstanceRepository } from '../src/omahdog-aws/FunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from '../src/omahdog-aws/SNSExchangeMessagePublisher';
-import SNS, { PublishInput, PublishResponse } from 'aws-sdk/clients/sns';
+import { PublishInput } from 'aws-sdk/clients/sns';
 import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
 import { IResumableRequestHandler } from '../src/omahdog/FlowRequestHandler';
@@ -74,7 +74,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher?
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
@@ -144,7 +144,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
@@ -213,7 +213,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
@@ -301,7 +301,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
@@ -368,7 +368,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
@@ -458,7 +458,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
@@ -520,7 +520,7 @@ describe('RequestHandlerLambda tests', () => {
             });
         const sns = new AWS.SNS();
         const exchangeTopicArn = 'exchangeTopicArn';
-        const flowInstanceRepository = Substitute.for<FunctionInstanceRepository>();
+        const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
         const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 

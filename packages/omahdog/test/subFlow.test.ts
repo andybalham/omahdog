@@ -29,7 +29,7 @@ describe('Handlers', () => {
         expect((response as ParentFlowResponse).total).to.be.equal(666);
     });
 
-    it.only('returns the total of the inputs when activity invoked asynchronously', async () => {
+    it('returns the total of the inputs when activity invoked asynchronously', async () => {
 
         let asyncRequestJSON = '';
 
@@ -165,7 +165,7 @@ class AsyncActivityHandler implements IActivityRequestHandler<any, any> {
     outputRequest: (request: any) => void;
     async handle(flowContext: FlowContext, request: any): Promise<any> {
         const requestId = uuid.v4();
-        this.outputRequest(request);
+        if (this.outputRequest !== undefined) this.outputRequest(request);
         return flowContext.getAsyncResponse(requestId);
     }
 }

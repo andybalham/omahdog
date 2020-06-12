@@ -4,6 +4,7 @@ import { FlowContext, IActivityRequestHandler } from '../omahdog/FlowContext';
 import { DynamoDBCrudService } from '../omahdog-aws/AwsServices';
 
 import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
+import { throwErrorIfInvalid } from '../omahdog-aws/SAMTemplate';
 
 export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
 
@@ -13,7 +14,7 @@ export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequ
 
     async handle(flowContext: FlowContext, request: StoreTotalRequest): Promise<StoreTotalResponse> {
 
-        this.services.flowResultTable.throwErrorIfInvalid();
+        throwErrorIfInvalid(this.services, () => StoreTotalHandler.name);
 
         const id = uuid.v4();
 

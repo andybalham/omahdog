@@ -25,13 +25,13 @@ export abstract class FlowStep {
 
 export class ActivityFlowStep<TReq, TRes, TState> extends FlowStep {
 
-    constructor(stepName: string, RequestType?: new () => TReq, ResponseType?: new () => TRes,
+    constructor(stepName: string, requestType?: new () => TReq, responseType?: new () => TRes,
         bindRequest?: (request: TReq, state: TState) => void, bindState?: (response: TRes, state: TState) => void) {
 
         super(FlowStepType.Activity, stepName);
 
-        this.requestType = RequestType;
-        this.responseType = ResponseType;
+        this.requestType = requestType;
+        this.responseType = responseType;
         this.bindRequest = bindRequest;
         this.bindState = bindState;
     }

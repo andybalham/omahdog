@@ -23,8 +23,8 @@ const snsClient = new SNS();
 const templateReferences = {
     addNumbersApiGateway: new ResourceReference('ApiGateway'),
     addNumbersExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
-    flowResultTable: new ResourceReference('FlowResultTable'),
-    flowInstanceTable: new ResourceReference('FlowInstanceTable'),
+    addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
+    addNumbersResultTable: new ResourceReference('FlowResultTable'),
 
     addTwoNumbersFunction: new FunctionReference(AddTwoNumbersHandler),
     addThreeNumbersFunction: new FunctionReference(AddThreeNumbersHandler),
@@ -36,13 +36,13 @@ export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublishe
     publisher.services.exchangeTopic = new SNSPublishMessageService(templateReferences.addNumbersExchangeTopicName, snsClient);
 });
 const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
-    repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.flowInstanceTable, dynamoDbClient);
+    repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
 });
 
 const handlerFactory = new HandlerFactory()
 
     .addInitialiser(StoreTotalHandler, handler => {
-        handler.services.flowResultTable = new DynamoDBCrudService(templateReferences.flowResultTable, dynamoDbClient);
+        handler.services.flowResultTable = new DynamoDBCrudService(templateReferences.addNumbersResultTable, dynamoDbClient);
     })
 
     .addInitialiser(SumNumbersLambdaProxy, handler => {
