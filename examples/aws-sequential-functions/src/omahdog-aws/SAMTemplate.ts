@@ -71,27 +71,50 @@ export class LambdaApplication {
         initialise(this);
     }    
     
-    // TODO 07Jun20: We will eventually pass in the base template for verification
     validate(): string[] {
         
+        // TODO 07Jun20: We will eventually pass in the base template for verification
+
         let errors: string[] = [];
 
-        // TODO 07Jun20: Iterate over the api controllers, as they would be when handling events
+        const allRequestHandlers = new Map<string, IActivityRequestHandlerBase>();
 
-        this.requestHandlerLambdas.forEach((handlerLambda: RequestHandlerLambda, handlerTypeName: string) => {
+        this.apiControllerLambdas.forEach((lambda) => {
 
-            const requestHandlerLambda = this.getRequestHandlerLambda(handlerTypeName);
-            const handlers = this.getHandlers(requestHandlerLambda.requestHandlerType);
+            const handlerTypes = lambda.apiControllerRoutes.getHandlerTypes();
 
-            errors = errors.concat(validateServices(requestHandlerLambda, requestHandlerLambda.resourceName));
-
-            handlers.forEach((handler, typeName) => {
-                const serviceErrors = validateServices(handler, `${requestHandlerLambda.resourceName}.${typeName}`);
-                errors = errors.concat(serviceErrors);
+            handlerTypes.forEach(handlerType => {
+                this.addRequestHandlers(handlerType, allRequestHandlers);
             });
         });
 
+        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambda, handlerTypeName: string) => {
+
+            const lambdaErrors = validateServices(lambda, lambda.resourceName);
+            errors = errors.concat(lambdaErrors);
+
+            this.addRequestHandlers(lambda.requestHandlerType, allRequestHandlers);
+        });
+
+        allRequestHandlers.forEach((handler, handlerTypeName) => {
+            const serviceErrors = validateServices(handler, handlerTypeName);
+            errors = errors.concat(serviceErrors);                        
+        });
+
         return errors;
+    }
+
+    private addRequestHandlers(requestHandlerType: new () => IActivityRequestHandlerBase, requestHandlers: Map<string, IActivityRequestHandlerBase>): void {
+
+        const requestHandler = this.handlerFactory.newHandler(requestHandlerType);
+
+        requestHandlers.set(requestHandlerType.name, requestHandler);
+
+        const subHandlers = this.getSubHandlers(requestHandler);
+        
+        subHandlers.forEach((handler, typeName) => {
+            requestHandlers.set(typeName, handler);            
+        });
     }
 
     private getHandlers(requestHandlerType: new () => IActivityRequestHandlerBase): Map<string, IActivityRequestHandlerBase> {

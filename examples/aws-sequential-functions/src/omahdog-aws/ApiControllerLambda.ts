@@ -7,6 +7,7 @@ export class ApiControllerLambda extends LambdaBase {
 
     readonly apiGatewayReference: TemplateReference;
     readonly apiControllerRoutesType: new () => ApiControllerRoutes;
+    readonly apiControllerRoutes: ApiControllerRoutes;
 
     constructor(apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void) {
 
@@ -14,6 +15,7 @@ export class ApiControllerLambda extends LambdaBase {
 
         this.apiGatewayReference = apiGatewayReference;
         this.apiControllerRoutesType = apiControllerRoutesType;
+        this.apiControllerRoutes = new apiControllerRoutesType;
 
         console.log(`${ApiControllerLambda.name}.resourceName: ${this.resourceName}`);
 
@@ -29,9 +31,7 @@ export class ApiControllerLambda extends LambdaBase {
         // TODO 10Jun20: What validation do we want to do?
         // this.throwErrorIfInvalid();
 
-        // TODO 03Jun20: Would we want to instantiate this each time?
-        const apiControllerRoutes = new this.apiControllerRoutesType;
-        const route = apiControllerRoutes.getRoute(event);
+        const route = this.apiControllerRoutes.getRoute(event);
 
         // TODO 17May20: Throw a more meaningful error
         if (route === undefined) throw new Error('route === undefined');
@@ -99,6 +99,17 @@ export abstract class ApiControllerRoutes {
 
     constructor(initialise: (routes: ApiControllerRoutes) => void) {
         initialise(this);
+    }
+
+    getHandlerTypes(): Array<new () => IActivityRequestHandlerBase> {
+        
+        const handlerTypes = new Map<string, new () => IActivityRequestHandlerBase>();
+
+        this.routeMap.forEach(route => {
+            handlerTypes.set(route.handlerType.name, route.handlerType);
+        });
+
+        return Array.from(handlerTypes.values());
     }
 
     addGet<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(

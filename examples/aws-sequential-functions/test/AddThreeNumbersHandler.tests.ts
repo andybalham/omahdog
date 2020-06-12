@@ -5,7 +5,6 @@ import { SumNumbersHandler } from '../src/handlers/SumNumbersHandler';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from '../src/exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from '../src/exchanges/StoreTotalExchange';
-import { ErrorResponse } from '../src/omahdog/FlowExchanges';
 
 describe('AddThreeNumbersHandler tests', () => {
 
