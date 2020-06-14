@@ -13,12 +13,15 @@ export abstract class AwsService {
     }
 
     abstract validate(): string[];
-    abstract getPolicy(): any;
+    abstract getPolicies(): any[];
 }
 
 export class DynamoDBCrudService extends AwsService {
     
-    private readonly tableNameValue?: ConfigurationValue;
+    parameters = {
+        tableName: new ConfigurationValue
+    }
+
     readonly client?: DocumentClient;
 
     constructor(tableReference?: TemplateReference, client?: DocumentClient, tableNameValue?: ConfigurationValue) {
@@ -28,27 +31,29 @@ export class DynamoDBCrudService extends AwsService {
         this.client = client;
 
         if (tableReference === undefined) {
-            this.tableNameValue = tableNameValue;    
+            this.parameters.tableName = tableNameValue ?? this.parameters.tableName;
         } else {
-            this.tableNameValue = tableNameValue ?? new EnvironmentVariable(tableReference);            
+            this.parameters.tableName = tableNameValue ?? new EnvironmentVariable(tableReference);            
         }
     }
 
     get tableName(): string | undefined {
-        return this.tableNameValue?.value;
+        return this.parameters.tableName.value;
     }
 
     validate(): string[] {
         const errorMessages: string[] = [];
-        if (this.tableNameValue === undefined) errorMessages.push('this.tableNameValue === undefined');
         if (this.client === undefined) errorMessages.push('this.client === undefined');
         return errorMessages;
     }
 
-    getPolicy(): any {
-        return {
-            'DynamoDBCrudPolicy': { 'TableName' : this.templateReference?.instance }
-        };
+    getPolicies(): any[] {
+        // TODO 13Jun20: We would also need to take into account any policies required to access the table name, e.g. SSM
+        return [
+            {
+                'DynamoDBCrudPolicy': { 'TableName' : this.templateReference?.instance }
+            }
+        ];
     }
 }
 
@@ -84,10 +89,12 @@ export class SNSPublishMessageService extends AwsService {
         return errorMessages;
     }
 
-    getPolicy(): any {
-        return {
-            'SNSPublishMessagePolicy': { 'TopicName' : this.templateReference?.instance }
-        };
+    getPolicies(): any[] {
+        return [
+            {
+                'SNSPublishMessagePolicy': { 'TopicName' : this.templateReference?.instance }
+            }
+        ];
     }
 }
 
@@ -120,9 +127,11 @@ export class LambdaInvokeService extends AwsService {
         return errorMessages;
     }
 
-    getPolicy(): any {
-        return {
-            'LambdaInvokePolicy': { 'FunctionName' : this.templateReference?.instance }
-        };
+    getPolicies(): any[] {
+        return [
+            {
+                'LambdaInvokePolicy': { 'FunctionName' : this.templateReference?.instance }
+            }
+        ];
     }
 }

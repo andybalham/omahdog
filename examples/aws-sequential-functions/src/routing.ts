@@ -7,6 +7,11 @@ import { RequestRouter } from './omahdog/FlowContext';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 
+export const requestRouter = new RequestRouter()
+    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)
+    ;
+
 export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
 
     constructor() {
@@ -15,15 +20,15 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
                 .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy,
                     (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                         return {
-                            x: this.parseOptionalInt(queryStringParameters?.x),
-                            y: this.parseOptionalInt(queryStringParameters?.y),
+                            x: parseOptionalInt(queryStringParameters?.x),
+                            y: parseOptionalInt(queryStringParameters?.y),
                         };
                     })
                 .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy,
                     (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                         return {
-                            x: this.parseOptionalInt(pathParameters?.x),
-                            y: this.parseOptionalInt(pathParameters?.y),
+                            x: parseOptionalInt(pathParameters?.x),
+                            y: parseOptionalInt(pathParameters?.y),
                         };
                     })
                 .addPost('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy,
@@ -34,9 +39,9 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
                 .addGet('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersLambdaProxy,
                     (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddThreeNumbersRequest => {
                         return {
-                            a: this.parseOptionalInt(queryStringParameters?.a),
-                            b: this.parseOptionalInt(queryStringParameters?.b),
-                            c: this.parseOptionalInt(queryStringParameters?.c),
+                            a: parseOptionalInt(queryStringParameters?.a),
+                            b: parseOptionalInt(queryStringParameters?.b),
+                            c: parseOptionalInt(queryStringParameters?.c),
                         };
                     })
                 .addPost('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersMessageProxy,
@@ -46,13 +51,8 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
             ;
         });
     }
-
-    private parseOptionalInt(intString: string | undefined, defaultValue = 0): number  {
-        return (intString === undefined) ? defaultValue : parseInt(intString);
-    }
 }
 
-export const requestRouter = new RequestRouter()
-    .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
-    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)
-    ;
+function parseOptionalInt(intString: string | undefined, defaultValue = 0): number  {
+    return (intString === undefined) ? defaultValue : parseInt(intString);
+}

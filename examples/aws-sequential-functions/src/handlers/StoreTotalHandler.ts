@@ -1,32 +1,15 @@
-import uuid = require('uuid');
-
 import { FlowContext, IActivityRequestHandler } from '../omahdog/FlowContext';
-import { DynamoDBCrudService } from '../omahdog-aws/AwsServices';
+import { DynamoDBCrudHandler } from '../omahdog-aws/AwsHandlers';
 
 import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
-import { throwErrorIfInvalid } from '../omahdog-aws/SAMTemplate';
 
-export class StoreTotalHandler implements IActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
-
-    services = {
-        flowResultTable: new DynamoDBCrudService,
-    }
+export class StoreTotalHandler extends DynamoDBCrudHandler implements IActivityRequestHandler<StoreTotalRequest, StoreTotalResponse> {
 
     async handle(flowContext: FlowContext, request: StoreTotalRequest): Promise<StoreTotalResponse> {
 
-        throwErrorIfInvalid(this.services, () => StoreTotalHandler.name);
+        this.throwErrorIfInvalid(() => StoreTotalHandler.name);
 
-        const id = uuid.v4();
-
-        const params: any = {
-            TableName: this.services.flowResultTable.tableName,
-            Item: {
-                id: id,
-                result: request
-            }
-        };
-
-        await this.services.flowResultTable.client?.put(params).promise();
+        const id = await this.put({result: request});
 
         return { id: id };
     }

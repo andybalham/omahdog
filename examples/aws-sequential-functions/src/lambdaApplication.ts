@@ -35,14 +35,11 @@ const templateReferences = {
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
     publisher.services.exchangeTopic = new SNSPublishMessageService(templateReferences.addNumbersExchangeTopicName, snsClient);
 });
-const functionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
-    repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
-});
 
 const handlerFactory = new HandlerFactory()
 
     .addInitialiser(StoreTotalHandler, handler => {
-        handler.services.flowResultTable = new DynamoDBCrudService(templateReferences.addNumbersResultTable, dynamoDbClient);
+        handler.services.dynamoDb = new DynamoDBCrudService(templateReferences.addNumbersResultTable, dynamoDbClient);
     })
 
     .addInitialiser(SumNumbersLambdaProxy, handler => {
@@ -83,7 +80,10 @@ export const addNumbersApplication =
         // application.defaultRequestTopic = awsServices.flowExchangeTopic;
 
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
-        application.defaultFunctionInstanceRepository = functionInstanceRepository;
+        
+        application.defaultFunctionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
+            repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
+        });
 
         application
             .addApiController(new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes))
