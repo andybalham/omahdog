@@ -1,10 +1,10 @@
 import { SNSEvent } from 'aws-lambda';
 
 import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
-import { NullFunctionInstanceRepository, FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
-import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { IExchangeMessagePublisher, NullExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
+import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
+import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { LambdaBase, FunctionReference, throwErrorIfInvalid } from './SAMTemplate';
 
 class RequestHandlerLambdaServices {
@@ -14,7 +14,7 @@ class RequestHandlerLambdaServices {
 
 export class RequestHandlerLambda extends LambdaBase {
 
-    services: RequestHandlerLambdaServices
+    services = new RequestHandlerLambdaServices
 
     readonly requestHandlerType: new () => IActivityRequestHandlerBase;
 
@@ -24,11 +24,6 @@ export class RequestHandlerLambda extends LambdaBase {
 
         if (functionReference.requestHandlerType === undefined) throw new Error('functionReference.requestHandlerType === undefined');
 
-        this.services = {
-            responsePublisher: new NullExchangeMessagePublisher,
-            functionInstanceRepository: new NullFunctionInstanceRepository
-        };
-
         this.requestHandlerType = functionReference.requestHandlerType;
         
         if (initialise !== undefined) {
@@ -36,11 +31,18 @@ export class RequestHandlerLambda extends LambdaBase {
         }
     }
     
+    validate(): string[] {
+        const errorMessages = new Array<string>();
+        if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
+        if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
+        return errorMessages;
+    }
+
     async handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        throwErrorIfInvalid(this.services, () => RequestHandlerLambda.name);
+        throwErrorIfInvalid(this, () => RequestHandlerLambda.name);
 
         let message: ExchangeRequestMessage | ExchangeResponseMessage;
         let isDirectRequest: boolean;

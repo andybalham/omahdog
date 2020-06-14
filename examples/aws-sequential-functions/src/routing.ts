@@ -1,6 +1,6 @@
 import { ApiControllerRoutes, StringParameters } from './omahdog-aws/ApiControllerLambda';
 
-import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy, SumNumbersLambdaProxy, StoreTotalMessageProxy } from './handlerProxies';
+import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy, SumNumbersLambdaProxy, StoreTotalMessageProxy, StoreTotalLambdaProxy } from './handlerProxies';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 import { RequestRouter } from './omahdog/FlowContext';
@@ -9,7 +9,7 @@ import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExc
 
 export const requestRouter = new RequestRouter()
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
-    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalLambdaProxy)
     ;
 
 export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {

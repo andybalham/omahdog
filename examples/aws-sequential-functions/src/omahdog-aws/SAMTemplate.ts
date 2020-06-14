@@ -31,6 +31,7 @@ export function validateConfiguration(targetObject: any, errorPrefix = ''): stri
     
     errorMessages = addConfigurationErrors(targetObject, 'parameters', errorPrefix, errorMessages);
     errorMessages = addConfigurationErrors(targetObject, 'services', errorPrefix, errorMessages);
+    // TODO 14Jun20: Can triggers have configuration errors?
     errorMessages = addConfigurationErrors(targetObject, 'triggers', errorPrefix, errorMessages);
 
     return errorMessages;
@@ -166,13 +167,10 @@ export class LambdaApplication {
         
         if (lambda.requestHandlerType === undefined) throw new Error('lambda.requestHandlerType === undefined');
         
-        if (lambda.services.responsePublisher.isNullImplementation && (this.defaultResponsePublisher !== undefined)) {
-            lambda.services.responsePublisher = this.defaultResponsePublisher;
-        }
-        
-        if (lambda.services.functionInstanceRepository.isNullImplementation && (this.defaultFunctionInstanceRepository !== undefined)) {
-            lambda.services.functionInstanceRepository = this.defaultFunctionInstanceRepository;
-        }
+        lambda.services.responsePublisher = 
+            lambda.services.responsePublisher ?? this.defaultResponsePublisher;
+        lambda.services.functionInstanceRepository = 
+            lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;
 
         this.requestHandlerLambdas.set(lambda.requestHandlerType.name, lambda);
         
@@ -198,26 +196,19 @@ export class LambdaApplication {
 }
 
 // TODO 03Jun20: Can we have a value that comes from SSM?
-// TODO 03Jun20: If we do, then we would have to infer the correct policy from 
+// TODO 03Jun20: If we do, then we would have to infer the correct policy from it
 
-export class ConfigurationValue {
-    
-    get value(): string | undefined {
-        throw new Error('Null implementation');
-    }
-
-    validate(): string[] {
-        return [ 'Null implementation' ];
-    }
+export interface IConfigurationValue {    
+    getValue(): string | undefined;
+    validate(): string[];
 }
 
-export class EnvironmentVariable extends ConfigurationValue {
+export class EnvironmentVariable implements IConfigurationValue {
     
     readonly templateReference: TemplateReference;
     readonly variableName: string;
 
     constructor(templateReference: TemplateReference, variableName?: string) {
-        super();
         this.templateReference = templateReference;
         this.variableName = variableName ?? this.generateVariableName(templateReference);
     }
@@ -226,7 +217,7 @@ export class EnvironmentVariable extends ConfigurationValue {
         return this.templateReference === undefined ? ['this.templateReference === undefined'] : [];
     }
     
-    get value(): string | undefined {
+    getValue(): string | undefined {
         const value = process.env[this.variableName];
         if (value === undefined) {
             console.log(`process.env[${this.variableName}] === undefined`);
@@ -240,11 +231,10 @@ export class EnvironmentVariable extends ConfigurationValue {
     }
 }
 
-export class ConstantValue extends ConfigurationValue {
+export class ConstantValue implements IConfigurationValue {
     private readonly constantValue?: string;
     
     constructor(constantValue?: string) {
-        super();
         this.constantValue = constantValue;
     }
     
@@ -252,7 +242,7 @@ export class ConstantValue extends ConfigurationValue {
         return this.constantValue === undefined ? ['this.constantValue === undefined'] : [];
     }
 
-    get value(): string | undefined {
+    getValue(): string | undefined {
         return this.constantValue;
     }
 }

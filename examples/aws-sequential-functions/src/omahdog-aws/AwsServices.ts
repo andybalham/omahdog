@@ -1,6 +1,6 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
-import { ConfigurationValue, TemplateReference, EnvironmentVariable, ResourceAttributeReference, ResourceReference } from './SAMTemplate';
+import { IConfigurationValue, TemplateReference, EnvironmentVariable, ResourceAttributeReference, ResourceReference } from './SAMTemplate';
 
 export abstract class AwsService {
 
@@ -16,15 +16,17 @@ export abstract class AwsService {
     abstract getPolicies(): any[];
 }
 
+class DynamoDBCrudServiceParameters {
+    tableName?: IConfigurationValue
+}
+
 export class DynamoDBCrudService extends AwsService {
     
-    parameters = {
-        tableName: new ConfigurationValue
-    }
+    parameters = new DynamoDBCrudServiceParameters
 
     readonly client?: DocumentClient;
 
-    constructor(tableReference?: TemplateReference, client?: DocumentClient, tableNameValue?: ConfigurationValue) {
+    constructor(tableReference?: TemplateReference, client?: DocumentClient, tableNameValue?: IConfigurationValue) {
         
         super(DynamoDBCrudService, tableReference);
         
@@ -38,11 +40,12 @@ export class DynamoDBCrudService extends AwsService {
     }
 
     get tableName(): string | undefined {
-        return this.parameters.tableName.value;
+        return this.parameters.tableName?.getValue();
     }
 
     validate(): string[] {
         const errorMessages: string[] = [];
+        if (this.parameters.tableName === undefined) errorMessages.push('this.parameters.tableName === undefined');
         if (this.client === undefined) errorMessages.push('this.client === undefined');
         return errorMessages;
     }
@@ -57,12 +60,17 @@ export class DynamoDBCrudService extends AwsService {
     }
 }
 
+class SNSPublishMessageServiceParameters {
+    topicArnValue?: IConfigurationValue
+}
+
 export class SNSPublishMessageService extends AwsService {
     
-    private readonly topicArnValue?: ConfigurationValue;
+    parameters = new SNSPublishMessageServiceParameters
+    
     readonly client?: SNS;
 
-    constructor(topicNameReference?: TemplateReference, client?: SNS, topicArnValue?: ConfigurationValue) {
+    constructor(topicNameReference?: TemplateReference, client?: SNS, topicArnValue?: IConfigurationValue) {
         
         super(SNSPublishMessageService, topicNameReference);
         
@@ -70,21 +78,21 @@ export class SNSPublishMessageService extends AwsService {
 
         if ((topicNameReference === undefined)
             || (topicNameReference.typeName !== 'ResourceAttributeReference')) {
-            this.topicArnValue = topicArnValue;
+            this.parameters.topicArnValue = topicArnValue;
         } else {
-            this.topicArnValue = 
+            this.parameters.topicArnValue = 
                 topicArnValue ?? 
                     new EnvironmentVariable(new ResourceReference((topicNameReference as ResourceAttributeReference).resourceName));
         }
     }
 
     get topicArn(): string | undefined {
-        return this.topicArnValue?.value;
+        return this.parameters.topicArnValue?.getValue();
     }
 
     validate(): string[] {
         const errorMessages: string[] = [];
-        if (this.topicArnValue === undefined) errorMessages.push('this.topicArnValue === undefined');
+        if (this.parameters.topicArnValue === undefined) errorMessages.push('this.parameters.topicArnValue === undefined');
         if (this.client === undefined) errorMessages.push('this.client === undefined');
         return errorMessages;
     }
@@ -98,31 +106,35 @@ export class SNSPublishMessageService extends AwsService {
     }
 }
 
+class LambdaInvokeServiceParameters {
+    functionNameValue?: IConfigurationValue
+}
+
 export class LambdaInvokeService extends AwsService {
 
-    private readonly functionNameValue?: ConfigurationValue;
+    parameters = new LambdaInvokeServiceParameters;    
     readonly client?: Lambda;
 
-    constructor(functionReference?: TemplateReference, client?: Lambda, functionNameValue?: ConfigurationValue) {
+    constructor(functionReference?: TemplateReference, client?: Lambda, functionNameValue?: IConfigurationValue) {
         
         super(DynamoDBCrudService, functionReference);
 
         this.client = client;
 
         if (functionReference === undefined) {
-            this.functionNameValue = functionNameValue;
+            this.parameters.functionNameValue = functionNameValue;
         } else {
-            this.functionNameValue = functionNameValue ?? new EnvironmentVariable(functionReference);
+            this.parameters.functionNameValue = functionNameValue ?? new EnvironmentVariable(functionReference);
         }
     }
     
     get functionName(): string | undefined {
-        return this.functionNameValue?.value;
+        return this.parameters.functionNameValue?.getValue();
     }
 
     validate(): string[] {
         const errorMessages: string[] = [];
-        if (this.functionNameValue === undefined) errorMessages.push('this.functionNameValue === undefined');
+        if (this.parameters.functionNameValue === undefined) errorMessages.push('this.parameters.functionNameValue === undefined');
         if (this.client === undefined) errorMessages.push('this.client === undefined');
         return errorMessages;
     }
