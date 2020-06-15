@@ -22,7 +22,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
         console.log(`Publishing message to exchangeTopicArn: ${this.getExchangeTopicArn()}`);
         console.log(`message: ${JSON.stringify(message)}`);
 
-        throwErrorIfInvalid(this.services, () => SNSExchangeMessagePublisher.name);
+        throwErrorIfInvalid(this, () => SNSExchangeMessagePublisher.name);
 
         const params: PublishInput = {
             Message: JSON.stringify(message),
@@ -46,7 +46,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
 
         console.log(`message: ${JSON.stringify(message)}`);
 
-        throwErrorIfInvalid(this.services, () => SNSExchangeMessagePublisher.name);
+        throwErrorIfInvalid(this, () => SNSExchangeMessagePublisher.name);
 
         const params: PublishInput = {
             Message: JSON.stringify(message),

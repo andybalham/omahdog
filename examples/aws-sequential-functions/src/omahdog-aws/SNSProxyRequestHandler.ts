@@ -21,7 +21,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
         
-        throwErrorIfInvalid(this.services, () => SNSProxyRequestHandler.name);
+        throwErrorIfInvalid(this, () => SNSProxyRequestHandler.name);
 
         const requestId = uuid.v4();
         

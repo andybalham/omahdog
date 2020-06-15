@@ -35,7 +35,7 @@ describe('StoreTotalHandler tests', () => {
         const client = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'});
 
         const handler = new StoreTotalHandler();
-        handler.services.flowResultTable = new DynamoDBCrudService(undefined, client, new ConstantValue(expectedTableName));
+        handler.services.dynamoDb = new DynamoDBCrudService(undefined, client, new ConstantValue(expectedTableName));
 
         const response = await handler.handle(FlowContext.newContext(), request);
 

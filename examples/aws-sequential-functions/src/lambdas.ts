@@ -9,6 +9,10 @@ import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
+import { AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
+import { SumNumbersRequest } from './exchanges/SumNumbersExchange';
+import { StoreTotalRequest } from './exchanges/StoreTotalExchange';
 
 const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(addNumbersExchangeMessagePublisher);
 export const deadLetterQueueHandler = async (event: SNSEvent): Promise<void> => {
@@ -30,19 +34,19 @@ export const addNumbersApiControllerRoutes = async (event: any): Promise<any> =>
 };
 
 export const addThreeNumbersHandler = async (event: any): Promise<any> => {
-    return await addNumbersApplication.handleRequestEvent(AddThreeNumbersHandler, event);
+    return await addNumbersApplication.handleRequestEvent(AddThreeNumbersRequest, event);
 };
 
 export const addTwoNumbersHandler = async (event: any): Promise<any> => {
-    return await addNumbersApplication.handleRequestEvent(AddTwoNumbersHandler, event);
+    return await addNumbersApplication.handleRequestEvent(AddTwoNumbersRequest, event);
 };
 
 export const sumNumbersHandler = async (event: any): Promise<any> => {
-    return await addNumbersApplication.handleRequestEvent(SumNumbersHandler, event);
+    return await addNumbersApplication.handleRequestEvent(SumNumbersRequest, event);
 };
 
 export const storeTotalHandler = async (event: any): Promise<any> => {
-    return await addNumbersApplication.handleRequestEvent(StoreTotalHandler, event);
+    return await addNumbersApplication.handleRequestEvent(StoreTotalRequest, event);
 };
 
 // --------------------------------------------------------------------------------------------------------------

@@ -16,7 +16,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async store(instance: FunctionInstance): Promise<void> {
         
-        throwErrorIfInvalid(this.services, () => DynamoDbFunctionInstanceRepository.name);
+        throwErrorIfInvalid(this, () => DynamoDbFunctionInstanceRepository.name);
 
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
@@ -36,7 +36,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
         
-        throwErrorIfInvalid(this.services, () => DynamoDbFunctionInstanceRepository.name);
+        throwErrorIfInvalid(this, () => DynamoDbFunctionInstanceRepository.name);
 
         const params = {
             TableName: this.getFunctionInstanceTableName(),
@@ -67,7 +67,7 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async delete(instanceId: string): Promise<void> {
         
-        throwErrorIfInvalid(this.services, () => DynamoDbFunctionInstanceRepository.name);
+        throwErrorIfInvalid(this, () => DynamoDbFunctionInstanceRepository.name);
 
         const params = {
             TableName: this.getFunctionInstanceTableName(),

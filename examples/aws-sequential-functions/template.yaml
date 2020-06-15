@@ -62,9 +62,9 @@ Resources:
       Handler: lambdas.addNumbersApiControllerRoutes
       Environment:
         Variables:
-          STORE_TOTAL_HANDLER_FUNCTION: !Ref StoreTotalHandlerFunction
-          # ADD_THREE_NUMBERS_HANDLER_FUNCTION: !Ref AddThreeNumbersHandlerFunction
-          ADD_TWO_NUMBERS_HANDLER_FUNCTION: !Ref AddTwoNumbersHandlerFunction
+          STORE_TOTAL_FUNCTION: !Ref StoreTotalHandlerFunction
+          # ADD_THREE_NUMBERS_FUNCTION: !Ref AddThreeNumbersHandlerFunction
+          ADD_TWO_NUMBERS_FUNCTION: !Ref AddTwoNumbersHandlerFunction
           FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
       Policies:
         # TODO: Think about: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-policy-template-list.html#lambda-invoke-policy
@@ -167,8 +167,8 @@ Resources:
   #       Variables:
   #         FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
   #         FLOW_INSTANCE_TABLE: !Ref FlowInstanceTable
-  #         SUM_NUMBERS_HANDLER_FUNCTION: !Ref SumNumbersHandlerFunction
-  #         STORE_TOTAL_HANDLER_FUNCTION: !Ref StoreTotalHandlerFunction
+  #         SUM_NUMBERS_FUNCTION: !Ref SumNumbersHandlerFunction
+  #         STORE_TOTAL_FUNCTION: !Ref StoreTotalHandlerFunction
   #     Events:
   #       ExchangeTopic:
   #         Type: SNS
@@ -200,14 +200,15 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC: !Ref FlowExchangeTopic
           FLOW_INSTANCE_TABLE: !Ref FlowInstanceTable
-          SUM_NUMBERS_HANDLER_FUNCTION: !Ref SumNumbersHandlerFunction
-          STORE_TOTAL_HANDLER_FUNCTION: !Ref StoreTotalHandlerFunction
+          SUM_NUMBERS_FUNCTION: !Ref SumNumbersHandlerFunction
+          STORE_TOTAL_FUNCTION: !Ref StoreTotalHandlerFunction
       Events:
-        ExchangeTopic:
+        FlowExchangeMessage:
           Type: SNS
           Properties:
             Topic: !Ref FlowExchangeTopic
             FilterPolicy:
+              # TODO: We will need to merge any subscription filter policies
               MessageType:
                 - AddTwoNumbersRequest:Handler
                 - AddTwoNumbersHandler:Response
@@ -278,7 +279,7 @@ Resources:
             TableName: 
               Ref: FlowResultTable
       Events:
-        # The app definition will define that this function is triggered by this event
+        # The app definition will define that this function is triggered by these events
         ExchangeTopic:
           Type: SNS
           Properties:

@@ -2,7 +2,7 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { Lambda, SNS } from 'aws-sdk';
 
 import { HandlerFactory } from './omahdog/FlowContext';
-import { ResourceReference, ResourceAttributeReference, LambdaApplication, FunctionReference } from './omahdog-aws/SAMTemplate';
+import { ResourceReference, ResourceAttributeReference, LambdaApplication } from './omahdog-aws/SAMTemplate';
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
@@ -15,6 +15,10 @@ import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
 import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy,AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
 import { AddNumbersApiControllerRoutes, requestRouter } from './routing';
+import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
+import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
+import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
+import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -26,10 +30,10 @@ const templateReferences = {
     addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
     addNumbersResultTable: new ResourceReference('FlowResultTable'),
 
-    addTwoNumbersFunction: new FunctionReference(AddTwoNumbersHandler),
-    addThreeNumbersFunction: new FunctionReference(AddThreeNumbersHandler),
-    sumNumbersFunction: new FunctionReference(SumNumbersHandler),
-    storeTotalFunction: new FunctionReference(StoreTotalHandler),
+    addTwoNumbersFunction: new ResourceReference('AddTwoNumbersFunction'),
+    addThreeNumbersFunction: new ResourceReference('AddThreeNumbersFunction'),
+    sumNumbersFunction: new ResourceReference('SumNumbersFunction'),
+    storeTotalFunction: new ResourceReference('StoreTotalFunction'),
 };
 
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
@@ -88,10 +92,18 @@ export const addNumbersApplication =
         application
             .addApiController(new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes))
 
-            .addRequestHandler(new RequestHandlerLambda(templateReferences.addThreeNumbersFunction))
-            .addRequestHandler(new RequestHandlerLambda(templateReferences.addTwoNumbersFunction))
-            .addRequestHandler(new RequestHandlerLambda(templateReferences.sumNumbersFunction))
-            .addRequestHandler(new RequestHandlerLambda(templateReferences.storeTotalFunction))
+            .addRequestHandler(
+                new RequestHandlerLambda(
+                    templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler))
+            .addRequestHandler(
+                new RequestHandlerLambda(
+                    templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler))
+            .addRequestHandler(
+                new RequestHandlerLambda(
+                    templateReferences.sumNumbersFunction, SumNumbersRequest, SumNumbersResponse, SumNumbersHandler))
+            .addRequestHandler(
+                new RequestHandlerLambda(
+                    templateReferences.storeTotalFunction, StoreTotalRequest, StoreTotalResponse, StoreTotalHandler))
         ;
     });
 

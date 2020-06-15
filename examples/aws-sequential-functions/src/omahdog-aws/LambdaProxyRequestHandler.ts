@@ -14,7 +14,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
         
-        throwErrorIfInvalid(this.services, () => LambdaProxyRequestHandler.name);
+        throwErrorIfInvalid(this, () => LambdaProxyRequestHandler.name);
         
         const functionName = this.services.lambda.functionName;
 

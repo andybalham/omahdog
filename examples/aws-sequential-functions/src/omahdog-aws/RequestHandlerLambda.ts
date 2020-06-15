@@ -1,30 +1,47 @@
 import { SNSEvent } from 'aws-lambda';
 
-import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase } from '../omahdog/FlowContext';
+import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
-import { LambdaBase, FunctionReference, throwErrorIfInvalid } from './SAMTemplate';
+import { LambdaBase, throwErrorIfInvalid, TemplateReference } from './SAMTemplate';
 
 class RequestHandlerLambdaServices {
     responsePublisher: IExchangeMessagePublisher
     functionInstanceRepository: IFunctionInstanceRepository
 }
 
-export class RequestHandlerLambda extends LambdaBase {
+export abstract class RequestHandlerLambdaBase extends LambdaBase {
 
     services = new RequestHandlerLambdaServices
 
-    readonly requestHandlerType: new () => IActivityRequestHandlerBase;
+    requestType: new () => any;
+    handlerType: new () => IActivityRequestHandlerBase;
 
-    constructor(functionReference: FunctionReference, initialise?: (lambda: RequestHandlerLambda) => void) {
+    abstract handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void>;
+}
 
-        super(`${functionReference.requestHandlerType?.name}Function`);
+export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>> extends RequestHandlerLambdaBase {
 
-        if (functionReference.requestHandlerType === undefined) throw new Error('functionReference.requestHandlerType === undefined');
+    // TODO 14Jun20: How can we generate the following? We need to know the type of request we are handling
+    // Events:
+    //     RequestReceived:
+    //     Type: SNS
+    //     Properties:
+    //         Topic: !Ref FlowExchangeTopic
+    //         FilterPolicy:
+    //         MessageType:
+    //             - AddTwoNumbersRequest:Handler
 
-        this.requestHandlerType = functionReference.requestHandlerType;
+    constructor(functionReference: TemplateReference, 
+        requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
+        initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void) {
+
+        super(functionReference.name ?? '<unknown>');
+
+        this.requestType = requestType;
+        this.handlerType = handlerType;
         
         if (initialise !== undefined) {
             initialise(this);            
@@ -55,7 +72,7 @@ export class RequestHandlerLambda extends LambdaBase {
             message = JSON.parse(snsMessage.Message);
         
             // TODO 02May20: Remove this temporary code
-            if (snsMessage.Message.includes('6666') && (this.requestHandlerType.name === 'SumNumbersHandler')) {
+            if (snsMessage.Message.includes('6666') && (this.handlerType.name === 'SumNumbersHandler')) {
                 throw new Error('Non-handler error in LambdaActivityRequestHandler!');
             }
                 
@@ -82,7 +99,7 @@ export class RequestHandlerLambda extends LambdaBase {
                     message.callingContext.flowCorrelationId, requestRouter, handlerFactory);
     
             try {
-                response = await flowContext.handleRequest(this.requestHandlerType, message.request);
+                response = await flowContext.handleRequest(this.handlerType, message.request);
             } catch (error) {
                 console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);
@@ -110,7 +127,7 @@ export class RequestHandlerLambda extends LambdaBase {
             const flowContext = FlowContext.newResumeContext(flowInstance, requestRouter, handlerFactory);
     
             try {
-                response = await flowContext.handleResponse(this.requestHandlerType, message.response);
+                response = await flowContext.handleResponse(this.handlerType, message.response);
             } catch (error) {
                 console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);

@@ -3,7 +3,7 @@ import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
 import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
-import { RequestHandlerLambda } from './RequestHandlerLambda';
+import { RequestHandlerLambda, RequestHandlerLambdaBase } from './RequestHandlerLambda';
 import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
@@ -67,7 +67,7 @@ export class LambdaApplication {
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
 
     private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
-    private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambda>();
+    private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambdaBase>();
 
     private readonly requestRouter: RequestRouter;
     private readonly handlerFactory: HandlerFactory;
@@ -97,12 +97,12 @@ export class LambdaApplication {
             });
         });
 
-        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambda, handlerTypeName: string) => {
+        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase, handlerTypeName: string) => {
 
             const lambdaErrors = validateConfiguration(lambda, lambda.resourceName);
             errors = errors.concat(lambdaErrors);
 
-            this.addRequestHandlers(lambda.requestHandlerType, allRequestHandlers);
+            this.addRequestHandlers(lambda.handlerType, allRequestHandlers);
         });
 
         allRequestHandlers.forEach((handler, handlerTypeName) => {
@@ -163,35 +163,23 @@ export class LambdaApplication {
         return response;
     }
 
-    addRequestHandler(lambda: RequestHandlerLambda): LambdaApplication {
-        
-        if (lambda.requestHandlerType === undefined) throw new Error('lambda.requestHandlerType === undefined');
+    addRequestHandler(lambda: RequestHandlerLambdaBase): LambdaApplication {
         
         lambda.services.responsePublisher = 
             lambda.services.responsePublisher ?? this.defaultResponsePublisher;
         lambda.services.functionInstanceRepository = 
             lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;
 
-        this.requestHandlerLambdas.set(lambda.requestHandlerType.name, lambda);
+        this.requestHandlerLambdas.set(lambda.requestType.name, lambda);
         
         return this;
     }
 
-    async handleRequestEvent(handlerType: new () => IActivityRequestHandlerBase, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
-        
-        const requestHandlerLambda = this.getRequestHandlerLambda(handlerType.name);
-
+    async handleRequestEvent(requestType: new () => any, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
+        const requestHandlerLambda = this.requestHandlerLambdas.get(requestType.name);
+        if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
         const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
         return response;
-    }
-
-    private getRequestHandlerLambda(handlerTypeName: string): RequestHandlerLambda {
-
-        const requestHandlerLambda = this.requestHandlerLambdas.get(handlerTypeName);
-
-        if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
-
-        return requestHandlerLambda;
     }
 }
 
@@ -254,16 +242,6 @@ export abstract class TemplateReference {
     }
     abstract get name(): string | undefined;
     abstract get instance(): any;
-}
-
-export class FunctionReference extends TemplateReference {
-    readonly requestHandlerType?: new () => IActivityRequestHandlerBase;
-    constructor(requestHandlerType?: new () => IActivityRequestHandlerBase) {
-        super(FunctionReference);
-        this.requestHandlerType = requestHandlerType;
-    }
-    get name(): string | undefined { return `${this.requestHandlerType?.name}Function`; }
-    get instance(): any { return { 'Ref': this.name }; }
 }
 
 export class ResourceReference extends TemplateReference {
