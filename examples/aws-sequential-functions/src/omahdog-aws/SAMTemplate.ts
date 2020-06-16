@@ -25,23 +25,18 @@ export function validateConfiguration(targetObject: any, errorPrefix = ''): stri
     if ('validate' in targetObject) {        
         const targetObjectErrorMessages: string[] = targetObject.validate();
         errorMessages = 
-            errorMessages.concat(targetObjectErrorMessages.map(errorMessage =>
-                `${errorPrefix}: ${errorMessage}`));
+            errorMessages.concat(targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
     }
     
-    errorMessages = addConfigurationErrors(targetObject, 'parameters', errorPrefix, errorMessages);
-    errorMessages = addConfigurationErrors(targetObject, 'services', errorPrefix, errorMessages);
-    // TODO 14Jun20: Can triggers have configuration errors?
-    errorMessages = addConfigurationErrors(targetObject, 'triggers', errorPrefix, errorMessages);
+    errorMessages = addConfigurationErrors(targetObject['parameters'], errorPrefix, errorMessages);
+    errorMessages = addConfigurationErrors(targetObject['services'], errorPrefix, errorMessages);
 
     return errorMessages;
 }
 
-function addConfigurationErrors(targetObject: any, configProperty: string, errorPrefix: string, errorMessages: string[]): string[] {
+function addConfigurationErrors(configObject: any, errorPrefix: string, errorMessages: string[]): string[] {
 
-    const configObject = targetObject[configProperty];
-
-    for (const configProperty in configObject ?? []) {
+    for (const configProperty in configObject ?? {}) {
         
         const config = configObject[configProperty];
         const configErrorPrefix = `${errorPrefix}.${configProperty}`;
@@ -51,6 +46,33 @@ function addConfigurationErrors(targetObject: any, configProperty: string, error
     }
 
     return errorMessages;
+}
+
+export function getPolicies(targetObject: any): any[] {
+        
+    let policies: any[] = [];
+
+    if ('getPolicies' in targetObject) {        
+        policies = policies.concat(targetObject.getPolicies());
+    }
+    
+    policies = addPolicies(targetObject['parameters'], policies);
+    policies = addPolicies(targetObject['services'], policies);
+
+    return policies;
+}
+
+function addPolicies(configObject: any, policies: any[]): any[] {
+
+    for (const configProperty in configObject ?? {}) {
+        
+        const config = configObject[configProperty];
+        const configPolicies = getPolicies(config);
+
+        policies = policies.concat(configPolicies);
+    }
+
+    return policies;
 }
 
 export function throwErrorIfInvalid(targetObject: any, getPrefix: () => string): void {
@@ -86,6 +108,64 @@ export class LambdaApplication {
 
         let errors: string[] = [];
 
+        const allRequestHandlers = this.getAllRequestHandlers();
+
+        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase) => {
+            const lambdaErrors = validateConfiguration(lambda, lambda.resourceName);
+            errors = errors.concat(lambdaErrors);
+        });
+
+        allRequestHandlers.forEach((handler, handlerTypeName) => {
+            const serviceErrors = validateConfiguration(handler, handlerTypeName);
+            errors = errors.concat(serviceErrors);                        
+        });
+
+        return errors;
+    }
+
+    getPolicies(): Map<string, any> {
+
+        const allPolicies = new Map<string, any>();
+
+        // TODO 16Jun20: Need to deduplicate the policies within a resource using deepEqual
+
+        this.apiControllerLambdas.forEach((lambda) => {
+
+            let policies = new Array<any>();
+
+            const handlerTypes = lambda.apiControllerRoutes.getHandlerTypes();
+            const handlers = new Map<string, IActivityRequestHandlerBase>();
+
+            handlerTypes.forEach(handlerType => {
+                this.addRequestHandlers(handlerType, handlers);
+            });
+
+            handlers.forEach(handler => {
+                policies = policies.concat(getPolicies(handler));
+            });
+
+            allPolicies.set(lambda.resourceName, policies);
+        });
+
+        this.requestHandlerLambdas.forEach(lambda => {
+
+            let policies = getPolicies(lambda);
+
+            const handlers = new Map<string, IActivityRequestHandlerBase>();
+            this.addRequestHandlers(lambda.handlerType, handlers);
+
+            handlers.forEach(handler => {
+                policies = policies.concat(getPolicies(handler));
+            });
+
+            allPolicies.set(lambda.resourceName, policies);
+        });
+
+        return allPolicies;
+    }
+
+    private getAllRequestHandlers(): Map<string, IActivityRequestHandlerBase> {
+
         const allRequestHandlers = new Map<string, IActivityRequestHandlerBase>();
 
         this.apiControllerLambdas.forEach((lambda) => {
@@ -97,20 +177,11 @@ export class LambdaApplication {
             });
         });
 
-        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase, handlerTypeName: string) => {
-
-            const lambdaErrors = validateConfiguration(lambda, lambda.resourceName);
-            errors = errors.concat(lambdaErrors);
-
+        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase) => {
             this.addRequestHandlers(lambda.handlerType, allRequestHandlers);
         });
 
-        allRequestHandlers.forEach((handler, handlerTypeName) => {
-            const serviceErrors = validateConfiguration(handler, handlerTypeName);
-            errors = errors.concat(serviceErrors);                        
-        });
-
-        return errors;
+        return allRequestHandlers;
     }
 
     private addRequestHandlers(requestHandlerType: new () => IActivityRequestHandlerBase, requestHandlers: Map<string, IActivityRequestHandlerBase>): void {

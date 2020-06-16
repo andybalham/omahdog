@@ -50,7 +50,9 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
     
     validate(): string[] {
         const errorMessages = new Array<string>();
+        // TODO 16Jun20: We only need the following if we are to enable asynchronous execution, e.g. from an explicit flag
         if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
+        // TODO 16Jun20: Can we derive if the following is required? E.g. do we have any triggers?
         if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
         return errorMessages;
     }

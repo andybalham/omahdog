@@ -14,5 +14,20 @@ describe('Lambda application tests', () => {
 
         console.log(`Errors:\n- ${errors.join('\n- ')}`);
     });
+
+    it.only('can return policies', () => {
+        
+        // Arrange
+
+        // Act
+
+        const policies = addNumbersApplication.getPolicies();
+
+        // Assert
+
+        policies.forEach((policy, resourceName) => {
+            console.log(`${resourceName}:\n${JSON.stringify(policy)}`);
+        });
+    });
     
 });

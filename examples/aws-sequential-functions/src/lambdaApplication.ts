@@ -90,7 +90,8 @@ export const addNumbersApplication =
         });
 
         application
-            .addApiController(new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes))
+            .addApiController(
+                new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes))
 
             .addRequestHandler(
                 new RequestHandlerLambda(
