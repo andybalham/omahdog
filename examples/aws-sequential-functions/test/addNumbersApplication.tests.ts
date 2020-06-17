@@ -1,3 +1,4 @@
+import YAML from 'yaml';
 import { addNumbersApplication } from '../src/lambdaApplication';
 
 describe('Lambda application tests', () => {
@@ -15,7 +16,7 @@ describe('Lambda application tests', () => {
         console.log(`Errors:\n- ${errors.join('\n- ')}`);
     });
 
-    it.only('can return policies', () => {
+    it('can return policies', () => {
         
         // Arrange
 
@@ -29,5 +30,17 @@ describe('Lambda application tests', () => {
             console.log(`${resourceName}:\n${JSON.stringify(policy)}`);
         });
     });
-    
+
+    it.only('can return function definitions', () => {
+        
+        // Arrange
+
+        // Act
+
+        const functionDefinitions = addNumbersApplication.getFunctionDefinitions();
+
+        // Assert
+
+        console.log(YAML.stringify(functionDefinitions));
+    });    
 });

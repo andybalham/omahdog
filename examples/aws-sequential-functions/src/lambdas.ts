@@ -1,19 +1,17 @@
 import { SNSEvent } from 'aws-lambda';
 
 import { DeadLetterQueueHandler } from './omahdog-aws/DeadLetterQueueHandler';
-
-import { addNumbersExchangeMessagePublisher, addNumbersApplication } from './lambdaApplication';
 import { LambdaExchangeWireTap } from './omahdog-aws/LambdaExchangeWireTap';
+
 import { AddNumbersApiControllerRoutes } from './routing';
-import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
-import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
-import { SumNumbersHandler } from './handlers/SumNumbersHandler';
-import { StoreTotalHandler } from './handlers/StoreTotalHandler';
+import { addNumbersExchangeMessagePublisher, addNumbersApplication } from './lambdaApplication';
+
 import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest } from './exchanges/StoreTotalExchange';
 
+// TODO 17Jun20: This needs to be called as addNumbersApplication.handleDeadLetterQueue
 const deadLetterQueueHandlerInstance = new DeadLetterQueueHandler(addNumbersExchangeMessagePublisher);
 export const deadLetterQueueHandler = async (event: SNSEvent): Promise<void> => {
     await deadLetterQueueHandlerInstance.handle(event);

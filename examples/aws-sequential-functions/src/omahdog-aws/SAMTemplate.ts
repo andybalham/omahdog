@@ -123,6 +123,39 @@ export class LambdaApplication {
         return errors;
     }
 
+    getFunctionDefinitions(): any {
+        
+        // TODO 17Jun20: We need to de-duplicate the policies using deepEqual
+        
+        const allPolicies = this.getPolicies();
+
+        const resources: any = {};
+
+        this.requestHandlerLambdas.forEach(lambda => {
+
+            const resourceDefinition = {
+                Type: 'AWS::Serverless::Function',
+                Properties: {
+                    FunctionName: `TODO-${lambda.resourceName}`,
+                    Handler: `lambdas.${lambda.handlerType.name}`,
+                    Environment: {
+                        Variables: {
+                            FLOW_EXCHANGE_TOPIC: {
+                                Ref: 'TODO'
+                            }
+                        }
+                    },
+                    Policies: allPolicies.get(lambda.resourceName),
+                    Events: [ 'TODO' ]
+                }
+            };
+
+            resources[lambda.resourceName] = resourceDefinition;
+        });
+
+        return resources;
+    }
+
     getPolicies(): Map<string, any> {
 
         const allPolicies = new Map<string, any>();
