@@ -1,9 +1,10 @@
 import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
+import deepEqual from 'deep-equal';
 
 import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
-import { RequestHandlerLambda, RequestHandlerLambdaBase } from './RequestHandlerLambda';
+import { RequestHandlerLambdaBase } from './RequestHandlerLambda';
 import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
@@ -48,31 +49,50 @@ function addConfigurationErrors(configObject: any, errorPrefix: string, errorMes
     return errorMessages;
 }
 
-export function getPolicies(targetObject: any): any[] {
+export function getRequiredPolicies(targetObject: any): any[] {
         
     let policies: any[] = [];
 
-    if ('getPolicies' in targetObject) {        
-        policies = policies.concat(targetObject.getPolicies());
+    const getMethodName = 'getPolicies';
+
+    if (getMethodName in targetObject) {
+        policies = policies.concat(targetObject[getMethodName]());
     }
+
+    function addPolicies(configObject: any, policies: any[]): any[] {
+
+        for (const configProperty in configObject ?? {}) {            
+            const configPolicies = getRequiredPolicies(configObject[configProperty]);
+            policies = policies.concat(configPolicies);
+        }
     
-    policies = addPolicies(targetObject['parameters'], policies);
-    policies = addPolicies(targetObject['services'], policies);
+        return policies;
+    }
+        
+    policies = addPolicies(targetObject.parameters, policies);
+    policies = addPolicies(targetObject.services, policies);
 
     return policies;
 }
 
-function addPolicies(configObject: any, policies: any[]): any[] {
-
-    for (const configProperty in configObject ?? {}) {
+export function getEnvironmentVariables(targetObject: any): any[] {
         
-        const config = configObject[configProperty];
-        const configPolicies = getPolicies(config);
+    let environmentVariables: any[] = [];
 
-        policies = policies.concat(configPolicies);
+    for (const parameterName in targetObject.parameters ?? {}) {
+        const parameter = targetObject.parameters[parameterName];
+        if ('getEnvironmentVariableDefinition' in parameter) {
+            environmentVariables.push(parameter.getEnvironmentVariableDefinition());
+        }
+    }            
+
+    for (const serviceName in targetObject.services ?? {}) {
+        const service = targetObject.services[serviceName];        
+        const serviceEnvironmentVariables = getEnvironmentVariables(service);
+        environmentVariables = environmentVariables.concat(serviceEnvironmentVariables);
     }
 
-    return policies;
+    return environmentVariables;
 }
 
 export function throwErrorIfInvalid(targetObject: any, getPrefix: () => string): void {
@@ -125,76 +145,90 @@ export class LambdaApplication {
 
     getFunctionDefinitions(): any {
         
-        // TODO 17Jun20: We need to de-duplicate the policies using deepEqual
+        // TODO 17Jun20: We need to de-duplicate the following using deepEqual
         
-        const allPolicies = this.getPolicies();
+        // TODO 19Jun20: Need to do triggers
+
+        const policiesByResource = this.getPropertiesByResource(getRequiredPolicies);
+        const environmentVariablesByResource = this.getPropertiesByResource(getEnvironmentVariables);
 
         const resources: any = {};
 
-        this.requestHandlerLambdas.forEach(lambda => {
+        function addFunctionResource(resourceName: string, handlerFunctionName: string): void {
+
+            const resourcePolicies = deduplicate(policiesByResource.get(resourceName));
+            const resourceEnvironmentVariables = deduplicate(environmentVariablesByResource.get(resourceName));
 
             const resourceDefinition = {
                 Type: 'AWS::Serverless::Function',
                 Properties: {
-                    FunctionName: `TODO-${lambda.resourceName}`,
-                    Handler: `lambdas.${lambda.handlerType.name}`,
+                    FunctionName: `TODO-${resourceName}`,
+                    Handler: `lambdas.${handlerFunctionName}`,
                     Environment: {
-                        Variables: {
-                            FLOW_EXCHANGE_TOPIC: {
-                                Ref: 'TODO'
-                            }
-                        }
+                        Variables: {}
                     },
-                    Policies: allPolicies.get(lambda.resourceName),
+                    Policies: resourcePolicies,
                     Events: [ 'TODO' ]
                 }
             };
 
-            resources[lambda.resourceName] = resourceDefinition;
+            (resourceEnvironmentVariables ?? []).forEach((environmentVariable: any) => {
+                const definitionEnvironmentVariables = (resourceDefinition.Properties.Environment.Variables as any);
+                definitionEnvironmentVariables[environmentVariable.name] = environmentVariable.value;
+            });
+
+            resources[resourceName] = resourceDefinition;
+        }
+
+        this.apiControllerLambdas.forEach(lambda => {
+            addFunctionResource(lambda.resourceName, lambda.apiControllerRoutesType.name);            
+        });
+
+        this.requestHandlerLambdas.forEach(lambda => {
+            addFunctionResource(lambda.resourceName, lambda.handlerType.name);            
         });
 
         return resources;
     }
+    
+    getPropertiesByResource(getProperties: (target: object) => any[]): Map<string, any> {
 
-    getPolicies(): Map<string, any> {
-
-        const allPolicies = new Map<string, any>();
-
-        // TODO 16Jun20: Need to deduplicate the policies within a resource using deepEqual
+        const propertiesByResource = new Map<string, any>();
 
         this.apiControllerLambdas.forEach((lambda) => {
 
-            let policies = new Array<any>();
+            let properties = getProperties(lambda);
 
-            const handlerTypes = lambda.apiControllerRoutes.getHandlerTypes();
             const handlers = new Map<string, IActivityRequestHandlerBase>();
 
+            const handlerTypes = lambda.apiControllerRoutes.getHandlerTypes();
             handlerTypes.forEach(handlerType => {
                 this.addRequestHandlers(handlerType, handlers);
             });
 
             handlers.forEach(handler => {
-                policies = policies.concat(getPolicies(handler));
+                properties = properties.concat(getProperties(handler));
             });
 
-            allPolicies.set(lambda.resourceName, policies);
+            propertiesByResource.set(lambda.resourceName, properties);
         });
 
         this.requestHandlerLambdas.forEach(lambda => {
 
-            let policies = getPolicies(lambda);
+            let properties = getProperties(lambda);
 
             const handlers = new Map<string, IActivityRequestHandlerBase>();
+
             this.addRequestHandlers(lambda.handlerType, handlers);
 
             handlers.forEach(handler => {
-                policies = policies.concat(getPolicies(handler));
+                properties = properties.concat(getProperties(handler));
             });
 
-            allPolicies.set(lambda.resourceName, policies);
+            propertiesByResource.set(lambda.resourceName, properties);
         });
 
-        return allPolicies;
+        return propertiesByResource;
     }
 
     private getAllRequestHandlers(): Map<string, IActivityRequestHandlerBase> {
@@ -290,7 +324,7 @@ export class LambdaApplication {
 // TODO 03Jun20: Can we have a value that comes from SSM?
 // TODO 03Jun20: If we do, then we would have to infer the correct policy from it
 
-export interface IConfigurationValue {    
+export interface IConfigurationValue {
     getValue(): string | undefined;
     validate(): string[];
 }
@@ -315,6 +349,14 @@ export class EnvironmentVariable implements IConfigurationValue {
             console.log(`process.env[${this.variableName}] === undefined`);
         }
         return value;
+    }
+
+    getEnvironmentVariableDefinition(): any {
+        const definition: any = {
+            name: this.variableName,
+            value: this.templateReference.instance
+        };
+        return definition;
     }
 
     private generateVariableName(templateReference: TemplateReference): string {
@@ -387,4 +429,21 @@ export class ResourceAttributeReference extends TemplateReference {
 
     get name(): string | undefined { return `${this.resourceName}${this.attributeName}`; }
     get instance(): any { return { 'Fn:Attr': [ this.resourceName, this.attributeName] }; }
+}
+
+function deduplicate(array: any[]): any[] {
+
+    const deduplicatedArray: any[] = [];
+
+    array.forEach(element => {
+        
+        const isDuplicate = 
+            deduplicatedArray.find(deduplicatedElement => deepEqual(deduplicatedElement, element)) !== undefined;
+
+        if (!isDuplicate) {
+            deduplicatedArray.push(element);
+        }
+    });
+
+    return deduplicatedArray;
 }

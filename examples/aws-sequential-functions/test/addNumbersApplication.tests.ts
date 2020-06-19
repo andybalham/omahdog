@@ -1,5 +1,6 @@
 import YAML from 'yaml';
 import { addNumbersApplication } from '../src/lambdaApplication';
+import { getRequiredPolicies } from '../src/omahdog-aws/SAMTemplate';
 
 describe('Lambda application tests', () => {
 
@@ -22,7 +23,7 @@ describe('Lambda application tests', () => {
 
         // Act
 
-        const policies = addNumbersApplication.getPolicies();
+        const policies = addNumbersApplication.getPropertiesByResource(getRequiredPolicies);
 
         // Assert
 
