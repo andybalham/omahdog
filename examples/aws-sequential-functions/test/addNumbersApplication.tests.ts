@@ -1,10 +1,11 @@
 import YAML from 'yaml';
 import { addNumbersApplication } from '../src/lambdaApplication';
 import { getRequiredPolicies } from '../src/omahdog-aws/samTemplateFunctions';
+import { expect } from 'chai';
 
 describe('Lambda application tests', () => {
 
-    it.only('can be validated', () => {
+    it('can be validated', () => {
         
         // Arrange
 
@@ -15,6 +16,8 @@ describe('Lambda application tests', () => {
         // Assert
 
         console.log(`Errors:\n- ${errors.join('\n- ')}`);
+
+        expect(errors).to.be.empty;
     });
 
     it('can return policies', () => {
@@ -32,7 +35,7 @@ describe('Lambda application tests', () => {
         });
     });
 
-    it.only('can return function definitions', () => {
+    it('can return function definitions', () => {
         
         // Arrange
 

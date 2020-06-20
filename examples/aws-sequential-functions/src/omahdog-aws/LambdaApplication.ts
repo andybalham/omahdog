@@ -212,7 +212,8 @@ export class LambdaApplication {
         requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
         initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void): LambdaApplication {
 
-        const lambda = new RequestHandlerLambda(functionReference, requestType, responseType, handlerType, initialise);
+        const lambda = 
+            new RequestHandlerLambda(functionReference, requestType, responseType, handlerType, initialise);
         
         lambda.services.responsePublisher = 
             lambda.services.responsePublisher ?? this.defaultResponsePublisher;

@@ -6,8 +6,6 @@ import { LambdaApplication } from './omahdog-aws/LambdaApplication';
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
-import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
-import { ApiControllerLambda } from './omahdog-aws/ApiControllerLambda';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
@@ -20,8 +18,7 @@ import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoN
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 import { ResourceReference, ResourceAttributeReference } from './omahdog-aws/TemplateReferences';
-import { addThreeNumbersHandler } from './lambdas';
-import { EnvironmentVariable } from './omahdog-aws/ConfigurationValues';
+import { EnvironmentVariable, ConstantValue } from './omahdog-aws/ConfigurationValues';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -49,7 +46,7 @@ const handlerFactory = new HandlerFactory()
         handler.services.dynamoDb = new DynamoDBCrudService(templateReferences.addNumbersResultTable, dynamoDbClient);
     })
     .setInitialiser(AddThreeNumbersHandler, handler => {
-        handler.parameters.totalDescription = EnvironmentVariable.newValue('TOTAL_DESCRIPTION', 'Life, the universe etc.');
+        handler.parameters.totalDescription = new ConstantValue('Life, the universe etc.');
     })
 
     .setInitialiser(SumNumbersLambdaProxy, handler => {
@@ -95,13 +92,11 @@ export const addNumbersApplication =
             repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
         });
 
-        // TODO 20Jun20: Should we allow environment variables to hold constants?
-
         application
             .addApiController(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)
 
-            .addRequestHandler(
-                templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
+            .addRequestHandler(templateReferences.addThreeNumbersFunction, 
+                AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
             .addRequestHandler(
                 templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler)
             .addRequestHandler(

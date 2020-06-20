@@ -21,9 +21,6 @@ export class FlowContext {
     private _rootHandlerTypeName: string;
     get rootHandlerTypeName(): string { return this._rootHandlerTypeName; }
 
-    // TODO 09May20: Get rid of the factory methods and pass the flowInstance in when resuming
-    // TODO 10May20: Also, always pass in the request router and handler factory
-
     static newContext(requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
         return new FlowContext(undefined, undefined, undefined, requestRouter, handlerFactory);
     }

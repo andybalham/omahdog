@@ -40,6 +40,8 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
         initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void) {
 
+        // TODO 20Jun20: How can we add instance-specific configuration for the handler?
+        
         super(functionReference.name ?? '<unknown>');
 
         this.requestType = requestType;

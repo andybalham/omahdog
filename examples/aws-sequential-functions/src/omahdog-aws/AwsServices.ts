@@ -36,7 +36,7 @@ export class DynamoDBCrudService extends AwsService {
         if (tableReference === undefined) {
             this.parameters.tableName = tableNameValue ?? this.parameters.tableName;
         } else {
-            this.parameters.tableName = tableNameValue ?? EnvironmentVariable.newReference(tableReference);            
+            this.parameters.tableName = tableNameValue ?? new EnvironmentVariable(tableReference);            
         }
     }
 
@@ -85,7 +85,7 @@ export class SNSPublishMessageService extends AwsService {
 
             this.parameters.topicArnValue = 
                 topicArnValue ?? 
-                    EnvironmentVariable.newReference(
+                    new EnvironmentVariable(
                         new ResourceReference((topicNameReference as ResourceAttributeReference).resourceName));
         }
     }
@@ -128,7 +128,8 @@ export class LambdaInvokeService extends AwsService {
         if (functionReference === undefined) {
             this.parameters.functionNameValue = functionNameValue;
         } else {
-            this.parameters.functionNameValue = functionNameValue ?? EnvironmentVariable.newReference(functionReference);
+            this.parameters.functionNameValue = 
+                functionNameValue ?? new EnvironmentVariable(functionReference);
         }
     }
     

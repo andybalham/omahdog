@@ -8,31 +8,18 @@ export interface IConfigurationValue {
     validate(): string[];
 }
 
-// TODO 20Jun20: We can also have environment variables that are constants
-    
 export class EnvironmentVariable implements IConfigurationValue {
     
-    readonly templateReference?: TemplateReference;
+    readonly templateReference: TemplateReference;
     readonly variableName: string;
-    readonly variableValue?: string;
 
-    static newReference(templateReference: TemplateReference): EnvironmentVariable {
-        return new EnvironmentVariable(templateReference);
-    }
-
-    static newValue(variableName: string, variableValue: string): EnvironmentVariable {
-        return new EnvironmentVariable(undefined, variableName, variableValue);
-    }
-
-    private constructor(templateReference?: TemplateReference, variableName?: string, variableValue?: string) {
+    constructor(templateReference: TemplateReference, variableName?: string) {
         this.templateReference = templateReference;        
         this.variableName = variableName ?? this.generateVariableName(templateReference);
-        this.variableValue = variableValue;
     }
     
     validate(): string[] {
-        return (this.templateReference === undefined) && (this.variableValue === undefined) 
-            ? ['(this.templateReference === undefined) && (this.variableValue === undefined)'] : [];
+        return (this.templateReference === undefined) ? ['this.templateReference === undefined'] : [];
     }
     
     getValue(): string | undefined {
@@ -46,13 +33,13 @@ export class EnvironmentVariable implements IConfigurationValue {
     getEnvironmentVariableDefinition(): any {
         const definition: any = {
             name: this.variableName,
-            value: this.templateReference === undefined ? this.variableValue : this.templateReference.instance
+            value: this.templateReference?.instance
         };
         return definition;
     }
 
-    private generateVariableName(templateReference?: TemplateReference): string {
-        const variableName = templateReference?.name?.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
+    private generateVariableName(templateReference: TemplateReference): string {
+        const variableName = templateReference.name?.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
         return variableName ?? 'UNDEFINED';
     }
 }
