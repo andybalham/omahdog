@@ -5,6 +5,7 @@ import { SumNumbersHandler } from '../src/handlers/SumNumbersHandler';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from '../src/exchanges/AddThreeNumbersExchange';
 import { AddThreeNumbersHandler } from '../src/handlers/AddThreeNumbersHandler';
 import { StoreTotalRequest, StoreTotalResponse } from '../src/exchanges/StoreTotalExchange';
+import { ConstantValue } from '../src/omahdog-aws/ConfigurationValues';
 
 describe('AddThreeNumbersHandler tests', () => {
 
@@ -14,8 +15,9 @@ describe('AddThreeNumbersHandler tests', () => {
             .register(SumNumbersRequest, SumNumbersResponse, SumNumbersHandler);
 
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(AddThreeNumbersHandler, handler => {
-                handler.totalDescription = 'The answer to life, the universe, and everything';
+            .setInitialiser(AddThreeNumbersHandler, handler => {
+                handler.parameters.totalDescription = 
+                    new ConstantValue('The answer to life, the universe, and everything');
             });
 
         const flowContext = FlowContext.newContext(requestRouter, handlerFactory);

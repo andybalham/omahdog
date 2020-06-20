@@ -1,10 +1,10 @@
 import YAML from 'yaml';
 import { addNumbersApplication } from '../src/lambdaApplication';
-import { getRequiredPolicies } from '../src/omahdog-aws/SAMTemplate';
+import { getRequiredPolicies } from '../src/omahdog-aws/samTemplateFunctions';
 
 describe('Lambda application tests', () => {
 
-    it('can be validated', () => {
+    it.only('can be validated', () => {
         
         // Arrange
 

@@ -5,7 +5,9 @@ import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
-import { LambdaBase, throwErrorIfInvalid, TemplateReference } from './SAMTemplate';
+import { throwErrorIfInvalid } from './samTemplateFunctions';
+import { LambdaBase } from './LambdaBase';
+import { TemplateReference } from './TemplateReferences';
 
 class RequestHandlerLambdaServices {
     responsePublisher: IExchangeMessagePublisher

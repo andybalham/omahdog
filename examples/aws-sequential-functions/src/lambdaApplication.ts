@@ -2,7 +2,7 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { Lambda, SNS } from 'aws-sdk';
 
 import { HandlerFactory } from './omahdog/FlowContext';
-import { ResourceReference, ResourceAttributeReference, LambdaApplication } from './omahdog-aws/SAMTemplate';
+import { LambdaApplication } from './omahdog-aws/LambdaApplication';
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
@@ -19,6 +19,9 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
+import { ResourceReference, ResourceAttributeReference } from './omahdog-aws/TemplateReferences';
+import { addThreeNumbersHandler } from './lambdas';
+import { EnvironmentVariable } from './omahdog-aws/ConfigurationValues';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -42,32 +45,35 @@ export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublishe
 
 const handlerFactory = new HandlerFactory()
 
-    .addInitialiser(StoreTotalHandler, handler => {
+    .setInitialiser(StoreTotalHandler, handler => {
         handler.services.dynamoDb = new DynamoDBCrudService(templateReferences.addNumbersResultTable, dynamoDbClient);
     })
+    .setInitialiser(AddThreeNumbersHandler, handler => {
+        handler.parameters.totalDescription = EnvironmentVariable.newValue('TOTAL_DESCRIPTION', 'Life, the universe etc.');
+    })
 
-    .addInitialiser(SumNumbersLambdaProxy, handler => {
+    .setInitialiser(SumNumbersLambdaProxy, handler => {
         handler.services.lambda = new LambdaInvokeService(templateReferences.sumNumbersFunction, lambdaClient);
     })
-    .addInitialiser(StoreTotalLambdaProxy, handler => {
+    .setInitialiser(StoreTotalLambdaProxy, handler => {
         handler.services.lambda = new LambdaInvokeService(templateReferences.storeTotalFunction, lambdaClient);
     })
-    .addInitialiser(AddTwoNumbersLambdaProxy, handler => {
+    .setInitialiser(AddTwoNumbersLambdaProxy, handler => {
         handler.services.lambda = new LambdaInvokeService(templateReferences.addTwoNumbersFunction, lambdaClient);
     })
-    .addInitialiser(AddThreeNumbersLambdaProxy, handler => {
+    .setInitialiser(AddThreeNumbersLambdaProxy, handler => {
         handler.services.lambda = new LambdaInvokeService(templateReferences.addThreeNumbersFunction, lambdaClient);
     })
     
-    .addInitialiser(AddTwoNumbersMessageProxy, handler => {
+    .setInitialiser(AddTwoNumbersMessageProxy, handler => {
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
         // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
-    .addInitialiser(AddThreeNumbersMessageProxy, handler => {
+    .setInitialiser(AddThreeNumbersMessageProxy, handler => {
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
         // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
-    .addInitialiser(StoreTotalMessageProxy, handler => {
+    .setInitialiser(StoreTotalMessageProxy, handler => {
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
         // TODO 31May20: The following would need to cause the right MessageType filter to generate, e.g. AddThreeNumbersHandler:Response
         // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
@@ -89,22 +95,19 @@ export const addNumbersApplication =
             repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
         });
 
+        // TODO 20Jun20: Should we allow environment variables to hold constants?
+
         application
-            .addApiController(
-                new ApiControllerLambda(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes))
+            .addApiController(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)
 
             .addRequestHandler(
-                new RequestHandlerLambda(
-                    templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler))
+                templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
             .addRequestHandler(
-                new RequestHandlerLambda(
-                    templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler))
+                templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler)
             .addRequestHandler(
-                new RequestHandlerLambda(
-                    templateReferences.sumNumbersFunction, SumNumbersRequest, SumNumbersResponse, SumNumbersHandler))
+                templateReferences.sumNumbersFunction, SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)
             .addRequestHandler(
-                new RequestHandlerLambda(
-                    templateReferences.storeTotalFunction, StoreTotalRequest, StoreTotalResponse, StoreTotalHandler))
+                templateReferences.storeTotalFunction, StoreTotalRequest, StoreTotalResponse, StoreTotalHandler)
         ;
     });
 

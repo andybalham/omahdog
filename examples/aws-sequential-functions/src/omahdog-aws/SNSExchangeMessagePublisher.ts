@@ -2,7 +2,7 @@ import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { PublishInput } from 'aws-sdk/clients/sns';
 import { ExchangeResponseMessage, ExchangeRequestMessage } from './Exchange';
 import { SNSPublishMessageService } from './AwsServices';
-import { throwErrorIfInvalid } from './SAMTemplate';
+import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 // TODO 03May20: Have a set of tests for this
 export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {

@@ -1,5 +1,6 @@
 import { FlowContext, IActivityRequestHandler } from '../omahdog/FlowContext';
 import { DynamoDBCrudHandler } from '../omahdog-aws/AwsHandlers';
+import { throwErrorIfInvalid } from '../omahdog-aws/samTemplateFunctions';
 
 import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
 
@@ -7,7 +8,7 @@ export class StoreTotalHandler extends DynamoDBCrudHandler implements IActivityR
 
     async handle(flowContext: FlowContext, request: StoreTotalRequest): Promise<StoreTotalResponse> {
 
-        this.throwErrorIfInvalid(() => StoreTotalHandler.name);
+        throwErrorIfInvalid(this, () => StoreTotalHandler.name);
 
         const id = await this.put({result: request});
 

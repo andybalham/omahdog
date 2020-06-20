@@ -1,6 +1,6 @@
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { DynamoDBCrudService } from './AwsServices';
-import { throwErrorIfInvalid } from './SAMTemplate';
+import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     

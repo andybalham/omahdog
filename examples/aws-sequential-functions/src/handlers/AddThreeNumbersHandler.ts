@@ -1,16 +1,29 @@
 import { FlowRequestHandler } from '../omahdog/FlowRequestHandler';
 import { FlowBuilder } from '../omahdog/FlowBuilder';
 import { FlowDefinition } from '../omahdog/FlowDefinition';
+
+import { IConfigurationValue } from '../omahdog-aws/ConfigurationValues';
+
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from '../exchanges/AddThreeNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from '../exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from '../exchanges/StoreTotalExchange';
 
+class AddThreeNumbersHandlerParameters {
+    totalDescription: IConfigurationValue;
+}
+
 export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState> {
     
-    totalDescription = 'Total';
+    parameters = new AddThreeNumbersHandlerParameters;
 
-    constructor() {        
+    constructor() {
         super(AddThreeNumbersHandler, AddThreeNumbersResponse, AddThreeNumbersState);
+    }
+
+    validate(): string[] {
+        const errorMessages: string[] = [];
+        if (this.parameters.totalDescription === undefined) errorMessages.push('this.parameters.totalDescription === undefined');
+        return errorMessages;
     }
 
     buildFlow(flowBuilder: FlowBuilder<AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersState>): 
@@ -38,7 +51,7 @@ export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRe
 
             .perform('Store_total', StoreTotalRequest, StoreTotalResponse,
                 (req, state) => { 
-                    req.description = this.totalDescription; 
+                    req.description = this.parameters.totalDescription.getValue() ?? 'Total'; 
                     req.total = state.total;
                     req.startTime = state.startTime;
                     req.endTime = new Date();

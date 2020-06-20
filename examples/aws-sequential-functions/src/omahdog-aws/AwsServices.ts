@@ -1,6 +1,7 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
-import { IConfigurationValue, TemplateReference, EnvironmentVariable, ResourceAttributeReference, ResourceReference } from './SAMTemplate';
+import { TemplateReference, ResourceReference, ResourceAttributeReference } from './TemplateReferences';
+import { IConfigurationValue, EnvironmentVariable } from './ConfigurationValues';
 
 export abstract class AwsService {
 
@@ -35,7 +36,7 @@ export class DynamoDBCrudService extends AwsService {
         if (tableReference === undefined) {
             this.parameters.tableName = tableNameValue ?? this.parameters.tableName;
         } else {
-            this.parameters.tableName = tableNameValue ?? new EnvironmentVariable(tableReference);            
+            this.parameters.tableName = tableNameValue ?? EnvironmentVariable.newReference(tableReference);            
         }
     }
 
@@ -51,7 +52,6 @@ export class DynamoDBCrudService extends AwsService {
     }
 
     getPolicies(): any[] {
-        // TODO 13Jun20: We would also need to take into account any policies required to access the table name, e.g. SSM
         return [
             {
                 'DynamoDBCrudPolicy': { 'TableName' : this.templateReference?.instance }
@@ -78,11 +78,15 @@ export class SNSPublishMessageService extends AwsService {
 
         if ((topicNameReference === undefined)
             || (topicNameReference.typeName !== 'ResourceAttributeReference')) {
+
             this.parameters.topicArnValue = topicArnValue;
+
         } else {
+
             this.parameters.topicArnValue = 
                 topicArnValue ?? 
-                    new EnvironmentVariable(new ResourceReference((topicNameReference as ResourceAttributeReference).resourceName));
+                    EnvironmentVariable.newReference(
+                        new ResourceReference((topicNameReference as ResourceAttributeReference).resourceName));
         }
     }
 
@@ -124,7 +128,7 @@ export class LambdaInvokeService extends AwsService {
         if (functionReference === undefined) {
             this.parameters.functionNameValue = functionNameValue;
         } else {
-            this.parameters.functionNameValue = functionNameValue ?? new EnvironmentVariable(functionReference);
+            this.parameters.functionNameValue = functionNameValue ?? EnvironmentVariable.newReference(functionReference);
         }
     }
     

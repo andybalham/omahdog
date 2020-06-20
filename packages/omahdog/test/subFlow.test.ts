@@ -38,7 +38,7 @@ describe('Handlers', () => {
             .register(ChildFlowRequest, ChildFlowResponse, ChildFlowHandler)
             ;
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(AsyncActivityHandler, handler => {
+            .setInitialiser(AsyncActivityHandler, handler => {
                 handler.outputRequest = (request): void => { asyncRequestJSON = JSON.stringify(request); };
             })
             ;

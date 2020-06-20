@@ -1,7 +1,6 @@
 import uuid = require('uuid');
 
 import { DynamoDBCrudService } from './AwsServices';
-import { throwErrorIfInvalid } from './SAMTemplate';
 
 export abstract class DynamoDBCrudHandler {
 
@@ -21,10 +20,6 @@ export abstract class DynamoDBCrudHandler {
         await this.services.dynamoDb.client?.put(params).promise();
 
         return item.id;
-    }
-
-    throwErrorIfInvalid(getPrefix: () => string): void {
-        throwErrorIfInvalid(this, getPrefix);
     }
 }
 

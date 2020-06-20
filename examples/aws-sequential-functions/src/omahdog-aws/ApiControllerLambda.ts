@@ -1,7 +1,8 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { LambdaBase, TemplateReference } from './SAMTemplate';
+import { TemplateReference } from './TemplateReferences';
+import { LambdaBase } from './LambdaBase';
 
 export class ApiControllerLambda extends LambdaBase {
 

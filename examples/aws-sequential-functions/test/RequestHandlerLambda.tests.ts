@@ -12,7 +12,8 @@ import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
 import { IResumableRequestHandler } from '../src/omahdog/FlowRequestHandler';
 import { SNSPublishMessageService } from '../src/omahdog-aws/AwsServices';
-import { ConstantValue, ResourceReference } from '../src/omahdog-aws/SAMTemplate';
+import { ConstantValue } from '../src/omahdog-aws/ConfigurationValues';
+import { ResourceReference } from '../src/omahdog-aws/TemplateReferences';
 
 class TestRequest {
     input: number
@@ -68,7 +69,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.request = request;
                 handler.response = (): TestResponse => response;
             });
@@ -139,7 +140,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.request = request;
                 handler.response = (): AsyncResponse => response;
             });
@@ -210,7 +211,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.response = (): TestResponse => response;
             });
         const sns = new AWS.SNS();        
@@ -298,7 +299,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.request = request;
                 handler.response = (): TestResponse => {throw new Error('Something went bandy!');};
             });
@@ -367,7 +368,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.response = (): TestResponse => {throw new Error('Something went bandy!');};
             });
         const sns = new AWS.SNS();        
@@ -457,7 +458,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.request = request;
                 handler.response = (): TestResponse => response;
             });
@@ -520,7 +521,7 @@ describe('RequestHandlerLambda tests', () => {
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
         const handlerFactory = new HandlerFactory()
-            .addInitialiser(TestActivityRequestHandler, handler => {
+            .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.request = request;
                 handler.response = (): AsyncResponse => response;
             });

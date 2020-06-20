@@ -1,106 +1,15 @@
 import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
 import deepEqual from 'deep-equal';
 
-import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
+import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory, IActivityRequestHandler } from '../omahdog/FlowContext';
 
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
-import { RequestHandlerLambdaBase } from './RequestHandlerLambda';
+import { RequestHandlerLambdaBase, RequestHandlerLambda } from './RequestHandlerLambda';
 import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
-
-export abstract class LambdaBase {
-    
-    readonly resourceName: string;
-    functionNameTemplate: string;
-
-    constructor(resourceName: string) {
-        this.resourceName = resourceName;
-    }
-}
-
-export function validateConfiguration(targetObject: any, errorPrefix = ''): string[] {
-        
-    let errorMessages: string[] = [];
-
-    if ('validate' in targetObject) {        
-        const targetObjectErrorMessages: string[] = targetObject.validate();
-        errorMessages = 
-            errorMessages.concat(targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
-    }
-    
-    errorMessages = addConfigurationErrors(targetObject['parameters'], errorPrefix, errorMessages);
-    errorMessages = addConfigurationErrors(targetObject['services'], errorPrefix, errorMessages);
-
-    return errorMessages;
-}
-
-function addConfigurationErrors(configObject: any, errorPrefix: string, errorMessages: string[]): string[] {
-
-    for (const configProperty in configObject ?? {}) {
-        
-        const config = configObject[configProperty];
-        const configErrorPrefix = `${errorPrefix}.${configProperty}`;
-        const configErrorMessages = validateConfiguration(config, configErrorPrefix);
-
-        errorMessages = errorMessages.concat(configErrorMessages);
-    }
-
-    return errorMessages;
-}
-
-export function getRequiredPolicies(targetObject: any): any[] {
-        
-    let policies: any[] = [];
-
-    const getMethodName = 'getPolicies';
-
-    if (getMethodName in targetObject) {
-        policies = policies.concat(targetObject[getMethodName]());
-    }
-
-    function addPolicies(configObject: any, policies: any[]): any[] {
-
-        for (const configProperty in configObject ?? {}) {            
-            const configPolicies = getRequiredPolicies(configObject[configProperty]);
-            policies = policies.concat(configPolicies);
-        }
-    
-        return policies;
-    }
-        
-    policies = addPolicies(targetObject.parameters, policies);
-    policies = addPolicies(targetObject.services, policies);
-
-    return policies;
-}
-
-export function getEnvironmentVariables(targetObject: any): any[] {
-        
-    let environmentVariables: any[] = [];
-
-    for (const parameterName in targetObject.parameters ?? {}) {
-        const parameter = targetObject.parameters[parameterName];
-        if ('getEnvironmentVariableDefinition' in parameter) {
-            environmentVariables.push(parameter.getEnvironmentVariableDefinition());
-        }
-    }            
-
-    for (const serviceName in targetObject.services ?? {}) {
-        const service = targetObject.services[serviceName];        
-        const serviceEnvironmentVariables = getEnvironmentVariables(service);
-        environmentVariables = environmentVariables.concat(serviceEnvironmentVariables);
-    }
-
-    return environmentVariables;
-}
-
-export function throwErrorIfInvalid(targetObject: any, getPrefix: () => string): void {
-    const errorMessages = validateConfiguration(targetObject);
-    if (errorMessages.length > 0) {
-        throw new Error(`${getPrefix()} is not valid:\n${errorMessages.join('\n')}`);
-    }
-}
+import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables } from './samTemplateFunctions';
+import { TemplateReference } from './TemplateReferences';
 
 export class LambdaApplication {
 
@@ -144,9 +53,7 @@ export class LambdaApplication {
     }
 
     getFunctionDefinitions(): any {
-        
-        // TODO 17Jun20: We need to de-duplicate the following using deepEqual
-        
+
         // TODO 19Jun20: Need to do triggers
 
         const policiesByResource = this.getPropertiesByResource(getRequiredPolicies);
@@ -288,8 +195,8 @@ export class LambdaApplication {
         return subHandlers;
     }
 
-    addApiController(lambda: ApiControllerLambda): LambdaApplication {
-        if (lambda.apiControllerRoutesType === undefined) throw new Error('lambda.apiControllerRoutesType === undefined');
+    addApiController(apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void): LambdaApplication {
+        const lambda = new ApiControllerLambda(apiGatewayReference, apiControllerRoutesType, initialise);
         this.apiControllerLambdas.set(lambda.apiControllerRoutesType.name, lambda);
         return this;
     }
@@ -301,7 +208,11 @@ export class LambdaApplication {
         return response;
     }
 
-    addRequestHandler(lambda: RequestHandlerLambdaBase): LambdaApplication {
+    addRequestHandler<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(functionReference: TemplateReference, 
+        requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
+        initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void): LambdaApplication {
+
+        const lambda = new RequestHandlerLambda(functionReference, requestType, responseType, handlerType, initialise);
         
         lambda.services.responsePublisher = 
             lambda.services.responsePublisher ?? this.defaultResponsePublisher;
@@ -309,7 +220,7 @@ export class LambdaApplication {
             lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;
 
         this.requestHandlerLambdas.set(lambda.requestType.name, lambda);
-        
+
         return this;
     }
 
@@ -319,116 +230,6 @@ export class LambdaApplication {
         const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
         return response;
     }
-}
-
-// TODO 03Jun20: Can we have a value that comes from SSM?
-// TODO 03Jun20: If we do, then we would have to infer the correct policy from it
-
-export interface IConfigurationValue {
-    getValue(): string | undefined;
-    validate(): string[];
-}
-
-export class EnvironmentVariable implements IConfigurationValue {
-    
-    readonly templateReference: TemplateReference;
-    readonly variableName: string;
-
-    constructor(templateReference: TemplateReference, variableName?: string) {
-        this.templateReference = templateReference;
-        this.variableName = variableName ?? this.generateVariableName(templateReference);
-    }
-    
-    validate(): string[] {
-        return this.templateReference === undefined ? ['this.templateReference === undefined'] : [];
-    }
-    
-    getValue(): string | undefined {
-        const value = process.env[this.variableName];
-        if (value === undefined) {
-            console.log(`process.env[${this.variableName}] === undefined`);
-        }
-        return value;
-    }
-
-    getEnvironmentVariableDefinition(): any {
-        const definition: any = {
-            name: this.variableName,
-            value: this.templateReference.instance
-        };
-        return definition;
-    }
-
-    private generateVariableName(templateReference: TemplateReference): string {
-        const variableName = templateReference.name?.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
-        return variableName ?? 'undefined';
-    }
-}
-
-export class ConstantValue implements IConfigurationValue {
-    private readonly constantValue?: string;
-    
-    constructor(constantValue?: string) {
-        this.constantValue = constantValue;
-    }
-    
-    validate(): string[] {
-        return this.constantValue === undefined ? ['this.constantValue === undefined'] : [];
-    }
-
-    getValue(): string | undefined {
-        return this.constantValue;
-    }
-}
-
-export abstract class TemplateReference {
-    readonly typeName: string;
-    constructor(type: new () => TemplateReference) {
-        this.typeName = type.name;
-    }
-    abstract get name(): string | undefined;
-    abstract get instance(): any;
-}
-
-export class ResourceReference extends TemplateReference {
-    
-    readonly resourceName?: string;
-    constructor(resourceName?: string) {
-        super(ResourceReference);
-        this.resourceName = resourceName;
-    }
-
-    get name(): string | undefined { return this.resourceName; }
-    get instance(): any { return { 'Ref': this.name }; }
-
-    attribute(attributeName: string): ResourceAttributeReference {
-        return new ResourceAttributeReference(this.resourceName, attributeName);
-    }
-}
-
-export class ParameterReference extends TemplateReference {
-    readonly parameterName?: string;
-    constructor(parameterName?: string) {
-        super(ParameterReference);
-        this.parameterName = parameterName;
-    }
-    get name(): string | undefined { return this.parameterName; }
-    get instance(): any { return { 'Ref': this.name }; }
-}
-
-export class ResourceAttributeReference extends TemplateReference {
-
-    readonly resourceName?: string;
-    readonly attributeName?: string;
-
-    constructor(resourceName?: string, attributeName?: string) {
-        super(ResourceAttributeReference);
-        this.resourceName = resourceName;
-        this.attributeName = attributeName;
-    }
-
-    get name(): string | undefined { return `${this.resourceName}${this.attributeName}`; }
-    get instance(): any { return { 'Fn:Attr': [ this.resourceName, this.attributeName] }; }
 }
 
 function deduplicate(array: any[]): any[] {

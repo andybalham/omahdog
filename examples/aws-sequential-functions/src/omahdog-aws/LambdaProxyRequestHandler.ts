@@ -4,7 +4,7 @@ import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { LambdaInvokeService } from './AwsServices';
-import { throwErrorIfInvalid } from './SAMTemplate';
+import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     

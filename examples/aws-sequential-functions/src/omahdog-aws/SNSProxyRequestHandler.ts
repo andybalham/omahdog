@@ -2,7 +2,7 @@ import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ExchangeRequestMessage } from './Exchange';
 import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
-import { throwErrorIfInvalid } from './SAMTemplate';
+import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
