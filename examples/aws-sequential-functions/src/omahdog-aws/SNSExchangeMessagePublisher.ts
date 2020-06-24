@@ -7,8 +7,6 @@ import { throwErrorIfInvalid } from './samTemplateFunctions';
 // TODO 03May20: Have a set of tests for this
 export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
     
-    isNullImplementation: boolean
-
     services = {
         exchangeTopic: new SNSPublishMessageService
     }

@@ -6,9 +6,6 @@ import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-    // TODO 30May20: Need to be able to define that the root handler will need to subscribe for response events
-    triggers: any;
-
     services = {
         requestPublisher: new SNSExchangeMessagePublisher
     }
@@ -17,6 +14,24 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     constructor(requestType: new() => TReq) {
         this.requestTypeName = requestType.name;
+    }
+
+    getEvents(rootHandlerTypeName: string): any[] {
+
+        const responseEvent = {
+            Type: 'SNS',
+            Properties: {
+                Topic: undefined,
+                FilterPolicy: {
+                    MessageType: new Array<string>()
+                }
+            },
+        };
+
+        responseEvent.Properties.Topic = this.services?.requestPublisher.services.exchangeTopic.parameters.topicArnValue?.getTemplateValue();
+        responseEvent.Properties.FilterPolicy.MessageType = [`${rootHandlerTypeName}:Response`];
+
+        return [responseEvent];
     }
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {

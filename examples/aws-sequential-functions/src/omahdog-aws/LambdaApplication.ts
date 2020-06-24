@@ -8,7 +8,7 @@ import { RequestHandlerLambdaBase, RequestHandlerLambda } from './RequestHandler
 import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
-import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables } from './samTemplateFunctions';
+import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
 import { TemplateReference } from './TemplateReferences';
 
 export class LambdaApplication {
@@ -56,8 +56,9 @@ export class LambdaApplication {
 
         // TODO 19Jun20: Need to do triggers
 
-        const policiesByResource = this.getPropertiesByResource(getRequiredPolicies);
-        const environmentVariablesByResource = this.getPropertiesByResource(getEnvironmentVariables);
+        const policiesByResource = this.getFunctionProperties(getRequiredPolicies);
+        const environmentVariablesByResource = this.getFunctionProperties(getEnvironmentVariables);
+        const eventsByResource = this.getFunctionEvents();
 
         const resources: any = {};
 
@@ -65,6 +66,7 @@ export class LambdaApplication {
 
             const resourcePolicies = deduplicate(policiesByResource.get(resourceName));
             const resourceEnvironmentVariables = deduplicate(environmentVariablesByResource.get(resourceName));
+            const resourceEvents = eventsByResource.get(resourceName);
 
             const resourceDefinition = {
                 Type: 'AWS::Serverless::Function',
@@ -75,7 +77,7 @@ export class LambdaApplication {
                         Variables: {}
                     },
                     Policies: resourcePolicies,
-                    Events: [ 'TODO' ]
+                    Events: resourceEvents
                 }
             };
 
@@ -98,7 +100,7 @@ export class LambdaApplication {
         return resources;
     }
     
-    getPropertiesByResource(getProperties: (target: object) => any[]): Map<string, any> {
+    getFunctionProperties(getProperties: (target: object) => any[]): Map<string, any> {
 
         const propertiesByResource = new Map<string, any>();
 
@@ -136,6 +138,35 @@ export class LambdaApplication {
         });
 
         return propertiesByResource;
+    }
+    
+    getFunctionEvents(): Map<string, any> {
+
+        const functionEvents = new Map<string, any>();
+
+        this.apiControllerLambdas.forEach((lambda) => {
+            // TODO 24Jun20: We only need to use the route to get the events for API controllers
+        });
+
+        this.requestHandlerLambdas.forEach(lambda => {
+
+            const handlers = new Map<string, IActivityRequestHandlerBase>();
+            this.addRequestHandlers(lambda.handlerType, handlers);
+
+            // TODO 24Jun20: Need to get the events from the lambda too, e.g. to trigger via message
+            let events = lambda.getEvents();
+
+            handlers.forEach(handler => {
+                const handlerEvents = getEvents(handler, lambda.handlerType.name);
+                events = events.concat(handlerEvents);
+            });
+
+            // TODO 24Jun20: We need to merge and name SNS events
+
+            functionEvents.set(lambda.resourceName, events);
+        });
+
+        return functionEvents;
     }
 
     private getAllRequestHandlers(): Map<string, IActivityRequestHandlerBase> {

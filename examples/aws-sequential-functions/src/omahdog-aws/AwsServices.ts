@@ -41,7 +41,7 @@ export class DynamoDBCrudService extends AwsService {
     }
 
     get tableName(): string | undefined {
-        return this.parameters.tableName?.getValue();
+        return this.parameters.tableName?.evaluate();
     }
 
     validate(): string[] {
@@ -91,7 +91,7 @@ export class SNSPublishMessageService extends AwsService {
     }
 
     get topicArn(): string | undefined {
-        return this.parameters.topicArnValue?.getValue();
+        return this.parameters.topicArnValue?.evaluate();
     }
 
     validate(): string[] {
@@ -134,7 +134,7 @@ export class LambdaInvokeService extends AwsService {
     }
     
     get functionName(): string | undefined {
-        return this.parameters.functionNameValue?.getValue();
+        return this.parameters.functionNameValue?.evaluate();
     }
 
     validate(): string[] {

@@ -1,6 +1,6 @@
 import YAML from 'yaml';
 import { addNumbersApplication } from '../src/lambdaApplication';
-import { getRequiredPolicies } from '../src/omahdog-aws/samTemplateFunctions';
+import { getRequiredPolicies, getEnvironmentVariables } from '../src/omahdog-aws/samTemplateFunctions';
 import { expect } from 'chai';
 
 describe('Lambda application tests', () => {
@@ -26,11 +26,41 @@ describe('Lambda application tests', () => {
 
         // Act
 
-        const policies = addNumbersApplication.getPropertiesByResource(getRequiredPolicies);
+        const policies = addNumbersApplication.getFunctionProperties(getRequiredPolicies);
 
         // Assert
 
         policies.forEach((policy, resourceName) => {
+            console.log(`${resourceName}:\n${JSON.stringify(policy)}`);
+        });
+    });
+
+    it('can return environment variables', () => {
+        
+        // Arrange
+
+        // Act
+
+        const environmentVariables = addNumbersApplication.getFunctionProperties(getEnvironmentVariables);
+
+        // Assert
+
+        environmentVariables.forEach((policy, resourceName) => {
+            console.log(`${resourceName}:\n${JSON.stringify(policy)}`);
+        });
+    });
+
+    it.only('can return events', () => {
+        
+        // Arrange
+
+        // Act
+
+        const events = addNumbersApplication.getFunctionEvents();
+
+        // Assert
+
+        events.forEach((policy, resourceName) => {
             console.log(`${resourceName}:\n${JSON.stringify(policy)}`);
         });
     });

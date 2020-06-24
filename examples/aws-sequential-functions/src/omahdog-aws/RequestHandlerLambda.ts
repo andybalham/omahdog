@@ -15,11 +15,15 @@ class RequestHandlerLambdaServices {
 }
 
 export abstract class RequestHandlerLambdaBase extends LambdaBase {
-
     services = new RequestHandlerLambdaServices
 
     requestType: new () => any;
     handlerType: new () => IActivityRequestHandlerBase;
+
+    getEvents(): any[] {
+        // TODO 24Jun20: Return event to trigger lambda from a message
+        return [];
+    }
 
     abstract handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void>;
 }

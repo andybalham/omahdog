@@ -1,11 +1,13 @@
 import { TemplateReference } from './TemplateReferences';
 
 // TODO 03Jun20: Can we have a value that comes from SSM?
+// TODO 20Jun20: Look at https://www.npmjs.com/package/aws-parameter-cache
 // TODO 03Jun20: If we do, then we would have to infer the correct policy from it
 
 export interface IConfigurationValue {
-    getValue(): string | undefined;
+    evaluate(): string | undefined;
     validate(): string[];
+    getTemplateValue(): any;
 }
 
 export class EnvironmentVariable implements IConfigurationValue {
@@ -17,12 +19,16 @@ export class EnvironmentVariable implements IConfigurationValue {
         this.templateReference = templateReference;        
         this.variableName = variableName ?? this.generateVariableName(templateReference);
     }
+
+    getTemplateValue(): any {
+        return this.templateReference.instance;
+    }
     
     validate(): string[] {
         return (this.templateReference === undefined) ? ['this.templateReference === undefined'] : [];
     }
     
-    getValue(): string | undefined {
+    evaluate(): string | undefined {
         const value = process.env[this.variableName];
         if (value === undefined) {
             console.warn(`process.env[${this.variableName}] === undefined`);
@@ -50,12 +56,16 @@ export class ConstantValue implements IConfigurationValue {
     constructor(constantValue?: string) {
         this.constantValue = constantValue;
     }
+
+    getTemplateValue(): any {
+        return this.constantValue;
+    }
     
     validate(): string[] {
         return this.constantValue === undefined ? ['this.constantValue === undefined'] : [];
     }
 
-    getValue(): string | undefined {
+    evaluate(): string | undefined {
         return this.constantValue;
     }
 }

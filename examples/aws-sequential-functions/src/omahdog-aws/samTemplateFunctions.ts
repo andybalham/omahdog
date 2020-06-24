@@ -2,28 +2,29 @@ export function validateConfiguration(targetObject: any, errorPrefix = ''): stri
         
     let errorMessages: string[] = [];
 
-    if ('validate' in targetObject) {        
-        const targetObjectErrorMessages: string[] = targetObject.validate();
+    const validateMethodName = 'validate';
+    if (validateMethodName in targetObject) {        
+        const targetObjectErrorMessages: string[] = targetObject[validateMethodName]();
         errorMessages = 
             errorMessages.concat(targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
     }
+
+    function addConfigurationErrors(configObject: any, errorPrefix: string, errorMessages: string[]): string[] {
+
+        for (const configProperty in configObject ?? {}) {
+            
+            const config = configObject[configProperty];
+            const configErrorPrefix = `${errorPrefix}.${configProperty}`;
+            const configErrorMessages = validateConfiguration(config, configErrorPrefix);
     
-    errorMessages = addConfigurationErrors(targetObject['parameters'], errorPrefix, errorMessages);
-    errorMessages = addConfigurationErrors(targetObject['services'], errorPrefix, errorMessages);
-
-    return errorMessages;
-}
-
-function addConfigurationErrors(configObject: any, errorPrefix: string, errorMessages: string[]): string[] {
-
-    for (const configProperty in configObject ?? {}) {
-        
-        const config = configObject[configProperty];
-        const configErrorPrefix = `${errorPrefix}.${configProperty}`;
-        const configErrorMessages = validateConfiguration(config, configErrorPrefix);
-
-        errorMessages = errorMessages.concat(configErrorMessages);
+            errorMessages = errorMessages.concat(configErrorMessages);
+        }
+    
+        return errorMessages;
     }
+        
+    errorMessages = addConfigurationErrors(targetObject.parameters, errorPrefix, errorMessages);
+    errorMessages = addConfigurationErrors(targetObject.services, errorPrefix, errorMessages);
 
     return errorMessages;
 }
@@ -32,10 +33,9 @@ export function getRequiredPolicies(targetObject: any): any[] {
         
     let policies: any[] = [];
 
-    const getMethodName = 'getPolicies';
-
-    if (getMethodName in targetObject) {
-        policies = policies.concat(targetObject[getMethodName]());
+    const getPoliciesMethodName = 'getPolicies';
+    if (getPoliciesMethodName in targetObject) {
+        policies = policies.concat(targetObject[getPoliciesMethodName]());
     }
 
     function addPolicies(configObject: any, policies: any[]): any[] {
@@ -59,9 +59,13 @@ export function getEnvironmentVariables(targetObject: any): any[] {
     let environmentVariables: any[] = [];
 
     for (const parameterName in targetObject.parameters ?? {}) {
+        
         const parameter = targetObject.parameters[parameterName];
-        if ('getEnvironmentVariableDefinition' in parameter) {
-            environmentVariables.push(parameter.getEnvironmentVariableDefinition());
+        
+        const getEnvironmentVariableDefinitionMethodName = 'getEnvironmentVariableDefinition';
+        if (getEnvironmentVariableDefinitionMethodName in parameter) {
+            const parameterEnvironmentVariables = parameter[getEnvironmentVariableDefinitionMethodName]();
+            environmentVariables.push(parameterEnvironmentVariables);
         }
     }            
 
@@ -72,6 +76,27 @@ export function getEnvironmentVariables(targetObject: any): any[] {
     }
 
     return environmentVariables;
+}
+
+export function getEvents(targetObject: any, rootHandlerName: string): any[] {
+        
+    let events: any[] = [];
+
+    if (targetObject !== undefined) {
+
+        const getEventsMethodName = 'getEvents';
+        if (getEventsMethodName in targetObject) {            
+            events = events.concat(targetObject[getEventsMethodName](rootHandlerName));
+        }
+        
+        for (const serviceName in targetObject.services ?? {}) {
+            const service = targetObject.services[serviceName];
+            const serviceEvents = getEvents(service, rootHandlerName);
+            events = events.concat(serviceEvents);
+        }    
+    }
+
+    return events;
 }
 
 export function throwErrorIfInvalid(targetObject: any, getPrefix: () => string): void {

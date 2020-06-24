@@ -9,7 +9,7 @@ import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExc
 
 export const requestRouter = new RequestRouter()
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
-    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalLambdaProxy)
+    .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)
     ;
 
 export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {

@@ -51,7 +51,7 @@ export class AddThreeNumbersHandler extends FlowRequestHandler<AddThreeNumbersRe
 
             .perform('Store_total', StoreTotalRequest, StoreTotalResponse,
                 (req, state) => { 
-                    req.description = this.parameters.totalDescription.getValue() ?? 'Total'; 
+                    req.description = this.parameters.totalDescription.evaluate() ?? 'Total'; 
                     req.total = state.total;
                     req.startTime = state.startTime;
                     req.endTime = new Date();
