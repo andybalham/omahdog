@@ -4,47 +4,41 @@ import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
-import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { throwErrorIfInvalid } from './samTemplateFunctions';
 import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
+import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { IConfigurationValue } from './ConfigurationValues';
 
 class RequestHandlerLambdaServices {
     responsePublisher: IExchangeMessagePublisher
     functionInstanceRepository: IFunctionInstanceRepository
 }
 
+class RequestHandlerLambdaParameters {
+    requestTopic?: TemplateReference
+}
+
 export abstract class RequestHandlerLambdaBase extends LambdaBase {
+
+    parameters = new RequestHandlerLambdaParameters
     services = new RequestHandlerLambdaServices
 
     requestType: new () => any;
     handlerType: new () => IActivityRequestHandlerBase;
 
-    getEvents(): any[] {
-        // TODO 24Jun20: Return event to trigger lambda from a message
-        return [];
-    }
+    abstract getEvents(): any[];
 
     abstract handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void>;
 }
 
 export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>> extends RequestHandlerLambdaBase {
 
-    // TODO 14Jun20: How can we generate the following? We need to know the type of request we are handling
-    // Events:
-    //     RequestReceived:
-    //     Type: SNS
-    //     Properties:
-    //         Topic: !Ref FlowExchangeTopic
-    //         FilterPolicy:
-    //         MessageType:
-    //             - AddTwoNumbersRequest:Handler
-
     constructor(functionReference: TemplateReference, 
         requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
         initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void) {
 
-        // TODO 20Jun20: How can we add instance-specific configuration for the handler?
+        // TODO 20Jun20: How can we add instance-specific configuration for the handler? E.g. No triggering by message
         
         super(functionReference.name ?? '<unknown>');
 
@@ -55,13 +49,46 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
             initialise(this);            
         }
     }
+
+    getEvents(): any[] {
+
+        // TODO 14Jun20: How can we generate the following? We need to know the type of request we are handling
+        // Events:
+        //     RequestReceived:
+        //     Type: SNS
+        //     Properties:
+        //         Topic: !Ref FlowExchangeTopic
+        //         FilterPolicy:
+        //         MessageType:
+        //             - AddTwoNumbersRequest:Handler
+
+        const responseEvent = {
+            Type: 'SNS',
+            Properties: {
+                Topic: undefined,
+                FilterPolicy: {
+                    MessageType: new Array<string>()
+                }
+            },
+        };
+
+        responseEvent.Properties.Topic = this.parameters.requestTopic?.instance;
+        responseEvent.Properties.FilterPolicy.MessageType = [`${this.requestType.name}:Handler`];
+
+        return [responseEvent];
+    }
     
     validate(): string[] {
+
         const errorMessages = new Array<string>();
-        // TODO 16Jun20: We only need the following if we are to enable asynchronous execution, e.g. from an explicit flag
-        if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
-        // TODO 16Jun20: Can we derive if the following is required? E.g. do we have any triggers?
+        
+        // TODO 16Jun20: We only need the following if we are to enable invocation from a message, e.g. from an explicit flag
+        if (this.parameters.requestTopic === undefined) errorMessages.push('this.parameters.requestTopic === undefined');
+        
+        // TODO 16Jun20: Can we derive if the following is required? E.g. do we have any triggers? I am not sure we would want to introspect on each handle() call
         if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
+        if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
+
         return errorMessages;
     }
 

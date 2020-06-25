@@ -9,14 +9,15 @@ import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
-import { TemplateReference } from './TemplateReferences';
+import { TemplateReference, ResourceReference } from './TemplateReferences';
 
 export class LambdaApplication {
 
     defaultFunctionNamePrefix: string;
+    defaultRequestTopic: TemplateReference;
     defaultResponsePublisher: IExchangeMessagePublisher;
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
-
+    
     private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
     private readonly requestHandlerLambdas = new Map<string, RequestHandlerLambdaBase>();
 
@@ -246,6 +247,8 @@ export class LambdaApplication {
         const lambda = 
             new RequestHandlerLambda(functionReference, requestType, responseType, handlerType, initialise);
         
+        lambda.parameters.requestTopic = 
+            lambda.parameters.requestTopic ?? this.defaultRequestTopic;
         lambda.services.responsePublisher = 
             lambda.services.responsePublisher ?? this.defaultResponsePublisher;
         lambda.services.functionInstanceRepository = 

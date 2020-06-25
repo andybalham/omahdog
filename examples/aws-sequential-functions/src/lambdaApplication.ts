@@ -26,6 +26,7 @@ const snsClient = new SNS();
 
 const templateReferences = {
     addNumbersApiGateway: new ResourceReference('ApiGateway'),
+    addNumbersExchangeTopic: new ResourceReference('FlowExchangeTopic'),
     addNumbersExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
     addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
     addNumbersResultTable: new ResourceReference('FlowResultTable'),
@@ -83,10 +84,8 @@ export const addNumbersApplication =
         // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?
         application.defaultFunctionNamePrefix = '${ApplicationName}-';
 
-        // TODO 07Jun20: Supply a defaultRequestTopic, so that the lambdas can be triggered
-        // application.defaultRequestTopic = awsServices.flowExchangeTopic;
-
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
+        application.defaultRequestTopic = templateReferences.addNumbersExchangeTopic;
         
         application.defaultFunctionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
             repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);

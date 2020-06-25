@@ -65,7 +65,7 @@ describe('Lambda application tests', () => {
         });
     });
 
-    it('can return function definitions', () => {
+    it.only('can return function definitions', () => {
         
         // Arrange
 

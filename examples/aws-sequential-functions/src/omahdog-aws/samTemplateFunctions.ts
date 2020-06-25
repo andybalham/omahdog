@@ -99,6 +99,7 @@ export function getEvents(targetObject: any, rootHandlerName: string): any[] {
     return events;
 }
 
+// TODO 25Jun20: I think we should get rid of this. I suspect it is a bit heavy to be doing every time.
 export function throwErrorIfInvalid(targetObject: any, getPrefix: () => string): void {
     const errorMessages = validateConfiguration(targetObject);
     if (errorMessages.length > 0) {
