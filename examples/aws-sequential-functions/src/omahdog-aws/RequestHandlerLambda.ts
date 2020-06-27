@@ -52,16 +52,6 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
     getEvents(): any[] {
 
-        // TODO 14Jun20: How can we generate the following? We need to know the type of request we are handling
-        // Events:
-        //     RequestReceived:
-        //     Type: SNS
-        //     Properties:
-        //         Topic: !Ref FlowExchangeTopic
-        //         FilterPolicy:
-        //         MessageType:
-        //             - AddTwoNumbersRequest:Handler
-
         const responseEvent = {
             Type: 'SNS',
             Properties: {

@@ -2,6 +2,10 @@ export function validateConfiguration(targetObject: any, errorPrefix = ''): stri
         
     let errorMessages: string[] = [];
 
+    if (targetObject === undefined) {
+        return errorMessages;
+    }
+
     const validateMethodName = 'validate';
     if (validateMethodName in targetObject) {        
         const targetObjectErrorMessages: string[] = targetObject[validateMethodName]();
@@ -33,6 +37,10 @@ export function getRequiredPolicies(targetObject: any): any[] {
         
     let policies: any[] = [];
 
+    if (targetObject === undefined) {
+        return policies;
+    }
+
     const getPoliciesMethodName = 'getPolicies';
     if (getPoliciesMethodName in targetObject) {
         policies = policies.concat(targetObject[getPoliciesMethodName]());
@@ -58,6 +66,10 @@ export function getEnvironmentVariables(targetObject: any): any[] {
         
     let environmentVariables: any[] = [];
 
+    if (targetObject === undefined) {
+        return environmentVariables;
+    }
+
     for (const parameterName in targetObject.parameters ?? {}) {
         
         const parameter = targetObject.parameters[parameterName];
@@ -81,6 +93,10 @@ export function getEnvironmentVariables(targetObject: any): any[] {
 export function getEvents(targetObject: any, rootHandlerName: string): any[] {
         
     let events: any[] = [];
+
+    if (targetObject === undefined) {
+        return events;
+    }
 
     if (targetObject !== undefined) {
 

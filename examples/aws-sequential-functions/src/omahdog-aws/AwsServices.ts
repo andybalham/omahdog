@@ -1,6 +1,6 @@
 import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
-import { TemplateReference, ResourceReference, ResourceAttributeReference } from './TemplateReferences';
+import { TemplateReference, ResourceReference, ResourceReferenceAttribute } from './TemplateReferences';
 import { IConfigurationValue, EnvironmentVariable } from './ConfigurationValues';
 
 export abstract class AwsService {
@@ -77,16 +77,19 @@ export class SNSPublishMessageService extends AwsService {
         this.client = client;
 
         if ((topicNameReference === undefined)
-            || (topicNameReference.typeName !== 'ResourceAttributeReference')) {
+            || (topicNameReference.typeName !== ResourceReferenceAttribute.name)) {
 
             this.parameters.topicArnValue = topicArnValue;
 
         } else {
 
-            this.parameters.topicArnValue = 
-                topicArnValue ?? 
-                    new EnvironmentVariable(
-                        new ResourceReference((topicNameReference as ResourceAttributeReference).resourceName));
+            const resourceReference = (topicNameReference as ResourceReferenceAttribute).resourceReference;
+
+            if (resourceReference === undefined) {
+                this.parameters.topicArnValue = topicArnValue;                
+            } else {
+                this.parameters.topicArnValue = topicArnValue ?? new EnvironmentVariable(resourceReference);
+            }
         }
     }
 

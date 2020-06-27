@@ -151,23 +151,113 @@ export class LambdaApplication {
 
         this.requestHandlerLambdas.forEach(lambda => {
 
+            let events = lambda.getEvents();
+
             const handlers = new Map<string, IActivityRequestHandlerBase>();
             this.addRequestHandlers(lambda.handlerType, handlers);
-
-            // TODO 24Jun20: Need to get the events from the lambda too, e.g. to trigger via message
-            let events = lambda.getEvents();
 
             handlers.forEach(handler => {
                 const handlerEvents = getEvents(handler, lambda.handlerType.name);
                 events = events.concat(handlerEvents);
             });
 
-            // TODO 24Jun20: We need to merge and name SNS events
+            const eventsObject = this.getEventsObject(events);
 
-            functionEvents.set(lambda.resourceName, events);
+            functionEvents.set(lambda.resourceName, eventsObject);
         });
 
         return functionEvents;
+    }
+
+    private getEventsObject(events: any[]): any {
+
+        const eventsObject: any = {};
+
+        const mergedEvents = new Array<any>();
+        
+        events.forEach((event, eventIndex) => {
+
+            const matchingEventIndex = this.getMatchingEventIndex(event, mergedEvents);
+
+            if (matchingEventIndex === -1) {
+                mergedEvents.push(event);
+            } else {
+                mergedEvents[matchingEventIndex] = this.mergeEvents(mergedEvents[matchingEventIndex], event);
+            }
+        });
+
+        mergedEvents.forEach((event, eventIndex) => {
+            const eventName = `${event.Type}Event${String(eventIndex + 1).padStart(3, '0')}`;
+            eventsObject[eventName] = event;
+        });
+
+        return eventsObject;
+    }
+
+    private getMatchingEventIndex(targetEvent: any, events: any[]): number {
+
+        let matchingEventIndex: number;
+
+        switch (targetEvent.Type) {
+        case 'SNS':
+            // TODO 27Jun20: Change this to ignore the filter
+            matchingEventIndex = events.findIndex(e => deepEqual(e.Topic, targetEvent.Topic));                
+            break;
+        
+        default:
+            matchingEventIndex = events.findIndex(e => deepEqual(e, targetEvent));
+            break;
+        }
+
+        return matchingEventIndex;
+    }
+    
+    private mergeEvents(event1: any, event2: any): any {
+
+        let mergedEvent: any;
+
+        switch (event1.Type) {
+        case 'SNS':
+            mergedEvent = this.mergeSNSEvents(event1, event2);
+            break;
+        
+        default:
+            mergedEvent = event1;
+            break;
+        }
+
+        return mergedEvent;
+    }
+
+    private mergeSNSEvents(event1: any, event2: any): any {
+
+        const mergedEvent = JSON.parse(JSON.stringify(event1));
+        
+        const mergedFilterPolicy = mergedEvent.Properties.FilterPolicy;
+        const event2FilterPolicy = event2.Properties.FilterPolicy;
+
+        for (const event2AttributeName in event2FilterPolicy) {
+
+            const event2Attribute = event2FilterPolicy[event2AttributeName];
+
+            if (event2AttributeName in mergedFilterPolicy) {
+
+                const mergedAttribute = mergedFilterPolicy[event2AttributeName];
+
+                if (!(Array.isArray(mergedAttribute) && Array.isArray(event2Attribute))) {
+                    throw new Error(`The filter policy attributes ${event2AttributeName} cannot be merged, as they are not both arrays`);                    
+                }
+
+                const mergedAttributes = (mergedAttribute as any[]).concat(event2Attribute);
+                
+                mergedFilterPolicy[event2AttributeName] = mergedAttributes;
+
+            } else {
+                
+                mergedFilterPolicy[event2AttributeName] = event2Attribute;
+            }
+        }
+        return mergedEvent;
     }
 
     private getAllRequestHandlers(): Map<string, IActivityRequestHandlerBase> {

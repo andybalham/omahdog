@@ -17,7 +17,7 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { ResourceReference, ResourceAttributeReference } from './omahdog-aws/TemplateReferences';
+import { ResourceReference, ResourceReferenceAttribute } from './omahdog-aws/TemplateReferences';
 import { EnvironmentVariable, ConstantValue } from './omahdog-aws/ConfigurationValues';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
@@ -27,7 +27,6 @@ const snsClient = new SNS();
 const templateReferences = {
     addNumbersApiGateway: new ResourceReference('ApiGateway'),
     addNumbersExchangeTopic: new ResourceReference('FlowExchangeTopic'),
-    addNumbersExchangeTopicName: new ResourceAttributeReference('FlowExchangeTopic', 'TopicName'),
     addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
     addNumbersResultTable: new ResourceReference('FlowResultTable'),
 
@@ -38,7 +37,8 @@ const templateReferences = {
 };
 
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
-    publisher.services.exchangeTopic = new SNSPublishMessageService(templateReferences.addNumbersExchangeTopicName, snsClient);
+    publisher.services.exchangeTopic = 
+        new SNSPublishMessageService(templateReferences.addNumbersExchangeTopic.attribute('TopicName'), snsClient);
 });
 
 const handlerFactory = new HandlerFactory()
@@ -65,16 +65,12 @@ const handlerFactory = new HandlerFactory()
     
     .setInitialiser(AddTwoNumbersMessageProxy, handler => {
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
-        // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
     .setInitialiser(AddThreeNumbersMessageProxy, handler => {
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
-        // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
     .setInitialiser(StoreTotalMessageProxy, handler => {
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
-        // TODO 31May20: The following would need to cause the right MessageType filter to generate, e.g. AddThreeNumbersHandler:Response
-        // handler.triggers.responseTopic = awsServices.flowExchangeTopic;
     })
     ;
     
@@ -94,8 +90,8 @@ export const addNumbersApplication =
         application
             .addApiController(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)
 
-            .addRequestHandler(templateReferences.addThreeNumbersFunction, 
-                AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
+            .addRequestHandler(
+                templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
             .addRequestHandler(
                 templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler)
             .addRequestHandler(

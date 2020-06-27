@@ -50,7 +50,7 @@ describe('Lambda application tests', () => {
         });
     });
 
-    it.only('can return events', () => {
+    it('can return events', () => {
         
         // Arrange
 

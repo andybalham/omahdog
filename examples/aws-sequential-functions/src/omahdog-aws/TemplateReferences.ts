@@ -18,8 +18,8 @@ export class ResourceReference extends TemplateReference {
     get name(): string | undefined { return this.resourceName; }
     get instance(): any { return { 'Ref': this.name }; }
 
-    attribute(attributeName: string): ResourceAttributeReference {
-        return new ResourceAttributeReference(this.resourceName, attributeName);
+    attribute(attributeName: string): ResourceReferenceAttribute {
+        return new ResourceReferenceAttribute(this, attributeName);
     }
 }
 
@@ -33,18 +33,18 @@ export class ParameterReference extends TemplateReference {
     get instance(): any { return { 'Ref': this.name }; }
 }
 
-export class ResourceAttributeReference extends TemplateReference {
+export class ResourceReferenceAttribute extends TemplateReference {
 
-    readonly resourceName?: string;
+    readonly resourceReference?: ResourceReference;
     readonly attributeName?: string;
 
-    constructor(resourceName?: string, attributeName?: string) {
-        super(ResourceAttributeReference);
-        this.resourceName = resourceName;
+    constructor(resourceReference?: ResourceReference, attributeName?: string) {
+        super(ResourceReferenceAttribute);
+        this.resourceReference = resourceReference;
         this.attributeName = attributeName;
     }
 
-    get name(): string | undefined { return `${this.resourceName}${this.attributeName}`; }
-    get instance(): any { return { 'Fn:Attr': [ this.resourceName, this.attributeName] }; }
+    get name(): string | undefined { return `${this.resourceReference?.name}${this.attributeName}`; }
+    get instance(): any { return { 'Fn:Attr': [ this.resourceReference?.name, this.attributeName] }; }
 }
 
