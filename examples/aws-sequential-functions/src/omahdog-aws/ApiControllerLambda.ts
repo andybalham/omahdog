@@ -25,6 +25,27 @@ export class ApiControllerLambda extends LambdaBase {
         }
     }
 
+    getEvents(): any[] {
+        
+        const events = new Array<any>();
+
+        this.apiControllerRoutes.routeMap.forEach(route => {
+
+            const apiEvent: any = {
+                Type: 'Api',
+                Properties: {
+                    RestApiId: this.apiGatewayReference.instance,
+                    Method: route.httpMethod,
+                    Path: route.resource
+                }
+            };
+            
+            events.push(apiEvent);
+        });
+
+        return events;
+    }
+
     async handle(event: APIGatewayProxyEvent, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<APIGatewayProxyResult> {
 
         console.log(`event: ${JSON.stringify(event)}`);
@@ -96,7 +117,7 @@ class ApiControllerRoute {
 
 export abstract class ApiControllerRoutes {
 
-    private readonly routeMap = new Map<string, ApiControllerRoute>();
+    readonly routeMap = new Map<string, ApiControllerRoute>();
 
     constructor(initialise: (routes: ApiControllerRoutes) => void) {
         initialise(this);
@@ -128,8 +149,7 @@ export abstract class ApiControllerRoutes {
             getAPIGatewayProxyResult: getAPIGatewayProxyResult        
         };
 
-        // TODO 17May20: Throw an error if duplicate routes
-        this.routeMap.set(ApiControllerRoutes.getRouteKey(route.httpMethod, route.resource), route);
+        this.addRoute(route);
 
         return this;
     }    
@@ -148,15 +168,25 @@ export abstract class ApiControllerRoutes {
             },
             getAPIGatewayProxyResult: getAPIGatewayProxyResult        
         };
-    
-        // TODO 17May20: Throw an error if duplicate routes
-        this.routeMap.set(ApiControllerRoutes.getRouteKey(route.httpMethod, route.resource), route);
+
+        this.addRoute(route);
 
         return this;
     }
 
     getRoute(event: APIGatewayProxyEvent): ApiControllerRoute | undefined {
         return this.routeMap.get(ApiControllerRoutes.getRouteKey(event.httpMethod, event.resource));
+    }
+
+    private addRoute(route: ApiControllerRoute): void {
+
+        const routeKey = ApiControllerRoutes.getRouteKey(route.httpMethod, route.resource);
+
+        if (this.routeMap.has(routeKey)) {
+            throw new Error(`Duplicate route key: ${routeKey}`);
+        }
+
+        this.routeMap.set(routeKey, route);
     }
 
     private static getRouteKey(httpMethod: string, resource: string): string {

@@ -146,7 +146,12 @@ export class LambdaApplication {
         const functionEvents = new Map<string, any>();
 
         this.apiControllerLambdas.forEach((lambda) => {
-            // TODO 24Jun20: We only need to use the route to get the events for API controllers
+            
+            const events = lambda.getEvents();
+
+            const eventsObject = this.getEventsObject(events);
+
+            functionEvents.set(lambda.resourceName, eventsObject);
         });
 
         this.requestHandlerLambdas.forEach(lambda => {
@@ -200,7 +205,6 @@ export class LambdaApplication {
 
         switch (targetEvent.Type) {
         case 'SNS':
-            // TODO 27Jun20: Change this to ignore the filter
             matchingEventIndex = events.findIndex(e => deepEqual(e.Topic, targetEvent.Topic));                
             break;
         
@@ -249,7 +253,7 @@ export class LambdaApplication {
                 }
 
                 const mergedAttributes = (mergedAttribute as any[]).concat(event2Attribute);
-                
+
                 mergedFilterPolicy[event2AttributeName] = mergedAttributes;
 
             } else {
