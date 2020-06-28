@@ -9,11 +9,13 @@ import { ExchangeRequestMessage } from './Exchange';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
-import { TemplateReference, ResourceReference } from './TemplateReferences';
+import { TemplateReference, ResourceReference, ParameterReference } from './TemplateReferences';
+
+// TODO 27Jun20: Handle DeadLetterQueues
 
 export class LambdaApplication {
 
-    defaultFunctionNamePrefix: string;
+    functionNamePrefix?: string | FunctionNamePrefix;
     defaultRequestTopic: TemplateReference;
     defaultResponsePublisher: IExchangeMessagePublisher;
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
@@ -34,7 +36,8 @@ export class LambdaApplication {
     
     validate(): string[] {
         
-        // TODO 07Jun20: We will eventually pass in the base template for verification
+        // TODO 07Jun20: We will eventually pass in the base template for verification against base references
+        // TODO 28Jun20: Include validation of the function name prefix
 
         let errors: string[] = [];
 
@@ -55,25 +58,36 @@ export class LambdaApplication {
 
     getFunctionDefinitions(): any {
 
-        // TODO 19Jun20: Need to do triggers
-
         const policiesByResource = this.getFunctionProperties(getRequiredPolicies);
         const environmentVariablesByResource = this.getFunctionProperties(getEnvironmentVariables);
         const eventsByResource = this.getFunctionEvents();
 
         const resources: any = {};
 
-        function addFunctionResource(resourceName: string, handlerFunctionName: string): void {
+        const functionNamePrefix = this.functionNamePrefix;
+
+        function addFunctionResource(resourceName: string, handledTypeName: string): void {
 
             const resourcePolicies = deduplicate(policiesByResource.get(resourceName));
             const resourceEnvironmentVariables = deduplicate(environmentVariablesByResource.get(resourceName));
             const resourceEvents = eventsByResource.get(resourceName);
 
+            const functionName: any = 
+                (functionNamePrefix === undefined) 
+                    ? resourceName 
+                    : (typeof functionNamePrefix === 'string') 
+                        ? `${functionNamePrefix}${resourceName}`
+                        : {
+                            'Fn::Sub': `${functionNamePrefix.getTemplate()}${resourceName}`
+                        };
+            
+            // TODO 28Jun20: Add support for Timeout, DeadLetterQueue, Description, Tags, Runtime(?)
+
             const resourceDefinition = {
                 Type: 'AWS::Serverless::Function',
                 Properties: {
-                    FunctionName: `TODO-${resourceName}`,
-                    Handler: `lambdas.${handlerFunctionName}`,
+                    FunctionName: functionName,
+                    Handler: `lambdas.handle${handledTypeName}`,
                     Environment: {
                         Variables: {}
                     },
@@ -95,7 +109,7 @@ export class LambdaApplication {
         });
 
         this.requestHandlerLambdas.forEach(lambda => {
-            addFunctionResource(lambda.resourceName, lambda.handlerType.name);            
+            addFunctionResource(lambda.resourceName, lambda.requestType.name);            
         });
 
         return resources;
@@ -358,6 +372,22 @@ export class LambdaApplication {
         if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
         const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
         return response;
+    }
+}
+
+export class FunctionNamePrefix {
+    
+    readonly separator: string;
+    readonly references: ParameterReference[];
+
+    constructor(separator: string, ...references: ParameterReference[]) {
+        this.separator = separator;
+        this.references = references;
+    }
+
+    getTemplate(): string {
+        const template = this.references.map(p => '${' + p.name + '}').join(this.separator) + this.separator;
+        return template;
     }
 }
 

@@ -16,36 +16,10 @@ Parameters:
 Globals:
   Function:
     Timeout: 3
-    CodeUri: dist/
+    CodeUri: dist/ # TODO: What should this be?
     Runtime: nodejs12.x
 
 Resources:
-
-  FlowExchangeTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: 
-        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
-      DisplayName: Topic for request & response messages
-
-  FlowDeadLetterQueueTopic:
-    Type: AWS::SNS::Topic
-    Properties:
-      TopicName: 
-        Fn::Sub: ${ApplicationName}-FlowDeadLetterQueueTopic
-      DisplayName: Topic for flow dead letter messages
-
-  FlowInstanceTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: 
-        Fn::Sub: ${ApplicationName}-FlowInstanceTable
-
-  FlowResultTable:
-    Type: AWS::Serverless::SimpleTable
-    Properties:
-      TableName: 
-        Fn::Sub: ${ApplicationName}-FlowResultTable
 
   ApiGateway:
     Type: AWS::Serverless::Api
@@ -57,6 +31,25 @@ Resources:
       EndpointConfiguration: REGIONAL
       Auth:
         ApiKeyRequired: true # sets for all methods
+
+  FlowResultTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: 
+        Fn::Sub: ${ApplicationName}-FlowResultTable
+
+  FlowExchangeTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 
+        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
+      DisplayName: Topic for request & response messages
+
+  FlowInstanceTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: 
+        Fn::Sub: ${ApplicationName}-FlowInstanceTable
 
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function

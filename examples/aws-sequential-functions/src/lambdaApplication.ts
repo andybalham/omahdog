@@ -2,7 +2,7 @@ import DynamoDB from 'aws-sdk/clients/dynamodb';
 import { Lambda, SNS } from 'aws-sdk';
 
 import { HandlerFactory } from './omahdog/FlowContext';
-import { LambdaApplication } from './omahdog-aws/LambdaApplication';
+import { LambdaApplication, FunctionNamePrefix } from './omahdog-aws/LambdaApplication';
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
@@ -17,7 +17,7 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { ResourceReference, ResourceReferenceAttribute } from './omahdog-aws/TemplateReferences';
+import { ResourceReference, ResourceReferenceAttribute, ParameterReference } from './omahdog-aws/TemplateReferences';
 import { EnvironmentVariable, ConstantValue } from './omahdog-aws/ConfigurationValues';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
@@ -25,6 +25,8 @@ const lambdaClient = new Lambda();
 const snsClient = new SNS();
 
 const templateReferences = {
+    applicationName: new ParameterReference('ApplicationName'),
+
     addNumbersApiGateway: new ResourceReference('ApiGateway'),
     addNumbersExchangeTopic: new ResourceReference('FlowExchangeTopic'),
     addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
@@ -77,8 +79,9 @@ const handlerFactory = new HandlerFactory()
 export const addNumbersApplication = 
     new LambdaApplication(requestRouter, handlerFactory, application => {
         
-        // TODO 29May20: We should be able to set CodeUri at this point? DeadLetterQueue? functionNameTemplate?
-        application.defaultFunctionNamePrefix = '${ApplicationName}-';
+        // TODO 29May20: Add default DeadLetterQueue
+
+        application.functionNamePrefix = new FunctionNamePrefix('-', templateReferences.applicationName);
 
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         application.defaultRequestTopic = templateReferences.addNumbersExchangeTopic;
