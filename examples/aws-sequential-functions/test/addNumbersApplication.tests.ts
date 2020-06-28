@@ -3,7 +3,7 @@ import YAML from 'yaml';
 import path from 'path';
 import { expect } from 'chai';
 import { getRequiredPolicies, getEnvironmentVariables } from '../src/omahdog-aws/samTemplateFunctions';
-import { addNumbersApplication } from '../src/lambdaApplication';
+import { addNumbersApplication } from '../src/addNumbersApplication';
 import { EnvironmentVariable } from '../src/omahdog-aws/ConfigurationValues';
 
 describe('Lambda application tests', () => {
@@ -81,7 +81,7 @@ describe('Lambda application tests', () => {
         console.log(YAML.stringify(functionDefinitions));
     });
 
-    it.only('can return function definitions', () => {
+    it('can return function definitions', () => {
         
         // Arrange
 

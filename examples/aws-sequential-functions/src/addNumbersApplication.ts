@@ -84,8 +84,8 @@ export const addNumbersApplication =
 
         application.functionNamePrefix = new FunctionNamePrefix('-', templateReferences.applicationName);
 
-        application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         application.defaultRequestTopic = templateReferences.addNumbersExchangeTopic;
+        application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         
         application.defaultFunctionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
             repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);

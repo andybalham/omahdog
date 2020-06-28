@@ -4,7 +4,7 @@ import { DeadLetterQueueHandler } from './omahdog-aws/DeadLetterQueueHandler';
 import { LambdaExchangeWireTap } from './omahdog-aws/LambdaExchangeWireTap';
 
 import { AddNumbersApiControllerRoutes } from './routing';
-import { addNumbersExchangeMessagePublisher, addNumbersApplication } from './lambdaApplication';
+import { addNumbersExchangeMessagePublisher, addNumbersApplication } from './addNumbersApplication';
 
 import { AddThreeNumbersRequest } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';

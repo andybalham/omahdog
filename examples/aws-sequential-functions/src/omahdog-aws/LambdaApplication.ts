@@ -56,6 +56,8 @@ export class LambdaApplication {
         return errors;
     }
 
+    // TODO 28Jun20: Create a command line tool to invoke the following from a command line
+
     getTemplate(baseTemplate: any): any {
 
         const template = JSON.parse(JSON.stringify(baseTemplate));
