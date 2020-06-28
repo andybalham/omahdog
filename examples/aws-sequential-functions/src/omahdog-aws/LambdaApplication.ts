@@ -56,6 +56,19 @@ export class LambdaApplication {
         return errors;
     }
 
+    getTemplate(baseTemplate: any): any {
+
+        const template = JSON.parse(JSON.stringify(baseTemplate));
+
+        const functionDefinitions = this.getFunctionDefinitions();
+
+        for (const resourceName in functionDefinitions) {
+            template.Resources[resourceName] = functionDefinitions[resourceName];
+        }
+
+        return template;
+    }
+
     getFunctionDefinitions(): any {
 
         const policiesByResource = this.getFunctionProperties(getRequiredPolicies);
@@ -335,8 +348,10 @@ export class LambdaApplication {
         return subHandlers;
     }
 
-    addApiController(apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void): LambdaApplication {
-        const lambda = new ApiControllerLambda(apiGatewayReference, apiControllerRoutesType, initialise);
+    addApiController(functionReference: TemplateReference, apiGatewayReference: TemplateReference, 
+        apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void): LambdaApplication {
+        
+        const lambda = new ApiControllerLambda(functionReference, apiGatewayReference, apiControllerRoutesType, initialise);
         this.apiControllerLambdas.set(lambda.apiControllerRoutesType.name, lambda);
         return this;
     }

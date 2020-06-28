@@ -10,20 +10,21 @@ export class ApiControllerLambda extends LambdaBase {
     readonly apiControllerRoutesType: new () => ApiControllerRoutes;
     readonly apiControllerRoutes: ApiControllerRoutes;
 
-    constructor(apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void) {
+    constructor(functionReference: TemplateReference, apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, 
+        initialise?: (lambda: ApiControllerLambda) => void) {
 
-        super(`${apiControllerRoutesType.name}Function`);
+        super(functionReference.name ?? 'Undefined');
 
         this.apiGatewayReference = apiGatewayReference;
         this.apiControllerRoutesType = apiControllerRoutesType;
         this.apiControllerRoutes = new apiControllerRoutesType;
 
-        console.log(`${ApiControllerLambda.name}.resourceName: ${this.resourceName}`);
-
         if (initialise !== undefined) {
             initialise(this);            
         }
     }
+
+    // TODO 28Jun20: What should happen to asynchronous responses? Only the caller knows the requestId. We might want to invoke a webhook or similar.
 
     getEvents(): any[] {
         
@@ -158,6 +159,8 @@ export abstract class ApiControllerRoutes {
         resource: string, requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
         getRequest: (pathParameters: StringParameters | null, body: TReq | null) => TReq, 
         getAPIGatewayProxyResult?: (response: TRes) => APIGatewayProxyResult): ApiControllerRoutes {
+
+        // TODO 28Jun20: How could we return a BadRequest?
 
         const route: ApiControllerRoute = {
             httpMethod: 'POST',

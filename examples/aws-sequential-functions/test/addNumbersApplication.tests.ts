@@ -1,7 +1,10 @@
+import fs from 'fs';
 import YAML from 'yaml';
-import { addNumbersApplication } from '../src/lambdaApplication';
-import { getRequiredPolicies, getEnvironmentVariables } from '../src/omahdog-aws/samTemplateFunctions';
+import path from 'path';
 import { expect } from 'chai';
+import { getRequiredPolicies, getEnvironmentVariables } from '../src/omahdog-aws/samTemplateFunctions';
+import { addNumbersApplication } from '../src/lambdaApplication';
+import { EnvironmentVariable } from '../src/omahdog-aws/ConfigurationValues';
 
 describe('Lambda application tests', () => {
 
@@ -76,5 +79,24 @@ describe('Lambda application tests', () => {
         // Assert
 
         console.log(YAML.stringify(functionDefinitions));
-    });    
+    });
+
+    it.only('can return function definitions', () => {
+        
+        // Arrange
+
+        const baseTemplateFilePath = path.join(__dirname, '../templateBase.yaml');
+        const baseTemplateContent = fs.readFileSync(baseTemplateFilePath, 'utf8');
+        const baseTemplate = YAML.parse(baseTemplateContent);
+        
+        // Act
+
+        const template = addNumbersApplication.getTemplate(baseTemplate);
+
+        // Assert
+
+        const generatedTemplateFilePath = path.join(__dirname, '../templateGenerated.yaml');
+        const generatedTemplateContent = YAML.stringify(template);
+        fs.writeFileSync(generatedTemplateFilePath, generatedTemplateContent, 'utf8');
+    });
 });

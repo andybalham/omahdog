@@ -1,0 +1,248 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: |
+  Add Three Numbers
+  SAM Template for the example of adding three numbers together
+Parameters:
+  ApplicationName:
+    Type: String
+    Default: Omahdog-AwsSequentialFunctions
+  ApiStageName:
+    Type: String
+    Default: test
+Globals:
+  Function:
+    Timeout: 3
+    CodeUri: dist/
+    Runtime: nodejs12.x
+Resources:
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName:
+        Ref: ApiStageName
+      Name:
+        Fn::Sub: ${ApplicationName}-ApiGateway
+      EndpointConfiguration: REGIONAL
+      Auth:
+        ApiKeyRequired: true
+  FlowResultTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName:
+        Fn::Sub: ${ApplicationName}-FlowResultTable
+  FlowExchangeTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
+      DisplayName: Topic for request & response messages
+  FlowInstanceTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName:
+        Fn::Sub: ${ApplicationName}-FlowInstanceTable
+  AddNumbersApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ApplicationName}-AddNumbersApiFunction
+      Handler: lambdas.handleAddNumbersApiControllerRoutes
+      Environment:
+        Variables:
+          ADD_TWO_NUMBERS_FUNCTION:
+            Ref: AddTwoNumbersFunction
+          FLOW_EXCHANGE_TOPIC:
+            Ref: FlowExchangeTopic
+          ADD_THREE_NUMBERS_FUNCTION:
+            Ref: AddThreeNumbersFunction
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName:
+              Ref: AddTwoNumbersFunction
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - FlowExchangeTopic
+                - TopicName
+        - LambdaInvokePolicy:
+            FunctionName:
+              Ref: AddThreeNumbersFunction
+      Events:
+        ApiEvent001:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Method: GET
+            Path: /do/add-two-numbers
+        ApiEvent002:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Method: GET
+            Path: /do/add-two-numbers/x/{x}/y/{y}
+        ApiEvent003:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Method: POST
+            Path: /do/add-two-numbers
+        ApiEvent004:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Method: GET
+            Path: /do/add-three-numbers
+        ApiEvent005:
+          Type: Api
+          Properties:
+            RestApiId:
+              Ref: ApiGateway
+            Method: POST
+            Path: /do/add-three-numbers
+  AddThreeNumbersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction
+      Handler: lambdas.handleAddThreeNumbersRequest
+      Environment:
+        Variables:
+          FLOW_EXCHANGE_TOPIC:
+            Ref: FlowExchangeTopic
+          FLOW_INSTANCE_TABLE:
+            Ref: FlowInstanceTable
+          SUM_NUMBERS_FUNCTION:
+            Ref: SumNumbersFunction
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - FlowExchangeTopic
+                - TopicName
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: FlowInstanceTable
+        - LambdaInvokePolicy:
+            FunctionName:
+              Ref: SumNumbersFunction
+      Events:
+        SNSEvent001:
+          Type: SNS
+          Properties:
+            Topic:
+              Ref: FlowExchangeTopic
+            FilterPolicy:
+              MessageType:
+                - AddThreeNumbersRequest:Handler
+                - AddThreeNumbersHandler:Response
+  AddTwoNumbersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ApplicationName}-AddTwoNumbersFunction
+      Handler: lambdas.handleAddTwoNumbersRequest
+      Environment:
+        Variables:
+          FLOW_EXCHANGE_TOPIC:
+            Ref: FlowExchangeTopic
+          FLOW_INSTANCE_TABLE:
+            Ref: FlowInstanceTable
+          SUM_NUMBERS_FUNCTION:
+            Ref: SumNumbersFunction
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - FlowExchangeTopic
+                - TopicName
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: FlowInstanceTable
+        - LambdaInvokePolicy:
+            FunctionName:
+              Ref: SumNumbersFunction
+      Events:
+        SNSEvent001:
+          Type: SNS
+          Properties:
+            Topic:
+              Ref: FlowExchangeTopic
+            FilterPolicy:
+              MessageType:
+                - AddTwoNumbersRequest:Handler
+                - AddTwoNumbersHandler:Response
+  SumNumbersFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ApplicationName}-SumNumbersFunction
+      Handler: lambdas.handleSumNumbersRequest
+      Environment:
+        Variables:
+          FLOW_EXCHANGE_TOPIC:
+            Ref: FlowExchangeTopic
+          FLOW_INSTANCE_TABLE:
+            Ref: FlowInstanceTable
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - FlowExchangeTopic
+                - TopicName
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: FlowInstanceTable
+      Events:
+        SNSEvent001:
+          Type: SNS
+          Properties:
+            Topic:
+              Ref: FlowExchangeTopic
+            FilterPolicy:
+              MessageType:
+                - SumNumbersRequest:Handler
+  StoreTotalFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${ApplicationName}-StoreTotalFunction
+      Handler: lambdas.handleStoreTotalRequest
+      Environment:
+        Variables:
+          FLOW_EXCHANGE_TOPIC:
+            Ref: FlowExchangeTopic
+          FLOW_INSTANCE_TABLE:
+            Ref: FlowInstanceTable
+          FLOW_RESULT_TABLE:
+            Ref: FlowResultTable
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - FlowExchangeTopic
+                - TopicName
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: FlowInstanceTable
+        - DynamoDBCrudPolicy:
+            TableName:
+              Ref: FlowResultTable
+      Events:
+        SNSEvent001:
+          Type: SNS
+          Properties:
+            Topic:
+              Ref: FlowExchangeTopic
+            FilterPolicy:
+              MessageType:
+                - StoreTotalRequest:Handler
+Outputs:
+  ApiEndpoint:
+    Description: API endpoint
+    Value:
+      Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/

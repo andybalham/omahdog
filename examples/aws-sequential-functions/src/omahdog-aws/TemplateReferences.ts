@@ -45,6 +45,6 @@ export class ResourceReferenceAttribute extends TemplateReference {
     }
 
     get name(): string | undefined { return `${this.resourceReference?.name}${this.attributeName}`; }
-    get instance(): any { return { 'Fn:Attr': [ this.resourceReference?.name, this.attributeName] }; }
+    get instance(): any { return { 'Fn::GetAtt': [ this.resourceReference?.name, this.attributeName] }; }
 }
 

@@ -32,6 +32,7 @@ const templateReferences = {
     addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
     addNumbersResultTable: new ResourceReference('FlowResultTable'),
 
+    addNumbersApiFunction: new ResourceReference('AddNumbersApiFunction'),
     addTwoNumbersFunction: new ResourceReference('AddTwoNumbersFunction'),
     addThreeNumbersFunction: new ResourceReference('AddThreeNumbersFunction'),
     sumNumbersFunction: new ResourceReference('SumNumbersFunction'),
@@ -91,7 +92,8 @@ export const addNumbersApplication =
         });
 
         application
-            .addApiController(templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)
+            .addApiController(
+                templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)
 
             .addRequestHandler(
                 templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
