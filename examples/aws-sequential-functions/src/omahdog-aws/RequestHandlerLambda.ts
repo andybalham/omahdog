@@ -4,15 +4,14 @@ import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
-import { throwErrorIfInvalid } from './samTemplateFunctions';
 import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IConfigurationValue } from './ConfigurationValues';
 
 class RequestHandlerLambdaServices {
-    responsePublisher: IExchangeMessagePublisher
-    functionInstanceRepository: IFunctionInstanceRepository
+    responsePublisher?: IExchangeMessagePublisher
+    functionInstanceRepository?: IFunctionInstanceRepository
 }
 
 class RequestHandlerLambdaParameters {
@@ -86,8 +85,6 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        throwErrorIfInvalid(this, () => RequestHandlerLambda.name);
-
         let message: ExchangeRequestMessage | ExchangeResponseMessage;
         let isDirectRequest: boolean;
 
@@ -134,6 +131,8 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
     
         } else {
     
+            if (this.services.functionInstanceRepository === undefined) throw new Error('this.services.functionInstanceRepository === undefined');
+
             const functionInstance = await this.services.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
@@ -177,17 +176,21 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
     
             console.log(`functionInstance: ${JSON.stringify(functionInstance)}`);
     
+            if (this.services.functionInstanceRepository === undefined) throw new Error('this.services.functionInstanceRepository === undefined');
+
             await this.services.functionInstanceRepository.store(functionInstance);
 
         } else {
 
             if (!isDirectRequest) {
+                if (this.services.responsePublisher === undefined) throw new Error('this.services.responsePublisher === undefined');
                 await this.services.responsePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
             }
 
             if (resumeCount > 0) {
                 // TODO 18May20: Perhaps we want to leave a trace, could have a TTL on the table
                 console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
+                if (this.services.functionInstanceRepository === undefined) throw new Error('this.services.functionInstanceRepository === undefined');
                 await this.services.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
             }
     

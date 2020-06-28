@@ -4,7 +4,6 @@ import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
 import { LambdaInvokeService } from './AwsServices';
-import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
     
@@ -13,8 +12,6 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
     }    
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
-        
-        throwErrorIfInvalid(this, () => LambdaProxyRequestHandler.name);
         
         const functionName = this.services.lambda.functionName;
 
@@ -44,7 +41,9 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             
             console.log(`invocationRequest: ${JSON.stringify(invocationRequest)}`);
             
-            invokeResult = await this.services.lambda.client?.invoke(invocationRequest).promise();
+            if (this.services.lambda.client === undefined) throw new Error('this.services.lambda.client === undefined');
+
+            invokeResult = await this.services.lambda.client.invoke(invocationRequest).promise();
             
             console.log(`invokeResult: ${JSON.stringify(invokeResult)}`);
 

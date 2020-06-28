@@ -1,6 +1,5 @@
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { DynamoDBCrudService } from './AwsServices';
-import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepository {
     
@@ -16,8 +15,6 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async store(instance: FunctionInstance): Promise<void> {
         
-        throwErrorIfInvalid(this, () => DynamoDbFunctionInstanceRepository.name);
-
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
             TableName: this.getFunctionInstanceTableName(),
@@ -31,13 +28,13 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await this.services.functionInstanceTable?.client?.put(params).promise();
+        if (this.services.functionInstanceTable.client === undefined) throw new Error('this.services.functionInstanceTable.client === undefined');
+
+        await this.services.functionInstanceTable.client.put(params).promise();
     }
     
     async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
         
-        throwErrorIfInvalid(this, () => DynamoDbFunctionInstanceRepository.name);
-
         const params = {
             TableName: this.getFunctionInstanceTableName(),
             Key: {
@@ -45,7 +42,9 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        const dynamoDbResult: any = await this.services.functionInstanceTable?.client?.get(params).promise();
+        if (this.services.functionInstanceTable.client === undefined) throw new Error('this.services.functionInstanceTable.client === undefined');
+        
+        const dynamoDbResult: any = await this.services.functionInstanceTable.client.get(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -67,8 +66,6 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
     
     async delete(instanceId: string): Promise<void> {
         
-        throwErrorIfInvalid(this, () => DynamoDbFunctionInstanceRepository.name);
-
         const params = {
             TableName: this.getFunctionInstanceTableName(),
             Key: {
@@ -76,11 +73,13 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             }
         };
 
-        await this.services.functionInstanceTable?.client?.delete(params).promise();
+        if (this.services.functionInstanceTable.client === undefined) throw new Error('this.services.functionInstanceTable.client === undefined');
+        
+        await this.services.functionInstanceTable.client.delete(params).promise();
     }
 
     private getFunctionInstanceTableName(): string {
-        return this.services.functionInstanceTable?.tableName ?? '<unknown>';
+        return this.services.functionInstanceTable.tableName ?? '<unknown>';
     }
 }   
 

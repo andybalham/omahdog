@@ -59,7 +59,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties: 
       FunctionName: !Sub ${ApplicationName}-ApiControllerFunction
-      Handler: lambdas.addNumbersApiControllerRoutes
+      Handler: lambdas.handleAddNumbersApiControllerRoutes
       Environment:
         Variables:
           STORE_TOTAL_FUNCTION: !Ref StoreTotalHandlerFunction
@@ -150,7 +150,7 @@ Resources:
   #   Type: AWS::Serverless::Function
   #   Properties:
   #     FunctionName: !Sub ${ApplicationName}-AddThreeNumbersHandlerFunction
-  #     Handler: lambdas.addThreeNumbersHandler
+  #     Handler: lambdas.handleAddThreeNumbersRequest
   #     Policies:
   #       - SNSPublishMessagePolicy:
   #           TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -183,7 +183,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: !Sub ${ApplicationName}-AddTwoNumbersHandlerFunction
-      Handler: lambdas.addTwoNumbersHandler
+      Handler: lambdas.handleAddTwoNumbersRequest
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: !GetAtt FlowExchangeTopic.TopicName
@@ -218,7 +218,7 @@ Resources:
     Properties:
       FunctionName: 
         Fn::Sub: ${ApplicationName}-SumNumbersHandlerFunction
-      Handler: lambdas.sumNumbersHandler
+      Handler: lambdas.handleSumNumbersRequest
       Policies:
         - SNSPublishMessagePolicy:
             TopicName: 
@@ -254,7 +254,7 @@ Resources:
       FunctionName: 
         Fn::Sub: ${ApplicationName}-StoreTotalHandlerFunction
       # The app definition can specify the module name, the method can be derived by convention
-      Handler: lambdas.storeTotalHandler
+      Handler: lambdas.handleStoreTotalRequest
       # The app definition will wire up environment variables to the function
       Environment:
         Variables:

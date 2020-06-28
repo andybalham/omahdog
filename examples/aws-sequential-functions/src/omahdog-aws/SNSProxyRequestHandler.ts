@@ -2,7 +2,6 @@ import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ExchangeRequestMessage } from './Exchange';
 import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
-import { throwErrorIfInvalid } from './samTemplateFunctions';
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
@@ -36,8 +35,6 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
         
-        throwErrorIfInvalid(this, () => SNSProxyRequestHandler.name);
-
         const requestId = uuid.v4();
         
         const message: ExchangeRequestMessage = 

@@ -27,23 +27,23 @@ export const exchangeWireTapHandler = async (event: SNSEvent): Promise<void> => 
 // TODO 29May20: Could we generate the following from the LambdaApplication instance? What about imports?
 // TODO 29May20: Could we generate after a specific comment, e.g. // Generated Lambda handlers
 
-export const addNumbersApiControllerRoutes = async (event: any): Promise<any> => {
+export const handleAddNumbersApiControllerRoutes = async (event: any): Promise<any> => {
     return await addNumbersApplication.handleApiEvent(AddNumbersApiControllerRoutes, event);
 };
 
-export const addThreeNumbersHandler = async (event: any): Promise<any> => {
+export const handleAddThreeNumbersRequest = async (event: any): Promise<any> => {
     return await addNumbersApplication.handleRequestEvent(AddThreeNumbersRequest, event);
 };
 
-export const addTwoNumbersHandler = async (event: any): Promise<any> => {
+export const handleAddTwoNumbersRequest = async (event: any): Promise<any> => {
     return await addNumbersApplication.handleRequestEvent(AddTwoNumbersRequest, event);
 };
 
-export const sumNumbersHandler = async (event: any): Promise<any> => {
+export const handleSumNumbersRequest = async (event: any): Promise<any> => {
     return await addNumbersApplication.handleRequestEvent(SumNumbersRequest, event);
 };
 
-export const storeTotalHandler = async (event: any): Promise<any> => {
+export const handleStoreTotalRequest = async (event: any): Promise<any> => {
     return await addNumbersApplication.handleRequestEvent(StoreTotalRequest, event);
 };
 
