@@ -23,6 +23,7 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
     parameters = new RequestHandlerLambdaParameters
     services = new RequestHandlerLambdaServices
 
+    enableSNS: boolean;
     requestType: new () => any;
     handlerType: new () => IActivityRequestHandlerBase;
 
@@ -45,40 +46,54 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         this.handlerType = handlerType;
         
         if (initialise !== undefined) {
-            initialise(this);            
+            initialise(this);
         }
     }
 
     getEvents(): any[] {
 
-        const responseEvent = {
-            Type: 'SNS',
-            Properties: {
-                Topic: undefined,
-                FilterPolicy: {
-                    MessageType: new Array<string>()
-                }
-            },
-        };
+        const events = [];
 
-        responseEvent.Properties.Topic = this.parameters.requestTopic?.instance;
-        responseEvent.Properties.FilterPolicy.MessageType = [`${this.requestType.name}:Handler`];
+        if (this.enableSNS) {
 
-        return [responseEvent];
+            const requestEvent = {
+                Type: 'SNS',
+                Properties: {
+                    Topic: undefined,
+                    FilterPolicy: {
+                        MessageType: new Array<string>()
+                    }
+                },
+            };
+    
+            requestEvent.Properties.Topic = this.parameters.requestTopic?.instance;
+            requestEvent.Properties.FilterPolicy.MessageType = [`${this.requestType.name}:Handler`];
+    
+            events.push(requestEvent);                
+        }
+
+        return events;
     }
     
     validate(): string[] {
 
         const errorMessages = new Array<string>();
         
-        // TODO 16Jun20: We only need the following if we are to enable invocation from a message, e.g. from an explicit flag
-        if (this.parameters.requestTopic === undefined) errorMessages.push('this.parameters.requestTopic === undefined');
+        if (this.enableSNS) {
+            if (this.parameters.requestTopic === undefined) errorMessages.push('this.parameters.requestTopic === undefined');
+            if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
+        }
         
-        // TODO 16Jun20: Can we derive if the following is required? E.g. do we have any triggers? I am not sure we would want to introspect on each handle() call
-        if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
-        if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
+        if (this.hasAsyncHandler()) {
+            if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
+        }
 
         return errorMessages;
+    }
+
+    hasAsyncHandler(): boolean {
+        // TODO 29Jun20: How can we work out if we have an async handler?
+        return true;
     }
 
     async handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void> {

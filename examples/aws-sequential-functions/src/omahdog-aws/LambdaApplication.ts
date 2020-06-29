@@ -372,12 +372,14 @@ export class LambdaApplication {
         const lambda = 
             new RequestHandlerLambda(functionReference, requestType, responseType, handlerType, initialise);
         
-        lambda.parameters.requestTopic = 
-            lambda.parameters.requestTopic ?? this.defaultRequestTopic;
-        lambda.services.responsePublisher = 
-            lambda.services.responsePublisher ?? this.defaultResponsePublisher;
-        lambda.services.functionInstanceRepository = 
-            lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;
+        if (lambda.enableSNS) {
+            lambda.parameters.requestTopic = lambda.parameters.requestTopic ?? this.defaultRequestTopic;
+            lambda.services.responsePublisher = lambda.services.responsePublisher ?? this.defaultResponsePublisher;
+        }
+
+        if (lambda.hasAsyncHandler()) {
+            lambda.services.functionInstanceRepository = lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;            
+        }
 
         this.requestHandlerLambdas.set(lambda.requestType.name, lambda);
 

@@ -6,19 +6,19 @@ import { LambdaApplication, FunctionNamePrefix } from './omahdog-aws/LambdaAppli
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
+import { ResourceReference, ParameterReference } from './omahdog-aws/TemplateReferences';
+import { ConstantValue } from './omahdog-aws/ConfigurationValues';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 import { StoreTotalHandler } from './handlers/StoreTotalHandler';
 import { SumNumbersHandler } from './handlers/SumNumbersHandler';
-import { SumNumbersLambdaProxy, StoreTotalLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy,AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
+import { SumNumbersLambdaProxy, AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy,AddTwoNumbersMessageProxy, AddThreeNumbersMessageProxy, StoreTotalMessageProxy } from './handlerProxies';
 import { AddNumbersApiControllerRoutes, requestRouter } from './routing';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { ResourceReference, ParameterReference } from './omahdog-aws/TemplateReferences';
-import { ConstantValue } from './omahdog-aws/ConfigurationValues';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -41,7 +41,8 @@ const templateReferences = {
 
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
     publisher.services.exchangeTopic = 
-        new SNSPublishMessageService(templateReferences.addNumbersExchangeTopic.attribute('TopicName'), snsClient);
+        new SNSPublishMessageService(
+            templateReferences.addNumbersExchangeTopic.attribute('TopicName'), snsClient);
 });
 
 const handlerFactory = new HandlerFactory()
@@ -55,9 +56,6 @@ const handlerFactory = new HandlerFactory()
 
     .setInitialiser(SumNumbersLambdaProxy, handler => {
         handler.services.lambda = new LambdaInvokeService(templateReferences.sumNumbersFunction, lambdaClient);
-    })
-    .setInitialiser(StoreTotalLambdaProxy, handler => {
-        handler.services.lambda = new LambdaInvokeService(templateReferences.storeTotalFunction, lambdaClient);
     })
     .setInitialiser(AddTwoNumbersLambdaProxy, handler => {
         handler.services.lambda = new LambdaInvokeService(templateReferences.addTwoNumbersFunction, lambdaClient);
@@ -92,17 +90,29 @@ export const addNumbersApplication =
         });
 
         application
+        // TODO 29Jun20: Think about changing this to be something like:
+        // .addApiController(
+        //     templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerLambda)
+        // .addRequestHandler(
+        //     templateReferences.addThreeNumbersFunction, AddThreeNumbersLambda)
+
             .addApiController(
                 templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)
-
+    
             .addRequestHandler(
-                templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler)
+                templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler, lambda => {
+                    lambda.enableSNS = true;
+                })
             .addRequestHandler(
-                templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler)
+                templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler, lambda => {
+                    lambda.enableSNS = true;
+                })
             .addRequestHandler(
                 templateReferences.sumNumbersFunction, SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)
             .addRequestHandler(
-                templateReferences.storeTotalFunction, StoreTotalRequest, StoreTotalResponse, StoreTotalHandler)
+                templateReferences.storeTotalFunction, StoreTotalRequest, StoreTotalResponse, StoreTotalHandler, lambda => {
+                    lambda.enableSNS = true;
+                })
         ;
     });
 

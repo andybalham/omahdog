@@ -9,7 +9,6 @@ import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExc
 export class AddThreeNumbersLambdaProxy extends LambdaProxyRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse> {}
 export class AddTwoNumbersLambdaProxy extends LambdaProxyRequestHandler<AddTwoNumbersRequest, AddTwoNumbersResponse> {}
 export class SumNumbersLambdaProxy extends LambdaProxyRequestHandler<SumNumbersRequest, SumNumbersResponse> {}
-export class StoreTotalLambdaProxy extends LambdaProxyRequestHandler<StoreTotalRequest, StoreTotalResponse> {}
 
 export class AddThreeNumbersMessageProxy extends SNSProxyRequestHandler<AddThreeNumbersRequest, AddThreeNumbersResponse> {
     constructor() { super(AddThreeNumbersRequest); }
@@ -17,10 +16,6 @@ export class AddThreeNumbersMessageProxy extends SNSProxyRequestHandler<AddThree
 
 export class AddTwoNumbersMessageProxy extends SNSProxyRequestHandler<AddTwoNumbersRequest, AddTwoNumbersResponse> {
     constructor() { super(AddTwoNumbersRequest); }
-}
-
-export class SumNumbersMessageProxy extends SNSProxyRequestHandler<SumNumbersRequest, SumNumbersResponse> {
-    constructor() { super(SumNumbersRequest); }
 }
 
 export class StoreTotalMessageProxy extends SNSProxyRequestHandler<StoreTotalRequest, StoreTotalResponse> {

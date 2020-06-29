@@ -119,8 +119,6 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
           SUM_NUMBERS_FUNCTION:
             Ref: SumNumbersFunction
       Policies:
@@ -129,9 +127,6 @@ Resources:
               Fn::GetAtt:
                 - FlowExchangeTopic
                 - TopicName
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
         - LambdaInvokePolicy:
             FunctionName:
               Ref: SumNumbersFunction
@@ -155,8 +150,6 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
           SUM_NUMBERS_FUNCTION:
             Ref: SumNumbersFunction
       Policies:
@@ -165,9 +158,6 @@ Resources:
               Fn::GetAtt:
                 - FlowExchangeTopic
                 - TopicName
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
         - LambdaInvokePolicy:
             FunctionName:
               Ref: SumNumbersFunction
@@ -187,29 +177,9 @@ Resources:
         Fn::Sub: ${ApplicationName}-SumNumbersFunction
       Handler: lambdas.handleSumNumbersRequest
       Environment:
-        Variables:
-          FLOW_EXCHANGE_TOPIC:
-            Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
-      Policies:
-        - SNSPublishMessagePolicy:
-            TopicName:
-              Fn::GetAtt:
-                - FlowExchangeTopic
-                - TopicName
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
-      Events:
-        SNSEvent001:
-          Type: SNS
-          Properties:
-            Topic:
-              Ref: FlowExchangeTopic
-            FilterPolicy:
-              MessageType:
-                - SumNumbersRequest:Handler
+        Variables: {}
+      Policies: []
+      Events: {}
   StoreTotalFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -220,8 +190,6 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
           FLOW_RESULT_TABLE:
             Ref: FlowResultTable
       Policies:
@@ -230,9 +198,6 @@ Resources:
               Fn::GetAtt:
                 - FlowExchangeTopic
                 - TopicName
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
         - DynamoDBCrudPolicy:
             TableName:
               Ref: FlowResultTable
