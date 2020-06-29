@@ -306,7 +306,7 @@ export class LambdaApplication {
             });
         });
 
-        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase) => {
+        this.requestHandlerLambdas.forEach(lambda => {
             this.addRequestHandlers(lambda.handlerType, allRequestHandlers);
         });
 

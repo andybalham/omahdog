@@ -29,14 +29,6 @@ export class AddTwoNumbersHandler extends FlowRequestHandler<AddTwoNumbersReques
                 (req, state) => { req.values = [state.x, state.y]; },
                 (res, state) => { state.total = res.total; })
 
-            .perform('Store_total', StoreTotalRequest, StoreTotalResponse,
-                (req, state) => { 
-                    req.description = this.totalDescription; 
-                    req.total = state.total;
-                    req.startTime = state.startTime;
-                    req.endTime = new Date();
-                })
-
             .finalise((res, state) => {
                 res.total = state.total;
             });

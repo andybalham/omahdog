@@ -17,8 +17,8 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { ResourceReference, ResourceReferenceAttribute, ParameterReference } from './omahdog-aws/TemplateReferences';
-import { EnvironmentVariable, ConstantValue } from './omahdog-aws/ConfigurationValues';
+import { ResourceReference, ParameterReference } from './omahdog-aws/TemplateReferences';
+import { ConstantValue } from './omahdog-aws/ConfigurationValues';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
