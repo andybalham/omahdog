@@ -39,10 +39,15 @@ const templateReferences = {
     storeTotalFunction: new ResourceReference('StoreTotalFunction'),
 };
 
+// TODO 29Jun20: We are only exporting this for the dead letter queue and wiretap lambdas
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
     publisher.services.exchangeTopic = 
         new SNSPublishMessageService(
             templateReferences.addNumbersExchangeTopic.attribute('TopicName'), snsClient);
+});
+
+const dynamoDbFunctionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
+    repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
 });
 
 const handlerFactory = new HandlerFactory()
@@ -74,7 +79,7 @@ const handlerFactory = new HandlerFactory()
         handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
     })
     ;
-    
+
 export const addNumbersApplication = 
     new LambdaApplication(requestRouter, handlerFactory, application => {
         
@@ -85,16 +90,16 @@ export const addNumbersApplication =
         application.defaultRequestTopic = templateReferences.addNumbersExchangeTopic;
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         
-        application.defaultFunctionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
-            repository.services.functionInstanceTable = new DynamoDBCrudService(templateReferences.addNumbersInstanceTable, dynamoDbClient);
-        });
+        application.defaultFunctionInstanceRepository = dynamoDbFunctionInstanceRepository;
+
+        // TODO 29Jun20: Think about changing this to be something like:
+        // application
+        //     .addApiController(
+        //         templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerLambda)
+        //     .addRequestHandler(
+        //         templateReferences.addThreeNumbersFunction, AddThreeNumbersLambda);
 
         application
-        // TODO 29Jun20: Think about changing this to be something like:
-        // .addApiController(
-        //     templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerLambda)
-        // .addRequestHandler(
-        //     templateReferences.addThreeNumbersFunction, AddThreeNumbersLambda)
 
             .addApiController(
                 templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerRoutes)

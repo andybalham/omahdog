@@ -1,4 +1,5 @@
 import { FlowDefinition, ActivityFlowStep, DecisionFlowStep, LabelFlowStep, GotoFlowStep, EndFlowStep, CaseDecisionBranch, DecisionBranchTargetType, ElseDecisionBranch } from './FlowDefinition';
+import { Type } from './Type';
 
 export class FlowBuilder<TFlowReq, TFlowRes, TState> {
 
@@ -16,7 +17,7 @@ export class FlowBuilder<TFlowReq, TFlowRes, TState> {
         return this.flowDefinition;
     }
 
-    perform<TReq, TRes>(stepName: string, RequestType: new () => TReq, ResponseType: new () => TRes,
+    perform<TReq, TRes>(stepName: string, RequestType: Type<TReq>, ResponseType: Type<TRes>,
         bindRequest: (request: TReq, state: TState) => void, bindState?: (response: TRes, state: TState) => void): FlowBuilder<TFlowReq, TFlowRes, TState> {
 
         bindState = (bindState === undefined) ? (_res, _state): void => { } : bindState;

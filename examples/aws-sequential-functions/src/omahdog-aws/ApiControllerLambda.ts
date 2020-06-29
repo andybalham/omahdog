@@ -1,16 +1,17 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
+import { Type } from '../omahdog/Type';
 import { TemplateReference } from './TemplateReferences';
 import { LambdaBase } from './LambdaBase';
 
 export class ApiControllerLambda extends LambdaBase {
 
     readonly apiGatewayReference: TemplateReference;
-    readonly apiControllerRoutesType: new () => ApiControllerRoutes;
+    readonly apiControllerRoutesType: Type<ApiControllerRoutes>;
     readonly apiControllerRoutes: ApiControllerRoutes;
 
-    constructor(functionReference: TemplateReference, apiGatewayReference: TemplateReference, apiControllerRoutesType: new () => ApiControllerRoutes, 
+    constructor(functionReference: TemplateReference, apiGatewayReference: TemplateReference, apiControllerRoutesType: Type<ApiControllerRoutes>, 
         initialise?: (lambda: ApiControllerLambda) => void) {
 
         super(functionReference.name ?? 'Undefined');
@@ -110,7 +111,7 @@ export class StringParameters { [name: string]: string }
 export abstract class ApiControllerRouteBase {
     httpMethod: string;
     resource: string;
-    handlerType: new () => IActivityRequestHandlerBase;
+    handlerType: Type<IActivityRequestHandlerBase>;
     getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null) => any;
     getAPIGatewayProxyResult?: (response: any) => APIGatewayProxyResult
 }
@@ -118,7 +119,7 @@ export abstract class ApiControllerRouteBase {
 export class ApiControllerRoute<TReq, TRes> extends ApiControllerRouteBase {
     httpMethod: string;
     resource: string;
-    handlerType: new () => IActivityRequestHandler<TReq, TRes>;
+    handlerType: Type<IActivityRequestHandler<TReq, TRes>>;
     getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null) => TReq;
     getAPIGatewayProxyResult?: (response: TRes) => APIGatewayProxyResult
 }
@@ -131,9 +132,9 @@ export abstract class ApiControllerRoutes {
         initialise(this);
     }
 
-    getHandlerTypes(): Array<new () => IActivityRequestHandlerBase> {
+    getHandlerTypes(): Array<Type<IActivityRequestHandlerBase>> {
         
-        const handlerTypes = new Map<string, new () => IActivityRequestHandlerBase>();
+        const handlerTypes = new Map<string, Type<IActivityRequestHandlerBase>>();
 
         this.routeMap.forEach(route => {
             handlerTypes.set(route.handlerType.name, route.handlerType);
@@ -143,7 +144,7 @@ export abstract class ApiControllerRoutes {
     }
 
     addGet<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(
-        resource: string, requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan,  
+        resource: string, requestType: Type<TReq>, responseType: Type<TRes>, handlerType: Type<THan>,  
         initialiseRoute?: (route: ApiControllerRoute<TReq, TRes>) => void): ApiControllerRoutes {
 
         const route: ApiControllerRoute<TReq, TRes> = {
@@ -165,7 +166,7 @@ export abstract class ApiControllerRoutes {
     }    
 
     addPost<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(
-        resource: string, requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
+        resource: string, requestType: Type<TReq>, responseType: Type<TRes>, handlerType: Type<THan>, 
         initialiseRoute?: (route: ApiControllerRoute<TReq, TRes>) => void): ApiControllerRoutes {
 
         const route: ApiControllerRoute<TReq, TRes> = {

@@ -10,6 +10,7 @@ import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
 import { TemplateReference, ResourceReference, ParameterReference } from './TemplateReferences';
+import { Type } from '../omahdog/Type';
 
 // TODO 27Jun20: Handle DeadLetterQueues
 
@@ -79,45 +80,44 @@ export class LambdaApplication {
 
         const resources: any = {};
 
-        const functionNamePrefix = this.functionNamePrefix;
+        const addFunctionResource = 
+            (resourceName: string, handledTypeName: string): void => {
 
-        function addFunctionResource(resourceName: string, handledTypeName: string): void {
+                const resourcePolicies = deduplicate(policiesByResource.get(resourceName));
+                const resourceEnvironmentVariables = deduplicate(environmentVariablesByResource.get(resourceName));
+                const resourceEvents = eventsByResource.get(resourceName);
 
-            const resourcePolicies = deduplicate(policiesByResource.get(resourceName));
-            const resourceEnvironmentVariables = deduplicate(environmentVariablesByResource.get(resourceName));
-            const resourceEvents = eventsByResource.get(resourceName);
-
-            const functionName: any = 
-                (functionNamePrefix === undefined) 
+                const functionName: any = 
+                (this.functionNamePrefix === undefined) 
                     ? resourceName 
-                    : (typeof functionNamePrefix === 'string') 
-                        ? `${functionNamePrefix}${resourceName}`
+                    : (typeof this.functionNamePrefix === 'string') 
+                        ? `${this.functionNamePrefix}${resourceName}`
                         : {
-                            'Fn::Sub': `${functionNamePrefix.getTemplate()}${resourceName}`
+                            'Fn::Sub': `${this.functionNamePrefix.getTemplate()}${resourceName}`
                         };
             
-            // TODO 28Jun20: Add support for Timeout, DeadLetterQueue, Description, Tags, Runtime(?)
+                // TODO 28Jun20: Add support for Timeout, DeadLetterQueue, Description, Tags, Runtime(?)
 
-            const resourceDefinition = {
-                Type: 'AWS::Serverless::Function',
-                Properties: {
-                    FunctionName: functionName,
-                    Handler: `lambdas.handle${handledTypeName}`,
-                    Environment: {
-                        Variables: {}
-                    },
-                    Policies: resourcePolicies,
-                    Events: resourceEvents
-                }
+                const resourceDefinition = {
+                    Type: 'AWS::Serverless::Function',
+                    Properties: {
+                        FunctionName: functionName,
+                        Handler: `lambdas.handle${handledTypeName}`,
+                        Environment: {
+                            Variables: {}
+                        },
+                        Policies: resourcePolicies,
+                        Events: resourceEvents
+                    }
+                };
+
+                (resourceEnvironmentVariables ?? []).forEach((environmentVariable: any) => {
+                    const definitionEnvironmentVariables = (resourceDefinition.Properties.Environment.Variables as any);
+                    definitionEnvironmentVariables[environmentVariable.name] = environmentVariable.value;
+                });
+
+                resources[resourceName] = resourceDefinition;
             };
-
-            (resourceEnvironmentVariables ?? []).forEach((environmentVariable: any) => {
-                const definitionEnvironmentVariables = (resourceDefinition.Properties.Environment.Variables as any);
-                definitionEnvironmentVariables[environmentVariable.name] = environmentVariable.value;
-            });
-
-            resources[resourceName] = resourceDefinition;
-        }
 
         this.apiControllerLambdas.forEach(lambda => {
             addFunctionResource(lambda.resourceName, lambda.apiControllerRoutesType.name);            
@@ -313,7 +313,7 @@ export class LambdaApplication {
         return allRequestHandlers;
     }
 
-    private addRequestHandlers(requestHandlerType: new () => IActivityRequestHandlerBase, requestHandlers: Map<string, IActivityRequestHandlerBase>): void {
+    private addRequestHandlers(requestHandlerType: Type<IActivityRequestHandlerBase>, requestHandlers: Map<string, IActivityRequestHandlerBase>): void {
 
         const requestHandler = this.handlerFactory.newHandler(requestHandlerType);
 
@@ -351,14 +351,14 @@ export class LambdaApplication {
     }
 
     addApiController(functionReference: TemplateReference, apiGatewayReference: TemplateReference, 
-        apiControllerRoutesType: new () => ApiControllerRoutes, initialise?: (lambda: ApiControllerLambda) => void): LambdaApplication {
+        apiControllerRoutesType: Type<ApiControllerRoutes>, initialise?: (lambda: ApiControllerLambda) => void): LambdaApplication {
         
         const lambda = new ApiControllerLambda(functionReference, apiGatewayReference, apiControllerRoutesType, initialise);
         this.apiControllerLambdas.set(lambda.apiControllerRoutesType.name, lambda);
         return this;
     }
 
-    async handleApiEvent(apiControllerRoutesType: new () => ApiControllerRoutes, event: APIGatewayProxyEvent): Promise<any> {
+    async handleApiEvent(apiControllerRoutesType: Type<ApiControllerRoutes>, event: APIGatewayProxyEvent): Promise<any> {
         const apiControllerLambda = this.apiControllerLambdas.get(apiControllerRoutesType.name);
         if (apiControllerLambda === undefined) throw new Error('apiControllerLambda === undefined');
         const response = await apiControllerLambda.handle(event, this.requestRouter, this.handlerFactory);        
@@ -366,7 +366,7 @@ export class LambdaApplication {
     }
 
     addRequestHandler<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>>(functionReference: TemplateReference, 
-        requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
+        requestType: Type<TReq>, responseType: Type<TRes>, handlerType: Type<THan>, 
         initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void): LambdaApplication {
 
         const lambda = 
@@ -386,7 +386,7 @@ export class LambdaApplication {
         return this;
     }
 
-    async handleRequestEvent(requestType: new () => any, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
+    async handleRequestEvent(requestType: Type<any>, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
         const requestHandlerLambda = this.requestHandlerLambdas.get(requestType.name);
         if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
         const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        

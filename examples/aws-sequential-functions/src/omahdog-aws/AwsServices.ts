@@ -2,13 +2,14 @@ import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import { SNS, Lambda } from 'aws-sdk';
 import { TemplateReference, ResourceReference, ResourceReferenceAttribute } from './TemplateReferences';
 import { IConfigurationValue, EnvironmentVariable } from './ConfigurationValues';
+import { Type } from '../omahdog/Type';
 
 export abstract class AwsService {
 
     readonly typeName: string;
     readonly templateReference?: TemplateReference;
     
-    constructor(type: new () => AwsService, templateReference?: TemplateReference) {
+    constructor(type: Type<AwsService>, templateReference?: TemplateReference) {
         this.typeName = type.name;
         this.templateReference = templateReference;
     }

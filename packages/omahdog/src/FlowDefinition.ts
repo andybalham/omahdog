@@ -1,3 +1,5 @@
+import { Type } from './Type';
+
 export class FlowDefinition<TFlowReq, TFlowRes, TState> {
     initialiseState?: (request: TFlowReq, state: TState) => void;
     bindResponse?: (response: TFlowRes, state: TState) => void;
@@ -25,7 +27,7 @@ export abstract class FlowStep {
 
 export class ActivityFlowStep<TReq, TRes, TState> extends FlowStep {
 
-    constructor(stepName: string, requestType?: new () => TReq, responseType?: new () => TRes,
+    constructor(stepName: string, requestType?: Type<TReq>, responseType?: Type<TRes>,
         bindRequest?: (request: TReq, state: TState) => void, bindState?: (response: TRes, state: TState) => void) {
 
         super(FlowStepType.Activity, stepName);
@@ -36,8 +38,8 @@ export class ActivityFlowStep<TReq, TRes, TState> extends FlowStep {
         this.bindState = bindState;
     }
 
-    readonly requestType?: new () => TReq;
-    readonly responseType?: new () => TRes;
+    readonly requestType?: Type<TReq>;
+    readonly responseType?: Type<TRes>;
     readonly bindRequest?: (request: TReq, state: TState) => void;
     readonly bindState?: (response: TRes, state: TState) => void;
 }

@@ -2,6 +2,7 @@ import uuid = require('uuid');
 import { FlowMocks } from './FlowMocks';
 import { ErrorResponse } from './FlowExchanges';
 import { IResumableRequestHandler } from './FlowRequestHandler';
+import { Type } from './Type';
 
 export class FlowContext {
 
@@ -60,7 +61,7 @@ export class FlowContext {
         return this.asyncResponse !== undefined;
     }
 
-    async sendRequest<TReq, TRes>(requestType: new () => TReq, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
+    async sendRequest<TReq, TRes>(requestType: Type<TReq>, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
 
         const handlerType = this.requestRouter.getHandlerType(requestType);
 
@@ -69,7 +70,7 @@ export class FlowContext {
         return await this.handleRequest(handlerType, request);
     }
 
-    async handleRequest<TReq, TRes>(handlerType: new () => IActivityRequestHandlerBase, request: TReq): 
+    async handleRequest<TReq, TRes>(handlerType: Type<IActivityRequestHandlerBase>, request: TReq): 
         Promise<TRes | AsyncResponse | ErrorResponse> {
 
         if (this._rootHandlerTypeName === undefined) {
@@ -83,7 +84,7 @@ export class FlowContext {
         return response;
     }
 
-    async receiveResponse<TReq, TRes>(requestType: new () => TReq, asyncResponse: any): Promise<TRes | AsyncResponse | ErrorResponse> {
+    async receiveResponse<TReq, TRes>(requestType: Type<TReq>, asyncResponse: any): Promise<TRes | AsyncResponse | ErrorResponse> {
         
         const handlerType = this.requestRouter.getHandlerType(requestType);
 
@@ -92,7 +93,7 @@ export class FlowContext {
         return await this.handleResponse(handlerType, asyncResponse);
     }
 
-    async handleResponse<TReq, TRes>(handlerType: new () => IActivityRequestHandlerBase, asyncResponse: any): 
+    async handleResponse<TReq, TRes>(handlerType: Type<IActivityRequestHandlerBase>, asyncResponse: any): 
         Promise<TRes | AsyncResponse | ErrorResponse> {
         
         if (this._rootHandlerTypeName === undefined) {
@@ -160,7 +161,7 @@ export interface IActivityRequestHandlerBase {
 }
 
 export interface ICompositeRequestHandler {
-    getSubRequestTypes(): (new () => any)[];
+    getSubRequestTypes(): (Type<any>)[];
 }
 
 export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHandlerBase {
@@ -192,7 +193,7 @@ export class HandlerFactory {
 
     private readonly initialisers = new Map<string, (handler: any) => void>();
 
-    setInitialiser<T extends IActivityRequestHandlerBase>(handlerType: new () => T, initialiser: (handler: T) => void): HandlerFactory {
+    setInitialiser<T extends IActivityRequestHandlerBase>(handlerType: Type<T>, initialiser: (handler: T) => void): HandlerFactory {
 
         if (this.initialisers.has(handlerType.name)) {
             throw new Error(`Initialiser already set for ${handlerType.name}`);
@@ -201,7 +202,7 @@ export class HandlerFactory {
         return this;
     }    
 
-    newHandler<T extends IActivityRequestHandlerBase>(type: new () => T): IActivityRequestHandlerBase {
+    newHandler<T extends IActivityRequestHandlerBase>(type: Type<T>): IActivityRequestHandlerBase {
 
         const handler = new type();
 
@@ -217,16 +218,16 @@ export class HandlerFactory {
 
 export class RequestRouter {
 
-    private readonly _requestHandlerTypes = new Map<string, new () => IActivityRequestHandlerBase>();
+    private readonly _requestHandlerTypes = new Map<string, Type<IActivityRequestHandlerBase>>();
 
     register<TReq, TRes, THand extends IActivityRequestHandler<TReq, TRes>>(
-        RequestType: new () => TReq, _ResponseType: new () => TRes, HandlerType: new () => THand): RequestRouter {
+        RequestType: Type<TReq>, _ResponseType: Type<TRes>, HandlerType: Type<THand>): RequestRouter {
 
         this._requestHandlerTypes.set(RequestType.name, HandlerType);
         return this;
     }
     
-    getHandlerType<TReq>(RequestType: new () => TReq): new () => IActivityRequestHandlerBase {
+    getHandlerType<TReq>(RequestType: Type<TReq>): Type<IActivityRequestHandlerBase> {
 
         const handlerType = this._requestHandlerTypes.get(RequestType.name);
 

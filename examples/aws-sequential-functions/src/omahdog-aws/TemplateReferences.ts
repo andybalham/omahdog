@@ -1,6 +1,8 @@
+import { Type } from '../omahdog/Type';
+
 export abstract class TemplateReference {
     readonly typeName: string;
-    constructor(type: new () => TemplateReference) {
+    constructor(type: Type<TemplateReference>) {
         this.typeName = type.name;
     }
     abstract get name(): string | undefined;

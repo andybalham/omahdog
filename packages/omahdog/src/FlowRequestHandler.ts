@@ -3,6 +3,7 @@ import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
 import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse, ICompositeRequestHandler } from './FlowContext';
 import { ErrorResponse } from './FlowExchanges';
+import { Type } from './Type';
 
 export interface IResumableRequestHandler {
     resume(flowContext: FlowContext): Promise<any>;
@@ -13,18 +14,18 @@ export abstract class FlowRequestHandlerBase implements IResumableRequestHandler
     constructor(typeName: string) {
         this.typeName = typeName;
     }
-    abstract getSubRequestTypes(): (new () => any)[];
+    abstract getSubRequestTypes(): (Type<any>)[];
     abstract resume(flowContext: FlowContext): Promise<any>;
 }
 
 // TODO 31May20: Rename this CompositeRequestHandler
 export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequestHandlerBase implements IActivityRequestHandler<TReq, TRes> {
 
-    private readonly responseType: new () => TRes;
-    private readonly stateType: new () => TState;
+    private readonly responseType: Type<TRes>;
+    private readonly stateType: Type<TState>;
     private readonly flowDefinition: FlowDefinition<TReq, TRes, TState>;
 
-    constructor(handlerType: new () => FlowRequestHandler<TReq, TRes, TState>, responseType: new () => TRes, StateType: new () => TState) {
+    constructor(handlerType: Type<FlowRequestHandler<TReq, TRes, TState>>, responseType: Type<TRes>, StateType: Type<TState>) {
 
         super(handlerType.name);
 
@@ -168,9 +169,9 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
         return response;
     }
 
-    getSubRequestTypes(): (new () => any)[] {
+    getSubRequestTypes(): (Type<any>)[] {
         
-        const subRequestTypes = new Map<string, new () => any>();
+        const subRequestTypes = new Map<string, Type<any>>();
 
         this.flowDefinition.steps.forEach(step => {            
             

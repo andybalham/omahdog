@@ -8,6 +8,7 @@ import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IConfigurationValue } from './ConfigurationValues';
+import { Type } from '../omahdog/Type';
 
 class RequestHandlerLambdaServices {
     responsePublisher?: IExchangeMessagePublisher
@@ -24,8 +25,8 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
     services = new RequestHandlerLambdaServices
 
     enableSNS: boolean;
-    requestType: new () => any;
-    handlerType: new () => IActivityRequestHandlerBase;
+    requestType: Type<any>;
+    handlerType: Type<IActivityRequestHandlerBase>;
 
     abstract getEvents(): any[];
 
@@ -35,7 +36,7 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
 export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>> extends RequestHandlerLambdaBase {
 
     constructor(functionReference: TemplateReference, 
-        requestType: new () => TReq, responseType: new () => TRes, handlerType: new () => THan, 
+        requestType: Type<TReq>, responseType: Type<TRes>, handlerType: Type<THan>, 
         initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void) {
 
         // TODO 20Jun20: How can we add instance-specific configuration for the handler? E.g. No triggering by message
