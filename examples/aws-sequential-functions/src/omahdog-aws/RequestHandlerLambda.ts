@@ -93,6 +93,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
     }
 
     hasAsyncHandler(): boolean {
+
         // TODO 29Jun20: How can we work out if we have an async handler?
         return true;
     }

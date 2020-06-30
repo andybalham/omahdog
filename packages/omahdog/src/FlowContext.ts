@@ -168,6 +168,34 @@ export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHan
     handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
 }
 
+export function getRequestHandlers(handlerType: Type<IActivityRequestHandlerBase>, 
+    handlerFactory: HandlerFactory, requestRouter: RequestRouter): Map<string, IActivityRequestHandlerBase> {
+
+    const handlers = new Map<string, IActivityRequestHandlerBase>();
+
+    const handler = handlerFactory.newHandler(handlerType);
+
+    handlers.set(handlerType.name, handler);
+
+    if ('getSubRequestTypes' in handler) {
+
+        const subRequestTypes = (handler as ICompositeRequestHandler).getSubRequestTypes();
+
+        subRequestTypes.forEach(subRequestType => {
+            
+            const subHandlerType = requestRouter.getHandlerType(subRequestType);
+
+            const subHandlers = getRequestHandlers(subHandlerType, handlerFactory, requestRouter);
+
+            subHandlers.forEach((handler, typeName) => {
+                handlers.set(typeName, handler);                    
+            });
+        });
+    }
+
+    return handlers;
+}
+
 export class AsyncResponse {
     
     readonly AsyncResponse: boolean = true;

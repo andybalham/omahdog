@@ -57,6 +57,7 @@ export class ApiControllerLambda extends LambdaBase {
         // TODO 17May20: Throw a more meaningful error
         if (route === undefined) throw new Error('route === undefined');
 
+        // TODO 30Jun20: Pass in headers, and possibly others. Perhaps easier to pass in the event itself?
         const request = route.getRequest(event.pathParameters, event.queryStringParameters, event.body);
 
         console.log(`request: ${JSON.stringify(request)}`);
@@ -112,15 +113,20 @@ export abstract class ApiControllerRouteBase {
     httpMethod: string;
     resource: string;
     handlerType: Type<IActivityRequestHandlerBase>;
-    getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null) => any;
+    getRequest: RequestGetter<any>;
     getAPIGatewayProxyResult?: (response: any) => APIGatewayProxyResult
+}
+
+// TODO 30Jun20: 
+interface RequestGetter<TReq> {
+    (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null): TReq;
 }
 
 export class ApiControllerRoute<TReq, TRes> extends ApiControllerRouteBase {
     httpMethod: string;
     resource: string;
     handlerType: Type<IActivityRequestHandler<TReq, TRes>>;
-    getRequest: (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null, body: string | null) => TReq;
+    getRequest: RequestGetter<TReq>;
     getAPIGatewayProxyResult?: (response: TRes) => APIGatewayProxyResult
 }
 

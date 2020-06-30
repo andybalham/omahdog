@@ -8,6 +8,7 @@ import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExc
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 
+// TODO 30Jun20: This could be changed to be FlowRequestRouter, with .route()
 export const requestRouter = new RequestRouter()
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)

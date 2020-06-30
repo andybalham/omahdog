@@ -1,7 +1,7 @@
 import { APIGatewayProxyEvent, SNSEvent } from 'aws-lambda';
 import deepEqual from 'deep-equal';
 
-import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory, IActivityRequestHandler } from '../omahdog/FlowContext';
+import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, HandlerFactory, IActivityRequestHandler, getRequestHandlers } from '../omahdog/FlowContext';
 
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
 import { RequestHandlerLambdaBase, RequestHandlerLambda } from './RequestHandlerLambda';
@@ -88,13 +88,13 @@ export class LambdaApplication {
                 const resourceEvents = eventsByResource.get(resourceName);
 
                 const functionName: any = 
-                (this.functionNamePrefix === undefined) 
-                    ? resourceName 
-                    : (typeof this.functionNamePrefix === 'string') 
-                        ? `${this.functionNamePrefix}${resourceName}`
-                        : {
-                            'Fn::Sub': `${this.functionNamePrefix.getTemplate()}${resourceName}`
-                        };
+                    (this.functionNamePrefix === undefined) 
+                        ? resourceName 
+                        : (typeof this.functionNamePrefix === 'string') 
+                            ? `${this.functionNamePrefix}${resourceName}`
+                            : {
+                                'Fn::Sub': `${this.functionNamePrefix.getTemplate()}${resourceName}`
+                            };
             
                 // TODO 28Jun20: Add support for Timeout, DeadLetterQueue, Description, Tags, Runtime(?)
 
@@ -138,15 +138,15 @@ export class LambdaApplication {
 
             let properties = getProperties(lambda);
 
-            const handlers = new Map<string, IActivityRequestHandlerBase>();
-
             const handlerTypes = lambda.apiControllerRoutes.getHandlerTypes();
-            handlerTypes.forEach(handlerType => {
-                this.addRequestHandlers(handlerType, handlers);
-            });
 
-            handlers.forEach(handler => {
-                properties = properties.concat(getProperties(handler));
+            handlerTypes.forEach(handlerType => {
+
+                const handlers = getRequestHandlers(handlerType, this.handlerFactory, this.requestRouter);
+
+                handlers.forEach(handler => {
+                    properties = properties.concat(getProperties(handler));
+                });    
             });
 
             propertiesByResource.set(lambda.resourceName, properties);
@@ -156,9 +156,7 @@ export class LambdaApplication {
 
             let properties = getProperties(lambda);
 
-            const handlers = new Map<string, IActivityRequestHandlerBase>();
-
-            this.addRequestHandlers(lambda.handlerType, handlers);
+            const handlers = getRequestHandlers(lambda.handlerType, this.handlerFactory, this.requestRouter);
 
             handlers.forEach(handler => {
                 properties = properties.concat(getProperties(handler));
@@ -187,8 +185,7 @@ export class LambdaApplication {
 
             let events = lambda.getEvents();
 
-            const handlers = new Map<string, IActivityRequestHandlerBase>();
-            this.addRequestHandlers(lambda.handlerType, handlers);
+            const handlers = getRequestHandlers(lambda.handlerType, this.handlerFactory, this.requestRouter);
 
             handlers.forEach(handler => {
                 const handlerEvents = getEvents(handler, lambda.handlerType.name);
@@ -302,52 +299,21 @@ export class LambdaApplication {
             const handlerTypes = lambda.apiControllerRoutes.getHandlerTypes();
 
             handlerTypes.forEach(handlerType => {
-                this.addRequestHandlers(handlerType, allRequestHandlers);
+                const handlers = getRequestHandlers(handlerType, this.handlerFactory, this.requestRouter);
+                handlers.forEach((handler, handlerTypeName) => {
+                    allRequestHandlers.set(handlerTypeName, handler);
+                });
             });
         });
 
         this.requestHandlerLambdas.forEach(lambda => {
-            this.addRequestHandlers(lambda.handlerType, allRequestHandlers);
+            const handlers = getRequestHandlers(lambda.handlerType, this.handlerFactory, this.requestRouter);
+            handlers.forEach((handler, handlerTypeName) => {
+                allRequestHandlers.set(handlerTypeName, handler);
+            });
         });
 
         return allRequestHandlers;
-    }
-
-    private addRequestHandlers(requestHandlerType: Type<IActivityRequestHandlerBase>, requestHandlers: Map<string, IActivityRequestHandlerBase>): void {
-
-        const requestHandler = this.handlerFactory.newHandler(requestHandlerType);
-
-        requestHandlers.set(requestHandlerType.name, requestHandler);
-
-        const subHandlers = this.getSubHandlers(requestHandler);
-        
-        subHandlers.forEach((handler, typeName) => {
-            requestHandlers.set(typeName, handler);            
-        });
-    }
-
-    private getSubHandlers(requestHandler: IActivityRequestHandlerBase): Map<string, IActivityRequestHandlerBase> {
-
-        const subHandlers = new Map<string, IActivityRequestHandlerBase>();
-
-        if ('getSubRequestTypes' in requestHandler) {
-
-            const subRequestTypes = (requestHandler as ICompositeRequestHandler).getSubRequestTypes();
-
-            subRequestTypes.forEach(subRequestType => {
-                
-                const subHandlerType = this.requestRouter.getHandlerType(subRequestType);                    
-                const subHandler = this.handlerFactory.newHandler(subHandlerType);
-
-                subHandlers.set(subHandlerType.name, subHandler);
-
-                this.getSubHandlers(subHandler).forEach((handler, typeName) => {
-                    subHandlers.set(typeName, handler);                    
-                });
-            });
-        }
-
-        return subHandlers;
     }
 
     addApiController(functionReference: TemplateReference, apiGatewayReference: TemplateReference, 
