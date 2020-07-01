@@ -45,12 +45,12 @@ export class LambdaApplication {
         const allRequestHandlers = this.getAllRequestHandlers();
 
         this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase) => {
-            const lambdaErrors = validateConfiguration(lambda, lambda.resourceName);
+            const lambdaErrors = validateConfiguration(lambda, this.requestRouter, this.handlerFactory, lambda.resourceName);
             errors = errors.concat(lambdaErrors);
         });
 
         allRequestHandlers.forEach((handler, handlerTypeName) => {
-            const serviceErrors = validateConfiguration(handler, handlerTypeName);
+            const serviceErrors = validateConfiguration(handler, this.requestRouter, this.handlerFactory, handlerTypeName);
             errors = errors.concat(serviceErrors);                        
         });
 
@@ -343,7 +343,7 @@ export class LambdaApplication {
             lambda.services.responsePublisher = lambda.services.responsePublisher ?? this.defaultResponsePublisher;
         }
 
-        if (lambda.hasAsyncHandler()) {
+        if (lambda.hasAsyncHandler(this.requestRouter, this.handlerFactory)) {
             lambda.services.functionInstanceRepository = lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;            
         }
 

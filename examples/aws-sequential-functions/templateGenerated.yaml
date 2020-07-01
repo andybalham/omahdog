@@ -155,8 +155,6 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
           SUM_NUMBERS_FUNCTION:
             Ref: SumNumbersFunction
       Policies:
@@ -165,9 +163,6 @@ Resources:
               Fn::GetAtt:
                 - FlowExchangeTopic
                 - TopicName
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
         - LambdaInvokePolicy:
             FunctionName:
               Ref: SumNumbersFunction
@@ -187,13 +182,8 @@ Resources:
         Fn::Sub: ${ApplicationName}-SumNumbersFunction
       Handler: lambdas.handleSumNumbersRequest
       Environment:
-        Variables:
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
-      Policies:
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
+        Variables: {}
+      Policies: []
       Events: {}
   StoreTotalFunction:
     Type: AWS::Serverless::Function
@@ -205,8 +195,6 @@ Resources:
         Variables:
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
-          FLOW_INSTANCE_TABLE:
-            Ref: FlowInstanceTable
           FLOW_RESULT_TABLE:
             Ref: FlowResultTable
       Policies:
@@ -215,9 +203,6 @@ Resources:
               Fn::GetAtt:
                 - FlowExchangeTopic
                 - TopicName
-        - DynamoDBCrudPolicy:
-            TableName:
-              Ref: FlowInstanceTable
         - DynamoDBCrudPolicy:
             TableName:
               Ref: FlowResultTable

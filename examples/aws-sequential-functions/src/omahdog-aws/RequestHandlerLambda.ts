@@ -1,6 +1,6 @@
 import { SNSEvent } from 'aws-lambda';
 
-import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler } from '../omahdog/FlowContext';
+import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler, getRequestHandlers } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
@@ -76,7 +76,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         return events;
     }
     
-    validate(): string[] {
+    validate(requestRouter: RequestRouter, handlerFactory: HandlerFactory): string[] {
 
         const errorMessages = new Array<string>();
         
@@ -85,17 +85,17 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
             if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
         }
         
-        if (this.hasAsyncHandler()) {
+        if (this.hasAsyncHandler(requestRouter, handlerFactory)) {
             if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
         }
 
         return errorMessages;
     }
 
-    hasAsyncHandler(): boolean {
-
-        // TODO 29Jun20: How can we work out if we have an async handler?
-        return true;
+    hasAsyncHandler(requestRouter: RequestRouter, handlerFactory: HandlerFactory): boolean {
+        const handlers = getRequestHandlers(this.handlerType, handlerFactory, requestRouter);
+        const hasAsyncHandler = Array.from(handlers.values()).some((h: any) => h.isAsync);
+        return hasAsyncHandler;
     }
 
     async handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void> {

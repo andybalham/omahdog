@@ -5,6 +5,8 @@ import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
+    isAsync = true;
+
     services = {
         requestPublisher: new SNSExchangeMessagePublisher
     }

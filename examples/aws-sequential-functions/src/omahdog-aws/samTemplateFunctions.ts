@@ -1,4 +1,6 @@
-export function validateConfiguration(targetObject: any, errorPrefix = ''): string[] {
+import { RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
+
+export function validateConfiguration(targetObject: any, requestRouter: RequestRouter, handlerFactory: HandlerFactory, errorPrefix = ''): string[] {
         
     let errorMessages: string[] = [];
 
@@ -6,26 +8,27 @@ export function validateConfiguration(targetObject: any, errorPrefix = ''): stri
         return errorMessages;
     }
 
-    const validateMethodName = 'validate';
-    if (validateMethodName in targetObject) {        
-        const targetObjectErrorMessages: string[] = targetObject[validateMethodName]();
+    if ('validate' in targetObject) {        
+        const targetObjectErrorMessages: string[] = targetObject.validate(requestRouter, handlerFactory);
         errorMessages = 
-            errorMessages.concat(targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
+            errorMessages.concat(
+                targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
     }
 
-    function addConfigurationErrors(configObject: any, errorPrefix: string, errorMessages: string[]): string[] {
+    const addConfigurationErrors = 
+        (configObject: any, errorPrefix: string, errorMessages: string[]): string[] => {
 
-        for (const configProperty in configObject ?? {}) {
-            
-            const config = configObject[configProperty];
-            const configErrorPrefix = `${errorPrefix}.${configProperty}`;
-            const configErrorMessages = validateConfiguration(config, configErrorPrefix);
-    
-            errorMessages = errorMessages.concat(configErrorMessages);
-        }
-    
-        return errorMessages;
-    }
+            for (const configProperty in configObject ?? {}) {
+                
+                const config = configObject[configProperty];
+                const configErrorPrefix = `${errorPrefix}.${configProperty}`;
+                const configErrorMessages = validateConfiguration(config, requestRouter, handlerFactory, configErrorPrefix);
+        
+                errorMessages = errorMessages.concat(configErrorMessages);
+            }
+        
+            return errorMessages;
+        };
         
     errorMessages = addConfigurationErrors(targetObject.parameters, errorPrefix, errorMessages);
     errorMessages = addConfigurationErrors(targetObject.services, errorPrefix, errorMessages);
