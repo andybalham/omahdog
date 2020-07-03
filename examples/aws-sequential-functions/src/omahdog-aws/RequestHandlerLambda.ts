@@ -76,7 +76,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         return events;
     }
     
-    validate(requestRouter: RequestRouter, handlerFactory: HandlerFactory): string[] {
+    validate(baseTemplate: any, requestRouter: RequestRouter, handlerFactory: HandlerFactory): string[] {
 
         const errorMessages = new Array<string>();
         

@@ -7,13 +7,20 @@ import { addNumbersApplication } from '../src/addNumbersApplication';
 
 describe('Lambda application tests', () => {
 
-    it('can be validated', () => {
+    it.only('can be validated', () => {
         
         // Arrange
 
+        const baseTemplateFilePath = path.join(__dirname, '../templateBase.yaml');
+        const baseTemplateContent = fs.readFileSync(baseTemplateFilePath, 'utf8');
+        const baseTemplate = YAML.parse(baseTemplateContent);
+        
         // Act
 
-        const errors = addNumbersApplication.validate();
+        // TODO 02Jul20: What about references to generated references? Also, the reference to ApiGateway doesn't seem to validate
+        // TODO 02Jul20: Need to ensure any template names are also validated
+
+        const errors = addNumbersApplication.validate(baseTemplate);
 
         // Assert
 

@@ -1,6 +1,6 @@
 import { RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 
-export function validateConfiguration(targetObject: any, requestRouter: RequestRouter, handlerFactory: HandlerFactory, errorPrefix = ''): string[] {
+export function validateConfiguration(targetObject: any, baseTemplate: any, requestRouter: RequestRouter, handlerFactory: HandlerFactory, errorPrefix = ''): string[] {
         
     let errorMessages: string[] = [];
 
@@ -9,7 +9,8 @@ export function validateConfiguration(targetObject: any, requestRouter: RequestR
     }
 
     if ('validate' in targetObject) {        
-        const targetObjectErrorMessages: string[] = targetObject.validate(requestRouter, handlerFactory);
+        
+        const targetObjectErrorMessages: string[] = targetObject.validate(baseTemplate, requestRouter, handlerFactory);
         errorMessages = 
             errorMessages.concat(
                 targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
@@ -22,7 +23,7 @@ export function validateConfiguration(targetObject: any, requestRouter: RequestR
                 
                 const config = configObject[configProperty];
                 const configErrorPrefix = `${errorPrefix}.${configProperty}`;
-                const configErrorMessages = validateConfiguration(config, requestRouter, handlerFactory, configErrorPrefix);
+                const configErrorMessages = validateConfiguration(config, baseTemplate, requestRouter, handlerFactory, configErrorPrefix);
         
                 errorMessages = errorMessages.concat(configErrorMessages);
             }

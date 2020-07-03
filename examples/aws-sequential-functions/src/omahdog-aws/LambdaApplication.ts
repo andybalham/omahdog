@@ -35,22 +35,31 @@ export class LambdaApplication {
         initialise(this);
     }    
     
-    validate(): string[] {
+    validate(baseTemplate: any): string[] {
         
-        // TODO 07Jun20: We will eventually pass in the base template for verification against base references
-        // TODO 28Jun20: Include validation of the function name prefix
+        // TODO 02Jul20: We need to extract all template references, they could be in configuration values, i.e. validation of the function name prefix
 
         let errors: string[] = [];
 
+        // TODO 02Jul20: We might be able to get rid of the following method, as we need to iterate over all types of lambdas
         const allRequestHandlers = this.getAllRequestHandlers();
 
-        this.requestHandlerLambdas.forEach((lambda: RequestHandlerLambdaBase) => {
-            const lambdaErrors = validateConfiguration(lambda, this.requestRouter, this.handlerFactory, lambda.resourceName);
+        // TODO 03Jul20: Is this the best way to inform validation of functions to come
+        this.requestHandlerLambdas.forEach(lambda => {
+            baseTemplate.Resources[lambda.resourceName] = '<placeholder>';
+        });
+
+        // TODO 03Jul20: Should we validate against that a reference was to the right type, e.g. function, SNS, etc?
+        
+        // TODO 02Jul20: We need to validate each ApiControllerLambda too
+
+        this.requestHandlerLambdas.forEach(lambda => {
+            const lambdaErrors = validateConfiguration(lambda, baseTemplate, this.requestRouter, this.handlerFactory, lambda.resourceName);
             errors = errors.concat(lambdaErrors);
         });
 
         allRequestHandlers.forEach((handler, handlerTypeName) => {
-            const serviceErrors = validateConfiguration(handler, this.requestRouter, this.handlerFactory, handlerTypeName);
+            const serviceErrors = validateConfiguration(handler, baseTemplate, this.requestRouter, this.handlerFactory, handlerTypeName);
             errors = errors.concat(serviceErrors);                        
         });
 

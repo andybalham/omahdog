@@ -6,8 +6,8 @@ import { LambdaApplication, FunctionNamePrefix } from './omahdog-aws/LambdaAppli
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
 import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
-import { ResourceReference, ParameterReference } from './omahdog-aws/TemplateReferences';
-import { ConstantValue } from './omahdog-aws/ConfigurationValues';
+import { ResourceReference, ParameterReference, TemplateReference } from './omahdog-aws/TemplateReferences';
+import { ConstantValue, EnvironmentVariable } from './omahdog-aws/ConfigurationValues';
 
 import { AddThreeNumbersHandler } from './handlers/AddThreeNumbersHandler';
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
@@ -56,7 +56,8 @@ const handlerFactory = new HandlerFactory()
         handler.services.dynamoDb = new DynamoDBCrudService(templateReferences.addNumbersResultTable, dynamoDbClient);
     })
     .setInitialiser(AddThreeNumbersHandler, handler => {
-        handler.parameters.totalDescription = new ConstantValue('Life, the universe etc.');
+        handler.parameters.totalDescription = new ConstantValue('Life, the universe, and everything');
+        // handler.parameters.totalDescription = new EnvironmentVariable(new ParameterReference('TotalDescription'));
     })
 
     .setInitialiser(SumNumbersLambdaProxy, handler => {

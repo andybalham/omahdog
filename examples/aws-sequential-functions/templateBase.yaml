@@ -12,6 +12,9 @@ Parameters:
   ApiStageName:
     Type: String
     Default: test
+  # TotalDescription:
+  #   Type: String
+  #   Default: Aloha from Hawaii
         
 Globals:
   Function:

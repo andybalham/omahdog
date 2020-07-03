@@ -1,23 +1,8 @@
 # TODO
 
 * Generate SAM template from an 'application' class
-  * I don't know whether this is a viable aim
-  * Perhaps we could have a CLI to aid in the boilerplate code
-  * [Handlebars.js](https://handlebarsjs.com/)
-  * [Mustache.js](https://github.com/janl/mustache.js)
-
-* Implement 'add number' flows using Step Functions
-  * [ResultPath](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-resultpath.html)
-  * [Input and Output Processing in Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-input-output-filtering.html)
-  * [Creating a Lambda State Machine for Step Functions Using AWS CloudFormation](https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-lambda-state-machine-cloudformation.html)
-  * [Building Serverless workflows with AWS Step Functions](https://medium.com/finimize-engineering/building-serverless-workflows-with-aws-step-functions-89eca69a93f3)
-  * [AWS::StepFunctions::StateMachine](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-stepfunctions-statemachine.html)
-  * [How AWS Step Functions Works with IAM](https://docs.aws.amazon.com/step-functions/latest/dg/procedure-create-iam-role.html)
-  * [IAM Policies for Integrated Services](https://docs.aws.amazon.com/step-functions/latest/dg/service-integration-iam-templates.html)
-
-* Look at wrapping all AWS services in our own services
-
-* [Set up Lambda proxy integrations in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html)
+  * Validate parameter references
+  * Create a command line tool for template generation
 
 * Look at layers and stacks
 
@@ -35,7 +20,6 @@
 
 * [AWS-Serverless-Applications-Lens.pdf](https://d1.awsstatic.com/whitepapers/architecture/AWS-Serverless-Applications-Lens.pdf)
   * [10 Things Serverless Architects Should Know](https://aws.amazon.com/blogs/architecture/ten-things-serverless-architects-should-know/)
-
 
 * Look into use of DynamoDb vs. S3 for storing flow instances
   * [S3 or DynamoDB?](https://serverless.pub/s3-or-dynamodb/)
@@ -99,3 +83,16 @@ export interface StateBinder<TObj, TState> {
     * A. Very, if resource is given a name, e.g. `arn:${AWS::Partition}:sns:${AWS::Region}:${AWS::AccountId}:${topicName}`
 
 * Provide support for calling other Lambdas directly
+
+* Implement 'add number' flows using Step Functions
+  * [ResultPath](https://docs.aws.amazon.com/step-functions/latest/dg/input-output-resultpath.html)
+  * [Input and Output Processing in Step Functions](https://docs.aws.amazon.com/step-functions/latest/dg/concepts-input-output-filtering.html)
+  * [Creating a Lambda State Machine for Step Functions Using AWS CloudFormation](https://docs.aws.amazon.com/step-functions/latest/dg/tutorial-lambda-state-machine-cloudformation.html)
+  * [Building Serverless workflows with AWS Step Functions](https://medium.com/finimize-engineering/building-serverless-workflows-with-aws-step-functions-89eca69a93f3)
+  * [AWS::StepFunctions::StateMachine](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-stepfunctions-statemachine.html)
+  * [How AWS Step Functions Works with IAM](https://docs.aws.amazon.com/step-functions/latest/dg/procedure-create-iam-role.html)
+  * [IAM Policies for Integrated Services](https://docs.aws.amazon.com/step-functions/latest/dg/service-integration-iam-templates.html)
+
+* Look at wrapping all AWS services in our own services
+
+* [Set up Lambda proxy integrations in API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html)

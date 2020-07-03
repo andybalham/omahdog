@@ -6,7 +6,7 @@ import { TemplateReference } from './TemplateReferences';
 
 export interface IConfigurationValue {
     evaluate(): string | undefined;
-    validate(): string[];
+    validate(baseTemplate: any): string[];
     getTemplateValue(): any;
 }
 
@@ -24,8 +24,10 @@ export class EnvironmentVariable implements IConfigurationValue {
         return this.templateReference.instance;
     }
     
-    validate(): string[] {
-        return (this.templateReference === undefined) ? ['this.templateReference === undefined'] : [];
+    validate(baseTemplate: any): string[] {
+        return (this.templateReference === undefined) 
+            ? ['this.templateReference === undefined'] 
+            : this.templateReference.validate(baseTemplate);
     }
     
     evaluate(): string | undefined {
@@ -61,7 +63,7 @@ export class ConstantValue implements IConfigurationValue {
         return this.constantValue;
     }
     
-    validate(): string[] {
+    validate(baseTemplate: any): string[] {
         return this.constantValue === undefined ? ['this.constantValue === undefined'] : [];
     }
 
