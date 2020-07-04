@@ -2,12 +2,17 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { FlowContext, AsyncResponse, IActivityRequestHandlerBase, IActivityRequestHandler, RequestRouter, HandlerFactory } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { Type } from '../omahdog/Type';
-import { TemplateReference } from './TemplateReferences';
+import { TemplateReference, ResourceReference } from './TemplateReferences';
 import { LambdaBase } from './LambdaBase';
+
+class ApiControllerLambdaParameters {
+    apiGatewayReference?: TemplateReference
+}
 
 export class ApiControllerLambda extends LambdaBase {
 
-    readonly apiGatewayReference: TemplateReference;
+    parameters = new ApiControllerLambdaParameters
+
     readonly apiControllerRoutesType: Type<ApiControllerRoutes>;
     readonly apiControllerRoutes: ApiControllerRoutes;
 
@@ -16,13 +21,24 @@ export class ApiControllerLambda extends LambdaBase {
 
         super(functionReference.name ?? 'Undefined');
 
-        this.apiGatewayReference = apiGatewayReference;
+        this.parameters.apiGatewayReference = apiGatewayReference;
         this.apiControllerRoutesType = apiControllerRoutesType;
         this.apiControllerRoutes = new apiControllerRoutesType;
 
         if (initialise !== undefined) {
-            initialise(this);            
+            initialise(this);
         }
+    }
+
+    validate(): string[] {
+
+        const errorMessages = new Array<string>();
+
+        if (this.parameters.apiGatewayReference === undefined) {
+            errorMessages.push('this.parameters.apiGatewayReference === undefined');
+        }
+
+        return errorMessages;
     }
 
     // TODO 28Jun20: What should happen to asynchronous responses? Only the caller knows the requestId. We might want to invoke a webhook or similar.
@@ -36,7 +52,7 @@ export class ApiControllerLambda extends LambdaBase {
             const apiEvent: any = {
                 Type: 'Api',
                 Properties: {
-                    RestApiId: this.apiGatewayReference.instance,
+                    RestApiId: this.parameters.apiGatewayReference?.instance,
                     Method: route.httpMethod,
                     Path: route.resource
                 }

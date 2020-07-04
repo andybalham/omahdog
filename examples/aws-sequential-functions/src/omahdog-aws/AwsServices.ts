@@ -142,9 +142,19 @@ export class LambdaInvokeService extends AwsService {
     }
 
     validate(): string[] {
+        
         const errorMessages: string[] = [];
-        if (this.parameters.functionNameValue === undefined) errorMessages.push('this.parameters.functionNameValue === undefined');
-        if (this.client === undefined) errorMessages.push('this.client === undefined');
+        
+        const functionNameValue = this.parameters.functionNameValue;
+
+        if (functionNameValue === undefined) {
+            errorMessages.push('this.parameters.functionNameValue === undefined');
+        }
+        
+        if (this.client === undefined) {
+            errorMessages.push('this.client === undefined');
+        }
+        
         return errorMessages;
     }
 

@@ -19,6 +19,7 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
+import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -27,16 +28,16 @@ const snsClient = new SNS();
 const templateReferences = {
     applicationName: new ParameterReference('ApplicationName'),
 
-    addNumbersApiGateway: new ResourceReference('ApiGateway'),
-    addNumbersExchangeTopic: new ResourceReference('FlowExchangeTopic'),
-    addNumbersInstanceTable: new ResourceReference('FlowInstanceTable'),
-    addNumbersResultTable: new ResourceReference('FlowResultTable'),
+    addNumbersApiGateway: ResourceReference.awsServerlessApi('ApiGateway'),
+    addNumbersExchangeTopic: ResourceReference.awsSNSTopic('FlowExchangeTopic'),
+    addNumbersInstanceTable: ResourceReference.awsServerlessSimpleTable('FlowInstanceTable'),
+    addNumbersResultTable: ResourceReference.awsServerlessSimpleTable('FlowResultTable'),
 
-    addNumbersApiFunction: new ResourceReference('AddNumbersApiFunction'),
-    addTwoNumbersFunction: new ResourceReference('AddTwoNumbersFunction'),
-    addThreeNumbersFunction: new ResourceReference('AddThreeNumbersFunction'),
-    sumNumbersFunction: new ResourceReference('SumNumbersFunction'),
-    storeTotalFunction: new ResourceReference('StoreTotalFunction'),
+    addNumbersApiFunction: ResourceReference.awsServerlessFunction('AddNumbersApiFunction'),
+    addTwoNumbersFunction: ResourceReference.awsServerlessFunction('AddTwoNumbersFunction'),
+    addThreeNumbersFunction: ResourceReference.awsServerlessFunction('AddThreeNumbersFunction'),
+    sumNumbersFunction: ResourceReference.awsServerlessFunction('SumNumbersFunction'),
+    storeTotalFunction: ResourceReference.awsServerlessFunction('StoreTotalFunction'),
 };
 
 // TODO 29Jun20: We are only exporting this for the dead letter queue and wiretap lambdas
@@ -57,7 +58,6 @@ const handlerFactory = new HandlerFactory()
     })
     .setInitialiser(AddThreeNumbersHandler, handler => {
         handler.parameters.totalDescription = new ConstantValue('Life, the universe, and everything');
-        // handler.parameters.totalDescription = new EnvironmentVariable(new ParameterReference('TotalDescription'));
     })
 
     .setInitialiser(SumNumbersLambdaProxy, handler => {
@@ -92,13 +92,6 @@ export const addNumbersApplication =
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         
         application.defaultFunctionInstanceRepository = dynamoDbFunctionInstanceRepository;
-
-        // TODO 29Jun20: Think about changing this to be something like:
-        // application
-        //     .addApiController(
-        //         templateReferences.addNumbersApiFunction, templateReferences.addNumbersApiGateway, AddNumbersApiControllerLambda)
-        //     .addRequestHandler(
-        //         templateReferences.addThreeNumbersFunction, AddThreeNumbersLambda);
 
         application
 

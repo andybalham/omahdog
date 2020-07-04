@@ -17,8 +17,9 @@ import { Type } from '../omahdog/Type';
 export class LambdaApplication {
 
     functionNamePrefix?: string | FunctionNamePrefix;
+
     defaultRequestTopic: TemplateReference;
-    defaultResponsePublisher: IExchangeMessagePublisher;
+    defaultResponsePublisher: IExchangeMessagePublisher;    
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
     
     private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();
@@ -36,31 +37,37 @@ export class LambdaApplication {
     }    
     
     validate(baseTemplate: any): string[] {
+
+        this.requestHandlerLambdas.forEach(lambda => {
+            baseTemplate.Resources[lambda.resourceName] = { Type: 'AWS::Serverless::Function' };
+        });
         
-        // TODO 02Jul20: We need to extract all template references, they could be in configuration values, i.e. validation of the function name prefix
+        // TODO 04Jul20: Is there anything else that would need to be validated?
 
         let errors: string[] = [];
 
-        // TODO 02Jul20: We might be able to get rid of the following method, as we need to iterate over all types of lambdas
-        const allRequestHandlers = this.getAllRequestHandlers();
+        if (typeof this.functionNamePrefix === 'object') {
+            errors = errors.concat(this.functionNamePrefix.validate(baseTemplate));
+        }
 
-        // TODO 03Jul20: Is this the best way to inform validation of functions to come
-        this.requestHandlerLambdas.forEach(lambda => {
-            baseTemplate.Resources[lambda.resourceName] = '<placeholder>';
-        });
-
-        // TODO 03Jul20: Should we validate against that a reference was to the right type, e.g. function, SNS, etc?
-        
-        // TODO 02Jul20: We need to validate each ApiControllerLambda too
-
-        this.requestHandlerLambdas.forEach(lambda => {
-            const lambdaErrors = validateConfiguration(lambda, baseTemplate, this.requestRouter, this.handlerFactory, lambda.resourceName);
+        this.apiControllerLambdas.forEach(lambda => {
+            const lambdaErrors = 
+                validateConfiguration(lambda, baseTemplate, this.requestRouter, this.handlerFactory, lambda.resourceName);
             errors = errors.concat(lambdaErrors);
         });
 
+        this.requestHandlerLambdas.forEach(lambda => {
+            const lambdaErrors = 
+                validateConfiguration(lambda, baseTemplate, this.requestRouter, this.handlerFactory, lambda.resourceName);
+            errors = errors.concat(lambdaErrors);
+        });
+
+        const allRequestHandlers = this.getAllRequestHandlers();
+
         allRequestHandlers.forEach((handler, handlerTypeName) => {
-            const serviceErrors = validateConfiguration(handler, baseTemplate, this.requestRouter, this.handlerFactory, handlerTypeName);
-            errors = errors.concat(serviceErrors);                        
+            const handlerErrors = 
+                validateConfiguration(handler, baseTemplate, this.requestRouter, this.handlerFactory, handlerTypeName);
+            errors = errors.concat(handlerErrors);                        
         });
 
         return errors;
@@ -356,15 +363,23 @@ export class LambdaApplication {
             lambda.services.functionInstanceRepository = lambda.services.functionInstanceRepository ?? this.defaultFunctionInstanceRepository;            
         }
 
+        if (this.requestHandlerLambdas.has(lambda.requestType.name)) {
+            throw new Error(`A request handler has already been added for the type: ${lambda.requestType.name}`);
+        }
+
         this.requestHandlerLambdas.set(lambda.requestType.name, lambda);
 
         return this;
     }
 
     async handleRequestEvent(requestType: Type<any>, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
+
         const requestHandlerLambda = this.requestHandlerLambdas.get(requestType.name);
+        
         if (requestHandlerLambda === undefined) throw new Error('requestHandlerLambda === undefined');
+        
         const response = await requestHandlerLambda.handle(event, this.requestRouter, this.handlerFactory);        
+        
         return response;
     }
 }
@@ -377,6 +392,17 @@ export class FunctionNamePrefix {
     constructor(separator: string, ...references: ParameterReference[]) {
         this.separator = separator;
         this.references = references;
+    }
+
+    validate(baseTemplate: any): string[] {
+        
+        let errorMessages = new Array<string>();
+
+        this.references.forEach(reference => {
+            errorMessages = errorMessages.concat(reference.validate(baseTemplate));
+        });
+
+        return errorMessages;
     }
 
     getTemplate(): string {
