@@ -8,13 +8,12 @@ export function validateConfiguration(targetObject: any, baseTemplate: any, requ
         return errorMessages;
     }
 
-    if ('validate' in targetObject) {        
-        
-        const targetObjectErrorMessages: string[] = targetObject.validate(baseTemplate, requestRouter, handlerFactory);
-        errorMessages = 
-            errorMessages.concat(
-                targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
-    }
+    const targetObjectErrorMessages: string[] = 
+        safeInvoke(targetObject, 'validate', baseTemplate, requestRouter, handlerFactory) ?? [];
+
+    errorMessages = 
+        errorMessages.concat(
+            targetObjectErrorMessages.map(errorMessage => `${errorPrefix}: ${errorMessage}`));
 
     const addConfigurationErrors = 
         (configObject: any, errorPrefix: string, errorMessages: string[]): string[] => {
@@ -45,25 +44,29 @@ export function getRequiredPolicies(targetObject: any): any[] {
         return policies;
     }
 
-    const getPoliciesMethodName = 'getPolicies';
-    if (getPoliciesMethodName in targetObject) {
-        policies = policies.concat(targetObject[getPoliciesMethodName]());
-    }
-
-    function addPolicies(configObject: any, policies: any[]): any[] {
-
-        for (const configProperty in configObject ?? {}) {            
-            const configPolicies = getRequiredPolicies(configObject[configProperty]);
-            policies = policies.concat(configPolicies);
-        }
+    const targetObjectPolicies = safeInvoke(targetObject, 'getPolicies') ?? [];
     
-        return policies;
-    }
+    policies = policies.concat(targetObjectPolicies);
+
+    const addPolicies = 
+        (configObject: any, policies: any[]): any[] => {
+
+            for (const configProperty in configObject ?? {}) {            
+                const configPolicies = getRequiredPolicies(configObject[configProperty]);
+                policies = policies.concat(configPolicies);
+            }
+        
+            return policies;
+        };
         
     policies = addPolicies(targetObject.parameters, policies);
     policies = addPolicies(targetObject.services, policies);
 
     return policies;
+}
+
+export function safeInvoke(target: any, methodName: string, ...parameters: any[]): any {
+    return (methodName in target) ? target[methodName](...parameters) : undefined;
 }
 
 export function getEnvironmentVariables(targetObject: any): any[] {
@@ -78,16 +81,15 @@ export function getEnvironmentVariables(targetObject: any): any[] {
         
         const parameter = targetObject.parameters[parameterName];
         
-        const getEnvironmentVariableDefinitionMethodName = 'getEnvironmentVariableDefinition';
-        if (getEnvironmentVariableDefinitionMethodName in parameter) {
-            const parameterEnvironmentVariables = parameter[getEnvironmentVariableDefinitionMethodName]();
+        const parameterEnvironmentVariables = safeInvoke(parameter, 'getEnvironmentVariableDefinition');
+
+        if (parameterEnvironmentVariables !== undefined) 
             environmentVariables.push(parameterEnvironmentVariables);
-        }
     }            
 
     for (const serviceName in targetObject.services ?? {}) {
-        const service = targetObject.services[serviceName];        
-        const serviceEnvironmentVariables = getEnvironmentVariables(service);
+        const service = targetObject.services[serviceName];
+        const serviceEnvironmentVariables = getEnvironmentVariables(service);        
         environmentVariables = environmentVariables.concat(serviceEnvironmentVariables);
     }
 
@@ -104,10 +106,9 @@ export function getEvents(targetObject: any, rootHandlerName: string): any[] {
 
     if (targetObject !== undefined) {
 
-        const getEventsMethodName = 'getEvents';
-        if (getEventsMethodName in targetObject) {            
-            events = events.concat(targetObject[getEventsMethodName](rootHandlerName));
-        }
+        const targetObjectEvents = safeInvoke(targetObject, 'getEvents', rootHandlerName) ?? [];
+
+        events = events.concat(targetObjectEvents);
         
         for (const serviceName in targetObject.services ?? {}) {
             const service = targetObject.services[serviceName];

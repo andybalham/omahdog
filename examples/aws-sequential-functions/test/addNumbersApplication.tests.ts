@@ -7,7 +7,7 @@ import { addNumbersApplication } from '../src/addNumbersApplication';
 
 describe('Lambda application tests', () => {
 
-    it.only('can be validated', () => {
+    it('can be validated', () => {
         
         // Arrange
 
@@ -87,7 +87,7 @@ describe('Lambda application tests', () => {
         console.log(YAML.stringify(functionDefinitions));
     });
 
-    it('can return generate template', () => {
+    it.only('can return generate template', () => {
         
         // Arrange
 

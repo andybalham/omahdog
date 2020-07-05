@@ -17,6 +17,8 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
         this.requestTypeName = requestType.name;
     }
 
+    // TODO 05Jul20: We could change this to be getResponseEvents, this would indicate async nature
+    
     getEvents(rootHandlerTypeName: string): any[] {
 
         const responseEvent = {
