@@ -1,6 +1,6 @@
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { PublishInput } from 'aws-sdk/clients/sns';
-import { ExchangeResponseMessage, ExchangeRequestMessage } from './Exchange';
+import { FlowResponseMessage, FlowRequestMessage } from './FlowMessage';
 import { SNSPublishMessageService } from './AwsServices';
 
 // TODO 03May20: Have a set of tests for this
@@ -14,7 +14,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
         if (initialise !== undefined) initialise(this);
     }
     
-    async publishRequest(requestTypeName: string, message: ExchangeRequestMessage): Promise<void> {
+    async publishRequest(requestTypeName: string, message: FlowRequestMessage): Promise<void> {
 
         console.log(`Publishing message to exchangeTopicArn: ${this.getExchangeTopicArn()}`);
         console.log(`message: ${JSON.stringify(message)}`);
@@ -43,7 +43,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
         }
     }
 
-    async publishResponse(flowTypeName: string, message: ExchangeResponseMessage): Promise<void> {
+    async publishResponse(flowTypeName: string, message: FlowResponseMessage): Promise<void> {
 
         console.log(`message: ${JSON.stringify(message)}`);
 

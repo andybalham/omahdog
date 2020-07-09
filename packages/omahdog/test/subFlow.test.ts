@@ -25,7 +25,7 @@ describe('Handlers', () => {
 
         const response = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect(flowContext.correlationId).to.be.not.undefined;
+        expect(flowContext.requestContext.correlationId).to.be.not.undefined;
         expect((response as ParentFlowResponse).total).to.be.equal(666);
     });
 

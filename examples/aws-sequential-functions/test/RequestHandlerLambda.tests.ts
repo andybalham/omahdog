@@ -1,7 +1,7 @@
-import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, HandlerFactory, FlowInstance } from '../src/omahdog/FlowContext';
+import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, HandlerFactory, FlowInstance, FlowRequestContext } from '../src/omahdog/FlowContext';
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { ErrorResponse } from '../src/omahdog/FlowExchanges';
-import { ExchangeRequestMessage, ExchangeResponseMessage } from '../src/omahdog-aws/Exchange';
+import { FlowRequestMessage, FlowResponseMessage } from '../src/omahdog-aws/FlowMessage';
 import { RequestHandlerLambda } from '../src/omahdog-aws/RequestHandlerLambda';
 import * as AWSMock from 'aws-sdk-mock';
 import AWS, { Request as AWSRequest } from 'aws-sdk';
@@ -88,12 +88,14 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const requestMessage: ExchangeRequestMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+        const requestMessage: FlowRequestMessage = {
+            requestContext: {
+                correlationId: 'correlationId'
+            },
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'requestId'
+                flowHandlerTypeName: 'handlerTypeName',
+                flowRequestId: 'requestId'
             },
             request: request
         };
@@ -114,9 +116,9 @@ describe('RequestHandlerLambda tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.callingContext).to.deep.equal(requestMessage.callingContext);
+            expect(responseMessage.responseContext).to.deep.equal(requestMessage.responseContext);
             expect(responseMessage.response).to.deep.equal(response);
         }
     });    
@@ -134,8 +136,12 @@ describe('RequestHandlerLambda tests', () => {
             });
         });
         
+        const flowRequestContext: FlowRequestContext = {
+            correlationId: 'flowCorrelationId'
+        };
+
         const request: TestRequest = { input: 666 };
-        const response = new AsyncResponse('flowCorrelationId', 'instanceId', [], 'requestId');
+        const response = new AsyncResponse(flowRequestContext, 'instanceId', [], 'requestId');
 
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
@@ -158,13 +164,13 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.responsePublisher = exchangeMessagePublisher;
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
-
-        const requestMessage: ExchangeRequestMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+    
+        const requestMessage: FlowRequestMessage = {
+            requestContext: flowRequestContext,
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'requestId'
+                flowHandlerTypeName: 'handlerTypeName',
+                flowRequestId: 'requestId'
             },
             request: request
         };
@@ -187,8 +193,8 @@ describe('RequestHandlerLambda tests', () => {
         expect(functionInstance).to.not.be.undefined;
 
         if (functionInstance !== undefined) {
-            expect(functionInstance.callingContext).to.deep.equal(requestMessage.callingContext);
-            expect(functionInstance.flowInstance.correlationId).to.equal(requestMessage.callingContext.flowCorrelationId);
+            expect(functionInstance.flowResponseContext).to.deep.equal(requestMessage.responseContext);
+            expect(functionInstance.flowInstance.flowRequestContext.correlationId).to.equal(requestMessage.requestContext.correlationId);
             expect(functionInstance.resumeCount).to.equal(0);
         }
     });    
@@ -214,6 +220,7 @@ describe('RequestHandlerLambda tests', () => {
             .setInitialiser(TestActivityRequestHandler, handler => {
                 handler.response = (): TestResponse => response;
             });
+
         const sns = new AWS.SNS();        
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
@@ -229,25 +236,27 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const responseMessage: ExchangeResponseMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+        const responseMessage: FlowResponseMessage = {
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'ExchangeRequestId'
+                flowHandlerTypeName: 'flowHandlerTypeName',
+                flowRequestId: 'flowRequestId'
             },
             response: {}
         };
 
+        const flowRequestContext: FlowRequestContext = {
+            correlationId: 'correlationId'
+        };
+
         const functionInstance: FunctionInstance = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+            flowResponseContext: {
                 flowInstanceId: 'callingFlowInstanceId',
-                handlerTypeName: 'callingHandlerTypeName',
-                requestId: 'callingRequestId'
+                flowHandlerTypeName: 'callingHandlerTypeName',
+                flowRequestId: 'callingRequestId'
             },
-            requestId: 'ExchangeRequestId',
-            flowInstance: new FlowInstance('flowCorrelationId', 'flowInstanceId', []),
+            flowInstance: new FlowInstance(flowRequestContext, 'flowInstanceId', []),
+            flowRequestId: 'flowRequestId',
             resumeCount: 0
         };
 
@@ -271,9 +280,9 @@ describe('RequestHandlerLambda tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.callingContext).to.deep.equal(functionInstance.callingContext);
+            expect(responseMessage.responseContext).to.deep.equal(functionInstance.flowResponseContext);
             expect(responseMessage.response).to.deep.equal(response);
         }
 
@@ -318,16 +327,20 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const requestMessage: ExchangeRequestMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+        const flowRequestContext: FlowRequestContext = {
+            correlationId: 'flowCorrelationId'
+        };
+    
+        const requestMessage: FlowRequestMessage = {
+            requestContext: flowRequestContext,
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'requestId'
+                flowHandlerTypeName: 'handlerTypeName',
+                flowRequestId: 'requestId'
             },
             request: request
         };
-            
+                
         // Act
 
         await handlerLambdaSut.handle(getSNSEvent(requestMessage), requestRouter, handlerFactory);
@@ -344,9 +357,9 @@ describe('RequestHandlerLambda tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.callingContext).to.deep.equal(requestMessage.callingContext);
+            expect(responseMessage.responseContext).to.deep.equal(requestMessage.responseContext);
             expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
             expect((responseMessage.response as ErrorResponse).message).to.equal('Something went bandy!');
         }
@@ -386,25 +399,27 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const responseMessage: ExchangeResponseMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+        const responseMessage: FlowResponseMessage = {
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'ExchangeRequestId'
+                flowHandlerTypeName: 'handlerTypeName',
+                flowRequestId: 'ExchangeRequestId'
             },
             response: {}
         };
 
+        const flowRequestContext: FlowRequestContext = {
+            correlationId: 'correlationId'
+        };
+
         const functionInstance: FunctionInstance = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+            flowResponseContext: {
                 flowInstanceId: 'callingFlowInstanceId',
-                handlerTypeName: 'callingHandlerTypeName',
-                requestId: 'callingRequestId'
+                flowHandlerTypeName: 'callingHandlerTypeName',
+                flowRequestId: 'callingRequestId'
             },
-            requestId: 'ExchangeRequestId',
-            flowInstance: new FlowInstance('flowCorrelationId', 'flowInstanceId', []),
+            flowRequestId: 'ExchangeRequestId',
+            flowInstance: new FlowInstance(flowRequestContext, 'flowInstanceId', []),
             resumeCount: 0
         };
 
@@ -428,9 +443,9 @@ describe('RequestHandlerLambda tests', () => {
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
             expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
     
-            const responseMessage = JSON.parse(actualPublishInput.Message) as ExchangeResponseMessage;
+            const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.callingContext).to.deep.equal(functionInstance.callingContext);
+            expect(responseMessage.responseContext).to.deep.equal(functionInstance.flowResponseContext);
             expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
             expect((responseMessage.response as ErrorResponse).message).to.equal('Something went bandy!');
         }
@@ -477,12 +492,16 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const requestMessage: ExchangeRequestMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+        const flowRequestContext: FlowRequestContext = {
+            correlationId: 'flowCorrelationId'
+        };
+        
+        const requestMessage: FlowRequestMessage = {
+            requestContext: flowRequestContext,
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'requestId'
+                flowHandlerTypeName: 'handlerTypeName',
+                flowRequestId: 'requestId'
             },
             request: request
         };
@@ -497,8 +516,8 @@ describe('RequestHandlerLambda tests', () => {
 
         if (responseMessage !== undefined) {
 
-            expect((responseMessage as ExchangeResponseMessage).callingContext).to.deep.equal(requestMessage.callingContext);
-            expect((responseMessage as ExchangeResponseMessage).response).to.deep.equal(response);
+            expect((responseMessage as FlowResponseMessage).responseContext).to.deep.equal(requestMessage.responseContext);
+            expect((responseMessage as FlowResponseMessage).response).to.deep.equal(response);
         }
     });    
 
@@ -515,8 +534,12 @@ describe('RequestHandlerLambda tests', () => {
             });
         });
         
+        const flowRequestContext: FlowRequestContext = {
+            correlationId: 'correlationId'
+        };
+
         const request: TestRequest = { input: 666 };
-        const response = new AsyncResponse('flowCorrelationId', 'instanceId', [], 'requestId');
+        const response = new AsyncResponse(flowRequestContext, 'instanceId', [], 'requestId');
 
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
@@ -539,13 +562,13 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.responsePublisher = exchangeMessagePublisher;
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
-
-        const requestMessage: ExchangeRequestMessage = {
-            callingContext: {
-                flowCorrelationId: 'flowCorrelationId',
+        
+        const requestMessage: FlowRequestMessage = {
+            requestContext: flowRequestContext,
+            responseContext: {
                 flowInstanceId: 'flowInstanceId',
-                handlerTypeName: 'handlerTypeName',
-                requestId: 'requestId'
+                flowHandlerTypeName: 'handlerTypeName',
+                flowRequestId: 'requestId'
             },
             request: request
         };
@@ -566,15 +589,15 @@ describe('RequestHandlerLambda tests', () => {
         expect(responseMessage).to.not.be.undefined;
 
         if (responseMessage !== undefined) {
-            expect((responseMessage as ExchangeResponseMessage).callingContext).to.deep.equal(requestMessage.callingContext);
-            expect((responseMessage as ExchangeResponseMessage).response.AsyncResponse).to.be.true;
+            expect((responseMessage as FlowResponseMessage).responseContext).to.deep.equal(requestMessage.responseContext);
+            expect((responseMessage as FlowResponseMessage).response.AsyncResponse).to.be.true;
         }
 
         expect(functionInstance).to.not.be.undefined;
 
         if (functionInstance !== undefined) {
-            expect(functionInstance.callingContext).to.deep.equal(requestMessage.callingContext);
-            expect(functionInstance.flowInstance.correlationId).to.equal(requestMessage.callingContext.flowCorrelationId);
+            expect(functionInstance.flowResponseContext).to.deep.equal(requestMessage.responseContext);
+            expect(functionInstance.flowInstance.flowRequestContext.correlationId).to.equal(requestMessage.requestContext.correlationId);
             expect(functionInstance.resumeCount).to.equal(0);
         }
     });    

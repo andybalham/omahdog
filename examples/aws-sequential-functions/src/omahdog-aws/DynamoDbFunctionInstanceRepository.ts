@@ -20,9 +20,9 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
             TableName: this.getFunctionInstanceTableName(),
             Item: {
                 id: instance.flowInstance.instanceId,
-                callingContext: instance.callingContext,
                 flowInstanceJson: JSON.stringify(instance.flowInstance),
-                requestId: instance.requestId,
+                requestId: instance.flowRequestId,
+                responseContext: instance.flowResponseContext,
                 resumeCount: instance.resumeCount,
                 lastUpdated: new Date().toISOString()    
             }
@@ -55,9 +55,9 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         console.log(`functionInstanceItem: ${JSON.stringify(functionInstanceItem)}`);
 
         const functionInstance: FunctionInstance = {
-            callingContext: functionInstanceItem.callingContext,
             flowInstance: JSON.parse(functionInstanceItem.flowInstanceJson),
-            requestId: functionInstanceItem.requestId,
+            flowRequestId: functionInstanceItem.requestId,
+            flowResponseContext: functionInstanceItem.responseContext,
             resumeCount: functionInstanceItem.resumeCount
         };
 

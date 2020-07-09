@@ -1,5 +1,5 @@
 import { SNSEvent } from 'aws-lambda';
-import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
+import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
 
 export class LambdaExchangeWireTap {
     async handle(event: SNSEvent): Promise<void> {
@@ -7,13 +7,14 @@ export class LambdaExchangeWireTap {
         
             const snsMessage = event.Records[0].Sns;
     
-            const message: ExchangeRequestMessage | ExchangeResponseMessage = JSON.parse(snsMessage.Message);
+            const message: FlowRequestMessage | FlowResponseMessage = JSON.parse(snsMessage.Message);
     
             if ('request' in message) {
     
                 const logEntry = {
                     MessageAttributes: snsMessage.MessageAttributes,
-                    MessageContext: message.callingContext,
+                    RequestContext: message.requestContext,
+                    ResponseContext: message.responseContext,
                     Request: message.request
                 };
         
@@ -23,7 +24,7 @@ export class LambdaExchangeWireTap {
     
                 const logEntry = {
                     MessageAttributes: snsMessage.MessageAttributes,
-                    MessageContext: message.callingContext,
+                    ResponseContext: message.responseContext,
                     Response: message.response
                 };
         

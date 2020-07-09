@@ -1,20 +1,56 @@
 # TODO
 
+* Q. How can we ensure that handlers are in place for all requests?
+  * I.e. can we do a sort of test traversal of all paths to see?
+
 * Generate SAM template from an 'application' class
-  * Validate parameter references
+  * Merge 'parameters' and 'services' to 'dependencies'?
   * Create a command line tool for template generation
 
-* Look at layers and stacks
-
-* [middy](https://middy.js.org/)
-  * [DAZN Lambda Powertools](https://github.com/getndazn/dazn-lambda-powertools)
+* Look to add a trace to the flow context and persist it in the function instance
+  * Look at X-Ray
+  * Look at middy and how it fits in with this approach
 
 * Logging
   * Look at how to do correlated logging through the flow context
   * We could also do sampled logging too. See 'header' information below.
+  * Do we need to allow for an ILogger implementation to be passed in to FlowContext
+    * Perhaps this have a 'entry type', e.g.:
+      * Custom Event (this might have the log level as well)
+      * Flow Request
+      * Flow Response
+      * Activity Request
+      * Activity Response
+      * Flow Branch
+      * Error
+  * How could the ILogger be passed from one flow to the next?
+  * How can we do 'best practise' structured logging
+    * (https://adrianhall.github.io/cloud/2019/06/30/building-an-efficient-logger-in-typescript/)
+    * (https://github.com/structured-log/structured-log)
+    * (https://www.npmjs.com/package/typescript-logging)
+    * (https://www.garysieling.com/blog/log4j-alternative-typescript/)
+  * What standard information would we want in the log entries?
+    * Correlation Id
+    * ?
+  * 
 
 * Correlation ids
   * Look at extending the flow context to have 'header' information
+  * This could include a debug level
+
+* Look at layers and stacks
+
+* Look at SQS
+  * Can we have 'enable SQS' for handlers?
+  * How can we get a callback from something that doesn't know about us? We can't use the same SQS queue?
+
+* Look to have - in the same vein as API Controller Lambda
+  * SQS Lambda (would we expect a FlowExchangeMessage? - See 'Look at SQS')
+  * S3 Lambda
+  * DynamoDb
+
+* [middy](https://middy.js.org/)
+  * [DAZN Lambda Powertools](https://github.com/getndazn/dazn-lambda-powertools)
 
 * Mocha test explorer extension
 
@@ -33,11 +69,7 @@
 * Look at minimising the use of `Type.name`
   * I.e. store as a string at the earliest opportunity to avoid unnecessary evaluation
 
-* Look to add a trace to the flow context and persist it in the function instance
-  * Look at X-Ray
-  * Look at middy and how it fits in with this approach
-
-* Use object references when storing the flow stack frames, 
+* Use object references when storing the flow stack frames
 
 * Allow for 'fire-and-forget' requests
   * We will need to change the response to be either:
@@ -56,9 +88,6 @@ export interface StateBinder<TObj, TState> {
 ```
 
 * Look into 'Document This' extension
-
-* Q. How can we ensure that handlers are in place for all requests?
-  * I.e. can we do a sort of test traversal of all paths to see?
 
 * Have a DLQ for asynchronous invocation
   * [AWS Serverless Application Model - DeadLetterQueue](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-deadletterqueue.html)

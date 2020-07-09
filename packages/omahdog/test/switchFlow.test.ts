@@ -85,7 +85,7 @@ describe('Switch test', () => {
             
             const response = await new SwitchTestFlowHandler().handle(flowContext, request);
 
-            expect(flowContext.correlationId).to.be.not.undefined;
+            expect(flowContext.requestContext.correlationId).to.be.not.undefined;
             expect((response as SwitchTestFlowResponse).rating).to.be.equal(theory.expectedRating);
         });
     });

@@ -1,9 +1,9 @@
 import { SNSEvent } from 'aws-lambda';
 
-import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler, getRequestHandlers } from '../omahdog/FlowContext';
+import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler, getRequestHandlers, FlowRequestContext } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
-import { ExchangeCallingContext, ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
+import { FlowRequestMessage, FlowResponseMessage, FlowResponseContext } from './FlowMessage';
 import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
@@ -30,7 +30,7 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
 
     abstract getEvents(): any[];
 
-    abstract handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void>;
+    abstract handle(event: SNSEvent | FlowRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<FlowResponseMessage | void>;
 }
 
 export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>> extends RequestHandlerLambdaBase {
@@ -98,11 +98,11 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         return hasAsyncHandler;
     }
 
-    async handle(event: SNSEvent | ExchangeRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<ExchangeResponseMessage | void> {
+    async handle(event: SNSEvent | FlowRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<FlowResponseMessage | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        let message: ExchangeRequestMessage | ExchangeResponseMessage;
+        let message: FlowRequestMessage | FlowResponseMessage;
         let isDirectRequest: boolean;
 
         if ('Records' in event) {
@@ -127,20 +127,23 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         console.log(`message: ${JSON.stringify(message)}`);
     
         let response: any;
-        let callingContext: ExchangeCallingContext;
+        let flowResponseContext: FlowResponseContext | undefined;
         let resumeCount: number;
     
         if ('request' in message) {
             
-            callingContext = message.callingContext;
+            // Handle request
+
+            flowResponseContext = message.responseContext;
+
             resumeCount = 0;
     
-            const flowContext = 
-                FlowContext.newCorrelatedContext(
-                    message.callingContext.flowCorrelationId, requestRouter, handlerFactory);
+            const flowContext = FlowContext.newRequestContext(message.requestContext, requestRouter, handlerFactory);
     
             try {
+                
                 response = await flowContext.handleRequest(this.handlerType, message.request);
+
             } catch (error) {
                 console.error(`Error handling response: ${error.message}\n${error.stack}`);
                 response = new ErrorResponse(error);
@@ -148,20 +151,23 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
     
         } else {
     
+            // Handle response
+            
+            if (message.responseContext === undefined) throw new Error('message.responseContext === undefined');
             if (this.services.functionInstanceRepository === undefined) throw new Error('this.services.functionInstanceRepository === undefined');
 
-            const functionInstance = await this.services.functionInstanceRepository.retrieve(message.callingContext.flowInstanceId);
+            const functionInstance = await this.services.functionInstanceRepository.retrieve(message.responseContext.flowInstanceId);
     
             if (functionInstance === undefined) throw new Error('functionInstance was undefined');
 
-            if (functionInstance.requestId !== message.callingContext.requestId) {
+            if (functionInstance.flowRequestId !== message.responseContext.flowRequestId) {
                 // TODO 26Apr20: Do something more in this case where request is not as we expect
-                console.error(`The requestId does not match what was expected. Expected: ${functionInstance.requestId}, Actual: ${message.callingContext.requestId}`);
+                console.error(`The requestId does not match what was expected. Expected: ${functionInstance.flowRequestId}, Actual: ${message.responseContext.flowRequestId}`);
                 return;
             }
     
-            callingContext = functionInstance.callingContext;
-            
+            flowResponseContext = functionInstance.flowResponseContext;
+
             resumeCount = functionInstance.resumeCount + 1;        
             if (resumeCount > 100) throw new Error(`resumeCount exceeded threshold: ${resumeCount}`);
     
@@ -177,17 +183,17 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
             }
         }
     
-        const responseMessage: ExchangeResponseMessage = {
-            callingContext: callingContext,
+        const responseMessage: FlowResponseMessage = {
+            responseContext: flowResponseContext,
             response: response
         };
     
         if ('AsyncResponse' in response) {
     
             const functionInstance: FunctionInstance = {
-                callingContext: callingContext,
                 flowInstance: response.getFlowInstance(),
-                requestId: response.requestId,
+                flowRequestId: response.requestId,
+                flowResponseContext: flowResponseContext,
                 resumeCount: resumeCount
             };
     
@@ -200,15 +206,21 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         } else {
 
             if (!isDirectRequest) {
+                
                 if (this.services.responsePublisher === undefined) throw new Error('this.services.responsePublisher === undefined');
-                await this.services.responsePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
+                if (flowResponseContext === undefined) throw new Error('flowResponseContext === undefined');
+
+                await this.services.responsePublisher.publishResponse(flowResponseContext.flowHandlerTypeName, responseMessage);
             }
 
             if (resumeCount > 0) {
+
                 // TODO 18May20: Perhaps we want to leave a trace, could have a TTL on the table
-                console.log(`DELETE flowInstanceId: ${message.callingContext.flowInstanceId}`);
+                if (message.responseContext === undefined) throw new Error('message.responseContext === undefined');
                 if (this.services.functionInstanceRepository === undefined) throw new Error('this.services.functionInstanceRepository === undefined');
-                await this.services.functionInstanceRepository.delete(message.callingContext.flowInstanceId);
+
+                console.log(`DELETE flowInstanceId: ${message.responseContext.flowInstanceId}`);
+                await this.services.functionInstanceRepository.delete(message.responseContext.flowInstanceId);
             }
     
         }

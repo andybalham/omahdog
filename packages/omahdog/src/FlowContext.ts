@@ -9,7 +9,8 @@ export class FlowContext {
     requestRouter: RequestRouter;
     handlerFactory: HandlerFactory;
 
-    readonly correlationId: string;
+    readonly requestContext: FlowRequestContext;
+
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
 
@@ -26,23 +27,26 @@ export class FlowContext {
         return new FlowContext(undefined, undefined, undefined, requestRouter, handlerFactory);
     }
 
-    static newCorrelatedContext(flowCorrelationId: string, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
-        return new FlowContext(flowCorrelationId, undefined, undefined, requestRouter, handlerFactory);
+    static newRequestContext(flowRequestContext: FlowRequestContext, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
+        return new FlowContext(flowRequestContext, undefined, undefined, requestRouter, handlerFactory);
     }
 
     static newResumeContext(flowInstance: FlowInstance, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
         return new FlowContext(
-            flowInstance.correlationId, flowInstance.instanceId, flowInstance.stackFrames, requestRouter, handlerFactory);
+            flowInstance.flowRequestContext, flowInstance.instanceId, flowInstance.stackFrames, requestRouter, handlerFactory);
     }
 
-    private constructor(flowCorrelationId?: string, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], 
+    private constructor(flowRequestContext?: FlowRequestContext, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], 
         requestRouter?: RequestRouter, handlerFactory?: HandlerFactory) {
 
         this.requestRouter = requestRouter ?? new RequestRouter();
         this.handlerFactory = handlerFactory ?? new HandlerFactory();
         this.mocks = new FlowMocks();
 
-        this.correlationId = flowCorrelationId ?? uuid.v4();
+        this.requestContext = flowRequestContext ?? new FlowRequestContext;
+        this.requestContext.correlationId = this.requestContext.correlationId ?? uuid.v4();
+        this.requestContext.logLevel = this.requestContext.logLevel ?? FlowLogLevel.INFO; // TODO 08Jul20: Is this a sensible default?
+
         this.instanceId = instanceId ?? uuid.v4();
 
         this.stackFrames = [];
@@ -127,18 +131,35 @@ export class FlowContext {
     }
 
     getAsyncResponse(requestId: string): AsyncResponse {
-        return new AsyncResponse(this.correlationId, this.instanceId, this.stackFrames, requestId);
+        return new AsyncResponse(this.requestContext, this.instanceId, this.stackFrames, requestId);
     }
+}
+
+export enum FlowLogLevel {
+    ALL = 'ALL',
+    DEBUG = 'DEBUG',
+    INFO = 'INFO',
+    WARN = 'WARN',
+    ERROR = 'ERROR',
+    FATAL = 'FATAL',
+    OFF = 'OFF',
+}
+
+export class FlowRequestContext {
+    correlationId: string;
+    logLevel?: FlowLogLevel;
+    customValues?: any;
 }
 
 export class FlowInstance {
     
-    readonly correlationId: string;
+    readonly flowRequestContext: FlowRequestContext;
+
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
 
-    constructor(correlationId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[]) {
-        this.correlationId = correlationId;
+    constructor(flowRequestContext: FlowRequestContext, instanceId: string, stackFrames: FlowInstanceStackFrame[]) {
+        this.flowRequestContext = flowRequestContext;
         this.instanceId = instanceId;
         this.stackFrames = stackFrames;
     }
@@ -200,20 +221,21 @@ export class AsyncResponse {
     
     readonly AsyncResponse: boolean = true;
 
-    readonly correlationId: string;
+    readonly flowRequestContext: FlowRequestContext;
+
     readonly instanceId: string;
     readonly stackFrames: FlowInstanceStackFrame[];
     readonly requestId: string;
 
-    constructor(correlationId: string, instanceId: string, stackFrames: FlowInstanceStackFrame[], requestId: string) {
-        this.correlationId = correlationId;
+    constructor(flowRequestContext: FlowRequestContext, instanceId: string, stackFrames: FlowInstanceStackFrame[], requestId: string) {
+        this.flowRequestContext = flowRequestContext;
         this.instanceId = instanceId;
         this.stackFrames = stackFrames;
         this.requestId = requestId;
     }
 
     getFlowInstance(): FlowInstance {
-        return new FlowInstance(this.correlationId, this.instanceId, this.stackFrames);
+        return new FlowInstance(this.flowRequestContext, this.instanceId, this.stackFrames);
     }
 }
 

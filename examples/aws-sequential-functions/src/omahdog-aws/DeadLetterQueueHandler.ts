@@ -1,5 +1,5 @@
 import { SNSEvent } from 'aws-lambda';
-import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
+import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 
@@ -23,19 +23,18 @@ export class DeadLetterQueueHandler {
     
             const deadSnsMessage = deadEvent.Records[0].Sns;
     
-            const deadMessage: ExchangeRequestMessage | ExchangeResponseMessage = JSON.parse(deadSnsMessage.Message);
+            const deadMessage: FlowRequestMessage | FlowResponseMessage = JSON.parse(deadSnsMessage.Message);
     
             if ('request' in deadMessage) {
     
                 const logEntry = {
                     MessageAttributes: deadSnsMessage.MessageAttributes,
-                    MessageContext: deadMessage.callingContext,
+                    RequestContext: deadMessage.requestContext,
+                    ResponseContext: deadMessage.responseContext,
                     Request: deadMessage.request
                 };
         
                 console.log(JSON.stringify(logEntry));
-    
-                const callingContext = deadMessage.callingContext;
     
                 const response: ErrorResponse = {
                     ErrorResponse: true,
@@ -43,13 +42,15 @@ export class DeadLetterQueueHandler {
                     message: snsMessage.MessageAttributes.ErrorMessage.Value
                 };
     
-                const responseMessage: ExchangeResponseMessage = 
+                const responseMessage: FlowResponseMessage = 
                     {
-                        callingContext: callingContext,
+                        responseContext: deadMessage.responseContext,
                         response: response
                     };
         
-                await this._exchangeMessagePublisher.publishResponse(callingContext.handlerTypeName, responseMessage);
+                if (deadMessage.responseContext === undefined) throw new Error('deadMessage.responseContext === undefined');
+
+                await this._exchangeMessagePublisher.publishResponse(deadMessage.responseContext.flowHandlerTypeName, responseMessage);
         
             } else if ('response' in deadMessage) {
     
@@ -57,7 +58,7 @@ export class DeadLetterQueueHandler {
 
                 const logEntry = {
                     MessageAttributes: deadSnsMessage.MessageAttributes,
-                    MessageContext: deadMessage.callingContext,
+                    ResponseContext: deadMessage.responseContext,
                     Response: deadMessage.response
                 };
         

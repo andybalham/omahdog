@@ -5,7 +5,7 @@ import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, H
 
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
 import { RequestHandlerLambdaBase, RequestHandlerLambda } from './RequestHandlerLambda';
-import { ExchangeRequestMessage } from './Exchange';
+import { FlowRequestMessage } from './FlowMessage';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
@@ -372,7 +372,7 @@ export class LambdaApplication {
         return this;
     }
 
-    async handleRequestEvent(requestType: Type<any>, event: SNSEvent | ExchangeRequestMessage): Promise<any> {
+    async handleRequestEvent(requestType: Type<any>, event: SNSEvent | FlowRequestMessage): Promise<any> {
 
         const requestHandlerLambda = this.requestHandlerLambdas.get(requestType.name);
         

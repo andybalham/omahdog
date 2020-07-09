@@ -2,7 +2,7 @@ import { Lambda } from 'aws-sdk';
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { ExchangeRequestMessage, ExchangeResponseMessage } from './Exchange';
+import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
 import { LambdaInvokeService } from './AwsServices';
 
 export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
@@ -19,13 +19,13 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
 
         const requestId = uuid.v4();
 
-        const message: ExchangeRequestMessage = 
+        const message: FlowRequestMessage = 
             {
-                callingContext: {
-                    requestId: requestId,
+                requestContext: flowContext.requestContext,
+                responseContext: {
+                    flowHandlerTypeName: flowContext.rootHandlerTypeName,
                     flowInstanceId: flowContext.instanceId,
-                    flowCorrelationId: flowContext.correlationId,
-                    handlerTypeName: flowContext.rootHandlerTypeName
+                    flowRequestId: requestId,
                 },
                 request: request
             };
@@ -65,7 +65,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             throw new Error('typeof invokeResult.Payload !== \'string\'');
         }
 
-        const responseMessage: ExchangeResponseMessage = JSON.parse(invokeResult.Payload);
+        const responseMessage: FlowResponseMessage = JSON.parse(invokeResult.Payload);
 
         const response: TRes | AsyncResponse | ErrorResponse = responseMessage.response;
 

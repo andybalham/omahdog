@@ -1,5 +1,5 @@
-import { FlowInstance } from '../omahdog/FlowContext';
-import { ExchangeCallingContext } from './Exchange';
+import { FlowInstance, FlowRequestContext } from '../omahdog/FlowContext';
+import { FlowResponseContext } from './FlowMessage';
 
 // TODO 29Jun20: Change this to be FlowInstance
 
@@ -10,9 +10,9 @@ export interface IFunctionInstanceRepository {
 }
 
 export class FunctionInstance {
-    readonly callingContext: ExchangeCallingContext;
+    readonly flowResponseContext?: FlowResponseContext;
     readonly flowInstance: FlowInstance;
-    readonly requestId: string;
+    readonly flowRequestId: string;
     readonly resumeCount: number;
 }
 

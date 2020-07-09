@@ -1,6 +1,6 @@
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
-import { ExchangeRequestMessage } from './Exchange';
+import { FlowRequestMessage } from './FlowMessage';
 import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
@@ -41,13 +41,13 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
         
         const requestId = uuid.v4();
         
-        const message: ExchangeRequestMessage = 
+        const message: FlowRequestMessage = 
             {
-                callingContext: {
-                    requestId: requestId,
+                requestContext: flowContext.requestContext,
+                responseContext: {
+                    flowHandlerTypeName: flowContext.rootHandlerTypeName,
                     flowInstanceId: flowContext.instanceId,
-                    flowCorrelationId: flowContext.correlationId,
-                    handlerTypeName: flowContext.rootHandlerTypeName
+                    flowRequestId: requestId,
                 },
                 request: request
             };
