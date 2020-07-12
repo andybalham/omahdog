@@ -17,9 +17,9 @@ export class FlowContext {
     readonly resumeStackFrames?: FlowInstanceStackFrame[];
     readonly initialResumeStackFrameCount?: number;
     asyncResponse: any;
-    
+
     readonly mocks: FlowMocks;
-    
+
     private _rootHandlerTypeName: string;
     get rootHandlerTypeName(): string { return this._rootHandlerTypeName; }
 
@@ -36,7 +36,7 @@ export class FlowContext {
             flowInstance.flowRequestContext, flowInstance.instanceId, flowInstance.stackFrames, requestRouter, handlerFactory);
     }
 
-    private constructor(flowRequestContext?: FlowRequestContext, instanceId?: string, stackFrames?: FlowInstanceStackFrame[], 
+    private constructor(flowRequestContext?: FlowRequestContext, instanceId?: string, stackFrames?: FlowInstanceStackFrame[],
         requestRouter?: RequestRouter, handlerFactory?: HandlerFactory) {
 
         this.requestRouter = requestRouter ?? new RequestRouter();
@@ -70,11 +70,11 @@ export class FlowContext {
         const handlerType = this.requestRouter.getHandlerType(requestType);
 
         if (handlerType === undefined) throw new Error('handlerType === undefined');
-        
+
         return await this.handleRequest(handlerType, request);
     }
 
-    async handleRequest<TReq, TRes>(handlerType: Type<IActivityRequestHandlerBase>, request: TReq): 
+    async handleRequest<TReq, TRes>(handlerType: Type<IActivityRequestHandlerBase>, request: TReq):
         Promise<TRes | AsyncResponse | ErrorResponse> {
 
         if (this._rootHandlerTypeName === undefined) {
@@ -89,24 +89,24 @@ export class FlowContext {
     }
 
     async receiveResponse<TReq, TRes>(requestType: Type<TReq>, asyncResponse: any): Promise<TRes | AsyncResponse | ErrorResponse> {
-        
+
         const handlerType = this.requestRouter.getHandlerType(requestType);
 
         if (handlerType === undefined) throw new Error('handlerType === undefined');
-        
+
         return await this.handleResponse(handlerType, asyncResponse);
     }
 
-    async handleResponse<TReq, TRes>(handlerType: Type<IActivityRequestHandlerBase>, asyncResponse: any): 
+    async handleResponse<TReq, TRes>(handlerType: Type<IActivityRequestHandlerBase>, asyncResponse: any):
         Promise<TRes | AsyncResponse | ErrorResponse> {
-        
+
         if (this._rootHandlerTypeName === undefined) {
             this._rootHandlerTypeName = handlerType.name;
         }
 
         this.asyncResponse = asyncResponse;
 
-        const handler = 
+        const handler =
             this.handlerFactory.newHandler(handlerType) as IActivityRequestHandlerBase | IResumableRequestHandler;
 
         if ('resume' in handler) {
@@ -121,12 +121,12 @@ export class FlowContext {
 
         const isRootFlow = this.stackFrames.length === 1;
 
-        if (!isRootFlow) {            
+        if (!isRootFlow) {
             return undefined;
         }
 
         const mockResponse = this.mocks.getResponse(stepName, request);
-        
+
         return mockResponse;
     }
 
@@ -145,6 +145,8 @@ export enum FlowLogLevel {
     OFF = 'OFF',
 }
 
+// TODO 09Jul20: Can we think of a better name for this? RequestContext? CallContext? CallLogLevel above?
+
 export class FlowRequestContext {
     correlationId: string;
     logLevel?: FlowLogLevel;
@@ -152,7 +154,7 @@ export class FlowRequestContext {
 }
 
 export class FlowInstance {
-    
+
     readonly flowRequestContext: FlowRequestContext;
 
     readonly instanceId: string;
@@ -189,7 +191,7 @@ export interface IActivityRequestHandler<TReq, TRes> extends IActivityRequestHan
     handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse>;
 }
 
-export function getRequestHandlers(handlerType: Type<IActivityRequestHandlerBase>, 
+export function getRequestHandlers(handlerType: Type<IActivityRequestHandlerBase>,
     handlerFactory: HandlerFactory, requestRouter: RequestRouter): Map<string, IActivityRequestHandlerBase> {
 
     const handlers = new Map<string, IActivityRequestHandlerBase>();
@@ -203,13 +205,13 @@ export function getRequestHandlers(handlerType: Type<IActivityRequestHandlerBase
         const subRequestTypes = (handler as ICompositeRequestHandler).getSubRequestTypes();
 
         subRequestTypes.forEach(subRequestType => {
-            
+
             const subHandlerType = requestRouter.getHandlerType(subRequestType);
 
             const subHandlers = getRequestHandlers(subHandlerType, handlerFactory, requestRouter);
 
             subHandlers.forEach((handler, typeName) => {
-                handlers.set(typeName, handler);                    
+                handlers.set(typeName, handler);
             });
         });
     }
@@ -218,7 +220,7 @@ export function getRequestHandlers(handlerType: Type<IActivityRequestHandlerBase
 }
 
 export class AsyncResponse {
-    
+
     readonly AsyncResponse: boolean = true;
 
     readonly flowRequestContext: FlowRequestContext;
@@ -250,18 +252,18 @@ export class HandlerFactory {
         }
         this.initialisers.set(handlerType.name, initialiser);
         return this;
-    }    
+    }
 
     newHandler<T extends IActivityRequestHandlerBase>(type: Type<T>): IActivityRequestHandlerBase {
 
         const handler = new type();
 
         const initialiser = this.initialisers.get(type.name);
-        
+
         if (initialiser !== undefined) {
             initialiser(handler);
         }
-        
+
         return handler;
     }
 }
@@ -276,7 +278,7 @@ export class RequestRouter {
         this._requestHandlerTypes.set(RequestType.name, HandlerType);
         return this;
     }
-    
+
     getHandlerType<TReq>(RequestType: Type<TReq>): Type<IActivityRequestHandlerBase> {
 
         const handlerType = this._requestHandlerTypes.get(RequestType.name);
