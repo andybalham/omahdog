@@ -35,7 +35,6 @@ describe('AddThreeNumbersHandler tests', () => {
 
         const response = await flowContext.handleRequest(AddThreeNumbersHandler, request) as AddThreeNumbersResponse;
 
-        expect(flowContext.instanceId).to.be.not.undefined;
         expect(response.total).to.be.equal(42);
     });
 

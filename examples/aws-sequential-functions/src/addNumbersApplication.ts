@@ -20,6 +20,7 @@ import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoN
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
 import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
+import { constants } from 'zlib';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -100,6 +101,7 @@ export const addNumbersApplication =
     
             .addRequestHandler(
                 templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler, lambda => {
+                    lambda.parameters.requesterId = new ConstantValue('AddThreeNumbersFunction');
                     lambda.enableSNS = true;
                 })
             .addRequestHandler(

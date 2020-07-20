@@ -17,16 +17,15 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
 
         console.log(`Lambda proxy for ${functionName} called with: ${JSON.stringify(request)}`);
 
+        if (flowContext.requesterId === undefined) throw new Error('flowContext.requesterId === undefined');
+
         const requestId = uuid.v4();
 
         const message: FlowRequestMessage = 
             {
-                requestContext: flowContext.requestContext,
-                responseContext: {
-                    flowHandlerTypeName: flowContext.rootHandlerTypeName,
-                    flowInstanceId: flowContext.instanceId,
-                    flowRequestId: requestId,
-                },
+                callContext: flowContext.callContext,
+                requesterId: flowContext.requesterId,
+                requestId: requestId,
                 request: request
             };
 

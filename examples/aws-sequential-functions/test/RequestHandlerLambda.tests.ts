@@ -1,4 +1,4 @@
-import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, HandlerFactory, FlowInstance, FlowRequestContext } from '../src/omahdog/FlowContext';
+import { IActivityRequestHandler, FlowContext, AsyncResponse, RequestRouter, HandlerFactory, CallContext } from '../src/omahdog/FlowContext';
 import { SNSEvent } from 'aws-lambda/trigger/sns';
 import { ErrorResponse } from '../src/omahdog/FlowExchanges';
 import { FlowRequestMessage, FlowResponseMessage } from '../src/omahdog-aws/FlowMessage';
@@ -89,14 +89,11 @@ describe('RequestHandlerLambda tests', () => {
             });
 
         const requestMessage: FlowRequestMessage = {
-            requestContext: {
+            callContext: {
                 correlationId: 'correlationId'
             },
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'requestId'
-            },
+            requesterId: 'requesterId',
+            requestId: 'requestId',            
             request: request
         };
             
@@ -114,11 +111,11 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.responseContext).to.deep.equal(requestMessage.responseContext);
+            expect(responseMessage.requestId).to.equal(requestMessage.requestId);
             expect(responseMessage.response).to.deep.equal(response);
         }
     });    
@@ -136,12 +133,12 @@ describe('RequestHandlerLambda tests', () => {
             });
         });
         
-        const flowRequestContext: FlowRequestContext = {
+        const callContext: CallContext = {
             correlationId: 'flowCorrelationId'
         };
 
         const request: TestRequest = { input: 666 };
-        const response = new AsyncResponse(flowRequestContext, 'instanceId', [], 'requestId');
+        const response = new AsyncResponse([], 'asyncRequestId');
 
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
@@ -166,21 +163,25 @@ describe('RequestHandlerLambda tests', () => {
             });
     
         const requestMessage: FlowRequestMessage = {
-            requestContext: flowRequestContext,
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'requestId'
-            },
+            callContext: callContext,
+            requesterId: 'requesterId',
+            requestId: 'requestId',            
             request: request
         };
 
+        let functionInstanceKey: string | undefined;
         let functionInstance: FunctionInstance | undefined;
 
-        flowInstanceRepository.store(Arg.is((fi: FunctionInstance) => {
-            functionInstance = fi;
-            return true;
-        }));
+        flowInstanceRepository.store(
+            Arg.is((id: string) => {
+                functionInstanceKey = id;
+                return true;
+            }), 
+            Arg.is((fi: FunctionInstance) => {
+                functionInstance = fi;
+                return true;
+            })
+        );
             
         // Act
 
@@ -193,8 +194,10 @@ describe('RequestHandlerLambda tests', () => {
         expect(functionInstance).to.not.be.undefined;
 
         if (functionInstance !== undefined) {
-            expect(functionInstance.flowResponseContext).to.deep.equal(requestMessage.responseContext);
-            expect(functionInstance.flowInstance.flowRequestContext.correlationId).to.equal(requestMessage.requestContext.correlationId);
+            expect(functionInstanceKey).to.equal('asyncRequestId');
+            expect(functionInstance.callContext.correlationId).to.equal(requestMessage.callContext.correlationId);
+            expect(functionInstance.requesterId).to.equal(requestMessage.requesterId);
+            expect(functionInstance.requestId).to.equal(requestMessage.requestId);
             expect(functionInstance.resumeCount).to.equal(0);
         }
     });    
@@ -237,31 +240,24 @@ describe('RequestHandlerLambda tests', () => {
             });
 
         const responseMessage: FlowResponseMessage = {
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'flowHandlerTypeName',
-                flowRequestId: 'flowRequestId'
-            },
+            requestId: 'asyncRequestId',
             response: {}
         };
 
-        const flowRequestContext: FlowRequestContext = {
+        const callContext: CallContext = {
             correlationId: 'correlationId'
         };
 
         const functionInstance: FunctionInstance = {
-            flowResponseContext: {
-                flowInstanceId: 'callingFlowInstanceId',
-                flowHandlerTypeName: 'callingHandlerTypeName',
-                flowRequestId: 'callingRequestId'
-            },
-            flowInstance: new FlowInstance(flowRequestContext, 'flowInstanceId', []),
-            flowRequestId: 'flowRequestId',
+            callContext: callContext,
+            requesterId: 'requesterId',
+            requestId: 'requestId',
+            stackFrames: [],
             resumeCount: 0
         };
 
         flowInstanceRepository
-            .retrieve(Arg.is(v => v === 'flowInstanceId'))
+            .retrieve(Arg.is(v => v === 'asyncRequestId'))
             .resolves(functionInstance);
 
         // Act
@@ -278,16 +274,13 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.responseContext).to.deep.equal(functionInstance.flowResponseContext);
+            expect(responseMessage.requestId).to.equal(functionInstance.requestId);
             expect(responseMessage.response).to.deep.equal(response);
         }
-
-        flowInstanceRepository.received()
-            .delete(Arg.is(v => v === 'flowInstanceId'));
     });
 
     it('returns error response on error to SNS request', async () => {
@@ -327,17 +320,14 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const flowRequestContext: FlowRequestContext = {
+        const callContext: CallContext = {
             correlationId: 'flowCorrelationId'
         };
     
         const requestMessage: FlowRequestMessage = {
-            requestContext: flowRequestContext,
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'requestId'
-            },
+            callContext: callContext,
+            requesterId: 'requesterId',
+            requestId: 'requestId',            
             request: request
         };
                 
@@ -355,11 +345,11 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('handlerTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.responseContext).to.deep.equal(requestMessage.responseContext);
+            expect(responseMessage.requestId).to.equal(requestMessage.requestId);
             expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
             expect((responseMessage.response as ErrorResponse).message).to.equal('Something went bandy!');
         }
@@ -400,31 +390,24 @@ describe('RequestHandlerLambda tests', () => {
             });
 
         const responseMessage: FlowResponseMessage = {
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'ExchangeRequestId'
-            },
+            requestId: 'asyncRequestId',
             response: {}
         };
 
-        const flowRequestContext: FlowRequestContext = {
+        const callContext: CallContext = {
             correlationId: 'correlationId'
         };
 
         const functionInstance: FunctionInstance = {
-            flowResponseContext: {
-                flowInstanceId: 'callingFlowInstanceId',
-                flowHandlerTypeName: 'callingHandlerTypeName',
-                flowRequestId: 'callingRequestId'
-            },
-            flowRequestId: 'ExchangeRequestId',
-            flowInstance: new FlowInstance(flowRequestContext, 'flowInstanceId', []),
+            callContext: callContext,
+            requesterId: 'requesterId',
+            requestId: 'requestId',
+            stackFrames: [],
             resumeCount: 0
         };
 
         flowInstanceRepository
-            .retrieve(Arg.is(v => v === 'flowInstanceId'))
+            .retrieve(Arg.is(v => v === responseMessage.requestId))
             .resolves(functionInstance);
 
         // Act
@@ -441,17 +424,14 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callingHandlerTypeName:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
-            expect(responseMessage.responseContext).to.deep.equal(functionInstance.flowResponseContext);
+            expect(responseMessage.requestId).to.equal(functionInstance.requestId);
             expect('ErrorResponse' in responseMessage.response, 'ErrorResponse').to.be.true;
             expect((responseMessage.response as ErrorResponse).message).to.equal('Something went bandy!');
         }
-
-        flowInstanceRepository.received()
-            .delete(Arg.is(v => v === 'flowInstanceId'));
     });    
 
     it('handles direct request with synchronous handler response', async () => {
@@ -492,17 +472,14 @@ describe('RequestHandlerLambda tests', () => {
                 lambda.services.functionInstanceRepository = flowInstanceRepository;
             });
 
-        const flowRequestContext: FlowRequestContext = {
+        const callContext: CallContext = {
             correlationId: 'flowCorrelationId'
         };
         
         const requestMessage: FlowRequestMessage = {
-            requestContext: flowRequestContext,
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'requestId'
-            },
+            callContext: callContext,
+            requesterId: 'requesterId',
+            requestId: 'requestId',            
             request: request
         };
             
@@ -516,7 +493,7 @@ describe('RequestHandlerLambda tests', () => {
 
         if (responseMessage !== undefined) {
 
-            expect((responseMessage as FlowResponseMessage).responseContext).to.deep.equal(requestMessage.responseContext);
+            expect((responseMessage as FlowResponseMessage).requestId).to.equal(requestMessage.requestId);
             expect((responseMessage as FlowResponseMessage).response).to.deep.equal(response);
         }
     });    
@@ -534,12 +511,12 @@ describe('RequestHandlerLambda tests', () => {
             });
         });
         
-        const flowRequestContext: FlowRequestContext = {
+        const callContext: CallContext = {
             correlationId: 'correlationId'
         };
 
         const request: TestRequest = { input: 666 };
-        const response = new AsyncResponse(flowRequestContext, 'instanceId', [], 'requestId');
+        const response = new AsyncResponse([], 'asyncRequestId');
 
         const requestRouter = new RequestRouter()
             .register(TestRequest, TestResponse, TestActivityRequestHandler);
@@ -564,21 +541,25 @@ describe('RequestHandlerLambda tests', () => {
             });
         
         const requestMessage: FlowRequestMessage = {
-            requestContext: flowRequestContext,
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'requestId'
-            },
+            callContext: callContext,
+            requesterId: 'requesterId',
+            requestId: 'requestId',            
             request: request
         };
 
+        let functionInstanceKey: string | undefined;
         let functionInstance: FunctionInstance | undefined;
 
-        flowInstanceRepository.store(Arg.is((fi: FunctionInstance) => {
-            functionInstance = fi;
-            return true;
-        }));
+        flowInstanceRepository.store(
+            Arg.is((id: string) => {
+                functionInstanceKey = id;
+                return true;
+            }), 
+            Arg.is((fi: FunctionInstance) => {
+                functionInstance = fi;
+                return true;
+            })
+        );
             
         // Act
 
@@ -589,15 +570,17 @@ describe('RequestHandlerLambda tests', () => {
         expect(responseMessage).to.not.be.undefined;
 
         if (responseMessage !== undefined) {
-            expect((responseMessage as FlowResponseMessage).responseContext).to.deep.equal(requestMessage.responseContext);
+            expect((responseMessage as FlowResponseMessage).requestId).to.equal(requestMessage.requestId);
             expect((responseMessage as FlowResponseMessage).response.AsyncResponse).to.be.true;
         }
 
         expect(functionInstance).to.not.be.undefined;
 
         if (functionInstance !== undefined) {
-            expect(functionInstance.flowResponseContext).to.deep.equal(requestMessage.responseContext);
-            expect(functionInstance.flowInstance.flowRequestContext.correlationId).to.equal(requestMessage.requestContext.correlationId);
+            expect(functionInstanceKey).to.equal(response.requestId);
+            expect(functionInstance.callContext).to.deep.equal(requestMessage.callContext);
+            expect(functionInstance.requesterId).to.equal(requestMessage.requesterId);
+            expect(functionInstance.requestId).to.equal(requestMessage.requestId);
             expect(functionInstance.resumeCount).to.equal(0);
         }
     });    

@@ -2,7 +2,7 @@ import uuid = require('uuid');
 import { FlowRequestHandler } from '../src/FlowRequestHandler';
 import { FlowBuilder } from '../src/FlowBuilder';
 import { FlowDefinition } from '../src/FlowDefinition';
-import { FlowContext, FlowInstance, RequestRouter, IActivityRequestHandler, AsyncResponse, HandlerFactory } from '../src/FlowContext';
+import { FlowContext, RequestRouter, IActivityRequestHandler, AsyncResponse, HandlerFactory, CallContext, FlowStackFrame } from '../src/FlowContext';
 import { expect } from 'chai';
 import { ErrorResponse } from '../src/FlowExchanges';
 
@@ -25,7 +25,7 @@ describe('Handlers', () => {
 
         const response = await new ParentFlowHandler().handle(flowContext, request);
 
-        expect(flowContext.requestContext.correlationId).to.be.not.undefined;
+        expect(flowContext.callContext.correlationId).to.be.not.undefined;
         expect((response as ParentFlowResponse).total).to.be.equal(666);
     });
 
@@ -43,7 +43,13 @@ describe('Handlers', () => {
             })
             ;
 
-        let flowContext = FlowContext.newContext(asyncRequestRouter, handlerFactory);
+        const callContext: CallContext = {
+            correlationId: 'correlationId'
+        };
+
+        const requesterId = 'requesterId';
+
+        let flowContext = FlowContext.newRequestContext(callContext, requesterId, asyncRequestRouter, handlerFactory);
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -51,46 +57,49 @@ describe('Handlers', () => {
         request.c = 206;
         request.d = 50;
 
-        let flowInstance: FlowInstance;
+        let stackFrames: FlowStackFrame[];
         
         const asyncResponse01 = 
             await flowContext.handleRequest<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, request);
 
         expect('AsyncResponse' in asyncResponse01).to.be.true;
-        flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
+        expect((asyncResponse01 as AsyncResponse).requestId).to.be.not.undefined;
+        stackFrames = (asyncResponse01 as AsyncResponse).stackFrames;
 
         // Feed in response01
 
         const response01 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncRequestJSON));
         
-        flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
+        flowContext = FlowContext.newResumeContext(callContext, requesterId, stackFrames, asyncRequestRouter, handlerFactory);
         
         const asyncResponse02 = 
             await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response01);
 
         expect('AsyncResponse' in asyncResponse02).to.be.true;
-        flowInstance = (asyncResponse02 as AsyncResponse).getFlowInstance();
+        expect((asyncResponse02 as AsyncResponse).requestId).to.be.not.undefined;
+        stackFrames = (asyncResponse02 as AsyncResponse).stackFrames;
 
         // Feed in response02
 
         const response02 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncRequestJSON));
         
-        flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
+        flowContext = FlowContext.newResumeContext(callContext, requesterId, stackFrames, asyncRequestRouter, handlerFactory);
         
         const asyncResponse03 = 
             await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response02);
 
         expect('AsyncResponse' in asyncResponse03).to.be.true;
-        flowInstance = (asyncResponse03 as AsyncResponse).getFlowInstance();
+        expect((asyncResponse03 as AsyncResponse).requestId).to.be.not.undefined;
+        stackFrames = (asyncResponse03 as AsyncResponse).stackFrames;
 
         // Feed in response03
 
         const response03 =
             await new SyncSumActivityHandler().handle(FlowContext.newContext(), JSON.parse(asyncRequestJSON));
         
-        flowContext = FlowContext.newResumeContext(flowInstance, asyncRequestRouter, handlerFactory);
+        flowContext = FlowContext.newResumeContext(callContext, requesterId, stackFrames, asyncRequestRouter, handlerFactory);
         
         const response04 = await flowContext.handleResponse<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, response03);
 
@@ -106,9 +115,7 @@ describe('Handlers', () => {
         const handlerFactory = new HandlerFactory()
             ;
 
-        let flowContext = FlowContext.newContext();
-        flowContext.requestRouter = asyncRequestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        let flowContext = FlowContext.newContext(asyncRequestRouter, handlerFactory);
 
         const request = new ParentFlowRequest();
         request.a = 200;
@@ -120,7 +127,7 @@ describe('Handlers', () => {
             await flowContext.handleRequest<ParentFlowRequest, ParentFlowResponse>(ParentFlowHandler, request);
 
         expect('AsyncResponse' in asyncResponse01).to.be.true;
-        const flowInstance = (asyncResponse01 as AsyncResponse).getFlowInstance();
+        const stackFrames = (asyncResponse01 as AsyncResponse).stackFrames;
 
         // Feed in asynchronous error
 
@@ -128,9 +135,13 @@ describe('Handlers', () => {
         try { throw new Error('Something went bandy!'); } catch (e) { error = e; }
         const errorResponse = new ErrorResponse(error);
         
-        flowContext = FlowContext.newResumeContext(flowInstance);
-        flowContext.requestRouter = asyncRequestRouter;
-        flowContext.handlerFactory = handlerFactory;
+        const callContext: CallContext = {
+            correlationId: 'subFlowTest'
+        };
+
+        const requesterId = 'requesterId';
+
+        flowContext = FlowContext.newResumeContext(callContext, requesterId, stackFrames, asyncRequestRouter, handlerFactory);
         
         let isErrorThrown: boolean;        
         try {

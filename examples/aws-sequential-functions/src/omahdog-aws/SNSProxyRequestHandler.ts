@@ -19,7 +19,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     // TODO 05Jul20: We could change this to be getResponseEvents, this would indicate async nature
     
-    getEvents(rootHandlerTypeName: string): any[] {
+    getEvents(requesterId: string): any[] {
 
         const responseEvent = {
             Type: 'SNS',
@@ -32,7 +32,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
         };
 
         responseEvent.Properties.Topic = this.services?.requestPublisher.services.exchangeTopic.parameters.topicArnValue?.getTemplateValue();
-        responseEvent.Properties.FilterPolicy.MessageType = [`${rootHandlerTypeName}:Response`];
+        responseEvent.Properties.FilterPolicy.MessageType = [`${requesterId}:Response`];
 
         return [responseEvent];
     }
@@ -41,14 +41,13 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
         
         const requestId = uuid.v4();
         
+        if (flowContext.requesterId === undefined) throw new Error('flowContext.requesterId === undefined');
+        
         const message: FlowRequestMessage = 
             {
-                requestContext: flowContext.requestContext,
-                responseContext: {
-                    flowHandlerTypeName: flowContext.rootHandlerTypeName,
-                    flowInstanceId: flowContext.instanceId,
-                    flowRequestId: requestId,
-                },
+                callContext: flowContext.callContext,
+                requesterId: flowContext.requesterId,
+                requestId: requestId,
                 request: request
             };
 

@@ -204,7 +204,7 @@ export class LambdaApplication {
             const handlers = getRequestHandlers(lambda.handlerType, this.handlerFactory, this.requestRouter);
 
             handlers.forEach(handler => {
-                const handlerEvents = getEvents(handler, lambda.handlerType.name);
+                const handlerEvents = getEvents(handler, lambda.parameters.requesterId?.evaluate());
                 events = events.concat(handlerEvents);
             });
 

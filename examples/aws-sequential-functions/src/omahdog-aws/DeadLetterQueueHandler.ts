@@ -29,8 +29,9 @@ export class DeadLetterQueueHandler {
     
                 const logEntry = {
                     MessageAttributes: deadSnsMessage.MessageAttributes,
-                    RequestContext: deadMessage.requestContext,
-                    ResponseContext: deadMessage.responseContext,
+                    CallContext: deadMessage.callContext,
+                    RequesterId: deadMessage.requesterId,
+                    RequestId: deadMessage.requestId,
                     Request: deadMessage.request
                 };
         
@@ -44,13 +45,11 @@ export class DeadLetterQueueHandler {
     
                 const responseMessage: FlowResponseMessage = 
                     {
-                        responseContext: deadMessage.responseContext,
+                        requestId: deadMessage.requestId,
                         response: response
                     };
         
-                if (deadMessage.responseContext === undefined) throw new Error('deadMessage.responseContext === undefined');
-
-                await this._exchangeMessagePublisher.publishResponse(deadMessage.responseContext.flowHandlerTypeName, responseMessage);
+                await this._exchangeMessagePublisher.publishResponse(deadMessage.requesterId, responseMessage);
         
             } else if ('response' in deadMessage) {
     
@@ -58,7 +57,7 @@ export class DeadLetterQueueHandler {
 
                 const logEntry = {
                     MessageAttributes: deadSnsMessage.MessageAttributes,
-                    ResponseContext: deadMessage.responseContext,
+                    RequestId: deadMessage.requestId,
                     Response: deadMessage.response
                 };
         

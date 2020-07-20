@@ -1,18 +1,16 @@
-import { FlowInstance, FlowRequestContext } from '../omahdog/FlowContext';
-import { FlowResponseContext } from './FlowMessage';
+import { FlowStackFrame, CallContext } from '../omahdog/FlowContext';
 
-// TODO 29Jun20: Change this to be FlowInstance
+// TODO 19Jul20: FunctionInstance is not quite the right terminology here
 
 export interface IFunctionInstanceRepository {    
-    store(instance: FunctionInstance): Promise<void>;    
-    retrieve(instanceId: string): Promise<FunctionInstance | undefined>;    
-    delete(instanceId: string): Promise<void>;
+    store(requestId: string, instance: FunctionInstance): Promise<void>;    
+    retrieve(requestId: string): Promise<FunctionInstance | undefined>;    
 }
 
 export class FunctionInstance {
-    readonly flowResponseContext?: FlowResponseContext;
-    readonly flowInstance: FlowInstance;
-    readonly flowRequestId: string;
+    readonly callContext: CallContext;
+    readonly requesterId: string;
+    readonly requestId: string;
+    readonly stackFrames: FlowStackFrame[];
     readonly resumeCount: number;
 }
-

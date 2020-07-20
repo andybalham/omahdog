@@ -144,7 +144,7 @@ Resources:
             FilterPolicy:
               MessageType:
                 - AddThreeNumbersRequest:Handler
-                - AddThreeNumbersHandler:Response
+                - AddThreeNumbersFunction:Response
   AddTwoNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:

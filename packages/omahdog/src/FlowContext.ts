@@ -4,22 +4,26 @@ import { ErrorResponse } from './FlowExchanges';
 import { IResumableRequestHandler } from './FlowRequestHandler';
 import { Type } from './Type';
 
+// TODO 19Jul20: Should this be OmahdogContext? It is very specific
+// TODO 19Jul20: This exposes more data than a request handler needs. Do they only need CallContext??
+// TODO 19Jul20: Is there something between this and call context?
 export class FlowContext {
 
-    requestRouter: RequestRouter;
-    handlerFactory: HandlerFactory;
+    readonly callContext: CallContext;
+    readonly requesterId?: string;
 
-    readonly requestContext: FlowRequestContext;
+    readonly stackFrames: FlowStackFrame[];
 
-    readonly instanceId: string;
-    readonly stackFrames: FlowInstanceStackFrame[];
-
-    readonly resumeStackFrames?: FlowInstanceStackFrame[];
+    readonly resumeStackFrames?: FlowStackFrame[];
     readonly initialResumeStackFrameCount?: number;
-    asyncResponse: any;
+    private _asyncResponse: any;
+    get asyncResponse(): any { return this._asyncResponse; }
 
+    readonly requestRouter: RequestRouter;
+    readonly handlerFactory: HandlerFactory;
     readonly mocks: FlowMocks;
 
+    // TODO 19Jul20: We won't need this when we subscribe using a unique function name
     private _rootHandlerTypeName: string;
     get rootHandlerTypeName(): string { return this._rootHandlerTypeName; }
 
@@ -27,27 +31,25 @@ export class FlowContext {
         return new FlowContext(undefined, undefined, undefined, requestRouter, handlerFactory);
     }
 
-    static newRequestContext(flowRequestContext: FlowRequestContext, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
-        return new FlowContext(flowRequestContext, undefined, undefined, requestRouter, handlerFactory);
+    static newRequestContext(callContext: CallContext, requesterId: string, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
+        return new FlowContext(callContext, requesterId, undefined, requestRouter, handlerFactory);
     }
 
-    static newResumeContext(flowInstance: FlowInstance, requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
-        return new FlowContext(
-            flowInstance.flowRequestContext, flowInstance.instanceId, flowInstance.stackFrames, requestRouter, handlerFactory);
+    static newResumeContext(callContext: CallContext, requesterId: string, stackFrames?: FlowStackFrame[], requestRouter?: RequestRouter, handlerFactory?: HandlerFactory): FlowContext {
+        return new FlowContext(callContext, requesterId, stackFrames, requestRouter, handlerFactory);
     }
 
-    private constructor(flowRequestContext?: FlowRequestContext, instanceId?: string, stackFrames?: FlowInstanceStackFrame[],
-        requestRouter?: RequestRouter, handlerFactory?: HandlerFactory) {
+    private constructor(callContext?: CallContext, requesterId?: string, stackFrames?: FlowStackFrame[], requestRouter?: RequestRouter, handlerFactory?: HandlerFactory) {
 
         this.requestRouter = requestRouter ?? new RequestRouter();
         this.handlerFactory = handlerFactory ?? new HandlerFactory();
         this.mocks = new FlowMocks();
 
-        this.requestContext = flowRequestContext ?? new FlowRequestContext;
-        this.requestContext.correlationId = this.requestContext.correlationId ?? uuid.v4();
-        this.requestContext.logLevel = this.requestContext.logLevel ?? FlowLogLevel.INFO; // TODO 08Jul20: Is this a sensible default?
+        this.callContext = callContext ?? new CallContext;
+        this.callContext.correlationId = this.callContext.correlationId ?? uuid.v4();
+        this.callContext.logLevel = this.callContext.logLevel ?? LogLevel.INFO; // TODO 08Jul20: Is this a sensible default?
 
-        this.instanceId = instanceId ?? uuid.v4();
+        this.requesterId = requesterId;
 
         this.stackFrames = [];
 
@@ -57,12 +59,12 @@ export class FlowContext {
         }
     }
 
-    get currentStackFrame(): FlowInstanceStackFrame {
+    get currentStackFrame(): FlowStackFrame {
         return this.stackFrames[this.stackFrames.length - 1];
     }
 
     get isResume(): boolean {
-        return this.asyncResponse !== undefined;
+        return this._asyncResponse !== undefined;
     }
 
     async sendRequest<TReq, TRes>(requestType: Type<TReq>, request: TReq): Promise<TRes | AsyncResponse | ErrorResponse> {
@@ -104,7 +106,7 @@ export class FlowContext {
             this._rootHandlerTypeName = handlerType.name;
         }
 
-        this.asyncResponse = asyncResponse;
+        this._asyncResponse = asyncResponse;
 
         const handler =
             this.handlerFactory.newHandler(handlerType) as IActivityRequestHandlerBase | IResumableRequestHandler;
@@ -131,11 +133,15 @@ export class FlowContext {
     }
 
     getAsyncResponse(requestId: string): AsyncResponse {
-        return new AsyncResponse(this.requestContext, this.instanceId, this.stackFrames, requestId);
+        return new AsyncResponse(this.stackFrames, requestId);
+    }
+
+    clearAsyncResponse(): void {
+        delete this._asyncResponse;
     }
 }
 
-export enum FlowLogLevel {
+export enum LogLevel {
     ALL = 'ALL',
     DEBUG = 'DEBUG',
     INFO = 'INFO',
@@ -145,36 +151,22 @@ export enum FlowLogLevel {
     OFF = 'OFF',
 }
 
-// TODO 09Jul20: Can we think of a better name for this? RequestContext? CallContext? CallLogLevel above?
+// TODO 19Jul20: Should the following have a trace? If not, how can we provide tracing?
 
-export class FlowRequestContext {
+export class CallContext {
     correlationId: string;
-    logLevel?: FlowLogLevel;
     customValues?: any;
+    logLevel?: LogLevel;
 }
 
-export class FlowInstance {
+export class FlowStackFrame {
 
-    readonly flowRequestContext: FlowRequestContext;
-
-    readonly instanceId: string;
-    readonly stackFrames: FlowInstanceStackFrame[];
-
-    constructor(flowRequestContext: FlowRequestContext, instanceId: string, stackFrames: FlowInstanceStackFrame[]) {
-        this.flowRequestContext = flowRequestContext;
-        this.instanceId = instanceId;
-        this.stackFrames = stackFrames;
-    }
-}
-
-export class FlowInstanceStackFrame {
-
-    readonly flowTypeName: string;
+    readonly handlerTypeName: string;
     readonly state: any;
     stepName?: string;
 
     constructor(flowTypeName: string, state: any) {
-        this.flowTypeName = flowTypeName;
+        this.handlerTypeName = flowTypeName;
         this.state = state;
     }
 }
@@ -223,21 +215,12 @@ export class AsyncResponse {
 
     readonly AsyncResponse: boolean = true;
 
-    readonly flowRequestContext: FlowRequestContext;
-
-    readonly instanceId: string;
-    readonly stackFrames: FlowInstanceStackFrame[];
     readonly requestId: string;
+    readonly stackFrames: FlowStackFrame[];
 
-    constructor(flowRequestContext: FlowRequestContext, instanceId: string, stackFrames: FlowInstanceStackFrame[], requestId: string) {
-        this.flowRequestContext = flowRequestContext;
-        this.instanceId = instanceId;
+    constructor(stackFrames: FlowStackFrame[], requestId: string) {
         this.stackFrames = stackFrames;
         this.requestId = requestId;
-    }
-
-    getFlowInstance(): FlowInstance {
-        return new FlowInstance(this.flowRequestContext, this.instanceId, this.stackFrames);
     }
 }
 

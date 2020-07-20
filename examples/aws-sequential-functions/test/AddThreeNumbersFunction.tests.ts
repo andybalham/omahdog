@@ -11,14 +11,11 @@ describe('handler tests', () => {
         };
 
         const snsFlowMessage: FlowRequestMessage = {
-            requestContext: {
+            callContext: {
                 correlationId: 'correlationId'
             },
-            responseContext: {
-                flowInstanceId: 'flowInstanceId',
-                flowHandlerTypeName: 'handlerTypeName',
-                flowRequestId: 'requestId'
-            },
+            requesterId: 'requesterId',
+            requestId: 'requestId',
             request: request
         };
 

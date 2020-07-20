@@ -1,20 +1,13 @@
-import { FlowRequestContext } from '../omahdog/FlowContext';
+import { CallContext } from '../omahdog/FlowContext';
 
-abstract class FlowMessage {
-    responseContext?: FlowResponseContext;
+export class FlowRequestMessage {
+    readonly callContext: CallContext;
+    readonly requesterId: string;
+    readonly requestId: string;
+    readonly request: any;
 }
 
-export class FlowResponseContext {
-    readonly flowHandlerTypeName: string;
-    readonly flowInstanceId: string;
-    readonly flowRequestId: string;
-}
-
-export class FlowRequestMessage extends FlowMessage {
-    requestContext: FlowRequestContext;
-    request: any;
-}
-
-export class FlowResponseMessage extends FlowMessage {
-    response: any;
+export class FlowResponseMessage {
+    readonly requestId: string;
+    readonly response: any;
 }

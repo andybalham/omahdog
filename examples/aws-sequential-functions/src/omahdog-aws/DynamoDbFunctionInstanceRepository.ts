@@ -13,17 +13,14 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         if (initialise !== undefined) initialise(this);
     }
     
-    async store(instance: FunctionInstance): Promise<void> {
+    async store(requestId: string, instance: FunctionInstance): Promise<void> {
         
         // TODO 22Apr20: How can we make the following more strongly-typed?
         const params: any = {
             TableName: this.getFunctionInstanceTableName(),
             Item: {
-                id: instance.flowInstance.instanceId,
-                flowInstanceJson: JSON.stringify(instance.flowInstance),
-                requestId: instance.flowRequestId,
-                responseContext: instance.flowResponseContext,
-                resumeCount: instance.resumeCount,
+                id: requestId,
+                instance: JSON.stringify(instance),
                 lastUpdated: new Date().toISOString()    
             }
         };
@@ -33,18 +30,20 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         await this.services.functionInstanceTable.client.put(params).promise();
     }
     
-    async retrieve(instanceId: string): Promise<FunctionInstance | undefined> {
+    async retrieve(requestId: string): Promise<FunctionInstance | undefined> {
         
         const params = {
             TableName: this.getFunctionInstanceTableName(),
             Key: {
-                id: instanceId
+                id: requestId
             }
         };
 
         if (this.services.functionInstanceTable.client === undefined) throw new Error('this.services.functionInstanceTable.client === undefined');
         
+        // TODO 20Jul20: Can the following be done in one transaction?
         const dynamoDbResult: any = await this.services.functionInstanceTable.client.get(params).promise();
+        await this.services.functionInstanceTable.client.delete(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -54,28 +53,9 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
 
         console.log(`functionInstanceItem: ${JSON.stringify(functionInstanceItem)}`);
 
-        const functionInstance: FunctionInstance = {
-            flowInstance: JSON.parse(functionInstanceItem.flowInstanceJson),
-            flowRequestId: functionInstanceItem.requestId,
-            flowResponseContext: functionInstanceItem.responseContext,
-            resumeCount: functionInstanceItem.resumeCount
-        };
+        const functionInstance = JSON.parse(functionInstanceItem.instance);
 
         return functionInstance;
-    }
-    
-    async delete(instanceId: string): Promise<void> {
-        
-        const params = {
-            TableName: this.getFunctionInstanceTableName(),
-            Key: {
-                id: instanceId
-            }
-        };
-
-        if (this.services.functionInstanceTable.client === undefined) throw new Error('this.services.functionInstanceTable.client === undefined');
-        
-        await this.services.functionInstanceTable.client.delete(params).promise();
     }
 
     private getFunctionInstanceTableName(): string {

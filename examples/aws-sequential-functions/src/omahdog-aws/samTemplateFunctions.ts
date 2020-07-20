@@ -96,7 +96,7 @@ export function getEnvironmentVariables(targetObject: any): any[] {
     return environmentVariables;
 }
 
-export function getEvents(targetObject: any, rootHandlerName: string): any[] {
+export function getEvents(targetObject: any, requesterId?: string): any[] {
         
     let events: any[] = [];
 
@@ -106,13 +106,13 @@ export function getEvents(targetObject: any, rootHandlerName: string): any[] {
 
     if (targetObject !== undefined) {
 
-        const targetObjectEvents = safeInvoke(targetObject, 'getEvents', rootHandlerName) ?? [];
+        const targetObjectEvents = safeInvoke(targetObject, 'getEvents', requesterId) ?? [];
 
         events = events.concat(targetObjectEvents);
         
         for (const serviceName in targetObject.services ?? {}) {
             const service = targetObject.services[serviceName];
-            const serviceEvents = getEvents(service, rootHandlerName);
+            const serviceEvents = getEvents(service, requesterId);
             events = events.concat(serviceEvents);
         }    
     }

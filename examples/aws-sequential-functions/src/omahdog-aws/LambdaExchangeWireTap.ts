@@ -13,8 +13,9 @@ export class LambdaExchangeWireTap {
     
                 const logEntry = {
                     MessageAttributes: snsMessage.MessageAttributes,
-                    RequestContext: message.requestContext,
-                    ResponseContext: message.responseContext,
+                    CallContext: message.callContext,
+                    RequesterId: message.requesterId,
+                    RequestId: message.requestId,
                     Request: message.request
                 };
         
@@ -24,7 +25,7 @@ export class LambdaExchangeWireTap {
     
                 const logEntry = {
                     MessageAttributes: snsMessage.MessageAttributes,
-                    ResponseContext: message.responseContext,
+                    RequestId: message.requestId,
                     Response: message.response
                 };
         

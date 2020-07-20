@@ -1,7 +1,7 @@
 import fs = require('fs');
 import { FlowBuilder } from './FlowBuilder';
 import { FlowDefinition, FlowStepType, DecisionBranchTarget, DecisionBranch, DecisionBranchTargetType, FlowStep, GotoFlowStep, DecisionFlowStepBase, DecisionBranchSummary } from './FlowDefinition';
-import { FlowContext, FlowInstanceStackFrame, IActivityRequestHandler, AsyncResponse, ICompositeRequestHandler } from './FlowContext';
+import { FlowContext, FlowStackFrame, IActivityRequestHandler, AsyncResponse, ICompositeRequestHandler } from './FlowContext';
 import { ErrorResponse } from './FlowExchanges';
 import { Type } from './Type';
 
@@ -158,7 +158,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
     async handle(flowContext: FlowContext, request: TReq): Promise<TRes | AsyncResponse> {
 
-        flowContext.stackFrames.push(new FlowInstanceStackFrame(this.typeName, new this.stateType()));
+        flowContext.stackFrames.push(new FlowStackFrame(this.typeName, new this.stateType()));
 
         const response = await this.performFlow(flowContext, this.flowDefinition, request);
 
@@ -404,7 +404,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
         if ('ErrorResponse' in flowContext.asyncResponse) {
             const error = (flowContext.asyncResponse as ErrorResponse);
-            delete flowContext.asyncResponse;
+            flowContext.clearAsyncResponse();
             // TODO 02May20: Externalise how such errors are logged
             console.error(`Step '${step.name}' received error response: ${error.message}`);
             console.error(error.stack);
@@ -413,7 +413,7 @@ export abstract class FlowRequestHandler<TReq, TRes, TState> extends FlowRequest
 
         const stepResponse = flowContext.asyncResponse;
 
-        delete flowContext.asyncResponse;
+        flowContext.clearAsyncResponse();
     
         step.bindState(stepResponse, flowContext.currentStackFrame.state);
     

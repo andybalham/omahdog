@@ -90,7 +90,7 @@ describe('Handlers', () => {
 
         const response = await new SumFlowHandler().handle(flowContext, request);
 
-        expect(flowContext.requestContext.correlationId).to.be.not.undefined;        
+        expect(flowContext.callContext.correlationId).to.be.not.undefined;        
         expect((response as SumActivityResponse).total).to.be.equal(616);
     });
 });
