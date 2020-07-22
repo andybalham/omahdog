@@ -9,8 +9,8 @@
     "copy-libs": "@powershell -NoProfile -ExecutionPolicy Unrestricted -Command ./copy-my-library.ps1",
     "build": "npm run copy-libs && npm run lint-and-fix && tsc",
     "package": "npm run build && copy .\\package.json .\\dist",
-    "sam-build": "npm run package && sam build",
-    "sam-build-generated": "npm run package && sam build -t templateGenerated.yaml",
+    "sam-build-old": "npm run package && sam build",
+    "sam-build": "npm run package && sam build -t templateGenerated.yaml",
     "delete-stack": "aws cloudformation delete-stack --stack-name aws-sequential-functions --region eu-west-2",
     "test": "mocha --require ts-node/register test/**/*.ts"
   },

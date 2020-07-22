@@ -101,7 +101,7 @@ export const addNumbersApplication =
     
             .addRequestHandler(
                 templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler, lambda => {
-                    lambda.parameters.requesterId = new ConstantValue('AddThreeNumbersFunction');
+                    lambda.parameters.requesterId = EnvironmentVariable.fromConstant('AddThreeNumbersFunction', 'REQUESTER_ID');
                     lambda.enableSNS = true;
                 })
             .addRequestHandler(

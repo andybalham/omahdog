@@ -41,8 +41,6 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
         
         const requestId = uuid.v4();
         
-        if (flowContext.requesterId === undefined) throw new Error('flowContext.requesterId === undefined');
-        
         const message: FlowRequestMessage = 
             {
                 callContext: flowContext.callContext,

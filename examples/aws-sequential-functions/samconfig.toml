@@ -6,6 +6,6 @@ stack_name = "aws-sequential-functions"
 s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-vn6jgi0d56lp"
 s3_prefix = "aws-sequential-functions"
 region = "eu-west-2"
-confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
+parameter_overrides = "ApplicationName=\"Omahdog-AwsSequentialFunctions\" ApiStageName=\"test\""
 

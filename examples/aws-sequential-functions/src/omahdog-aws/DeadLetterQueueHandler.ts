@@ -37,19 +37,22 @@ export class DeadLetterQueueHandler {
         
                 console.log(JSON.stringify(logEntry));
     
-                const response: ErrorResponse = {
-                    ErrorResponse: true,
-                    name: 'Error',
-                    message: snsMessage.MessageAttributes.ErrorMessage.Value
-                };
-    
-                const responseMessage: FlowResponseMessage = 
-                    {
-                        requestId: deadMessage.requestId,
-                        response: response
+                if (deadMessage.requesterId !== undefined) {
+                    
+                    const response: ErrorResponse = {
+                        ErrorResponse: true,
+                        name: 'Error',
+                        message: snsMessage.MessageAttributes.ErrorMessage.Value
                     };
         
-                await this._exchangeMessagePublisher.publishResponse(deadMessage.requesterId, responseMessage);
+                    const responseMessage: FlowResponseMessage = 
+                        {
+                            requestId: deadMessage.requestId,
+                            response: response
+                        };
+            
+                    await this._exchangeMessagePublisher.publishResponse(deadMessage.requesterId, responseMessage);
+                }
         
             } else if ('response' in deadMessage) {
     

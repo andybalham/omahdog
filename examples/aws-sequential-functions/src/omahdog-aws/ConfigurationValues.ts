@@ -12,43 +12,64 @@ export interface IConfigurationValue {
 
 export class EnvironmentVariable implements IConfigurationValue {
     
-    readonly templateReference: TemplateReference;
-    readonly variableName: string;
+    readonly value: TemplateReference | string;
+    readonly name: string;
 
-    constructor(templateReference: TemplateReference, variableName?: string) {
-        this.templateReference = templateReference;        
-        this.variableName = variableName ?? this.generateVariableName(templateReference);
+    static fromReference(templateReference: TemplateReference, name?: string): EnvironmentVariable {
+        return new EnvironmentVariable(templateReference, name ?? EnvironmentVariable.generateVariableName(templateReference));
+    }
+
+    static fromConstant(value: string, name: string): EnvironmentVariable {
+        return new EnvironmentVariable(value, name);
+    }
+
+    private constructor(value: TemplateReference | string, name: string) {
+        this.value = value;        
+        this.name = name;
     }
 
     getTemplateValue(): any {
-        return this.templateReference.instance;
+        return (typeof this.value === 'string') ? this.value : this.value.instance;
     }
     
-    validate(baseTemplate: any): string[] {
-        return (this.templateReference === undefined) 
+    validate(baseTemplate: any): string[] {        
+        return (this.value === undefined) 
             ? ['this.templateReference === undefined'] 
-            : this.templateReference.validate(baseTemplate);
+            : (typeof this.value !== 'string') 
+                ? this.value.validate(baseTemplate)
+                : [];
     }
     
     evaluate(): string | undefined {
-        const value = process.env[this.variableName];
+        
+        const value = (typeof this.value === 'string') ? this.value : process.env[this.name];
+
         if (value === undefined) {
-            console.warn(`process.env[${this.variableName}] === undefined`);
+            console.warn(`process.env[${this.name}] === undefined`);
         }
+
         return value;
     }
 
     getEnvironmentVariableDefinition(): any {
         const definition: any = {
-            name: this.variableName,
-            value: this.templateReference?.instance
+            name: this.name,
+            value: (typeof this.value === 'string') ? this.value : this.value?.instance
         };
         return definition;
     }
 
-    private generateVariableName(templateReference: TemplateReference): string {
-        const variableName = templateReference.name?.replace(/([a-z0-9])([A-Z])/g, '$1_$2').toUpperCase();
-        return variableName ?? 'UNDEFINED';
+    private static generateVariableName(reference: TemplateReference): string {
+
+        const nameBase = reference.name ?? 'undefined';
+
+        const variableName = 
+            nameBase
+                .replace(/[^0-9a-zA-Z]/g, '_')
+                .replace(/([a-z0-9])([A-Z])/g, '$1_$2')
+                .toUpperCase();
+
+        return variableName;
     }
 }
 
