@@ -11,6 +11,7 @@ import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
 import { TemplateReference, ResourceReference, ParameterReference } from './TemplateReferences';
 import { Type } from '../omahdog/Type';
+import { EnvironmentVariable } from './ConfigurationValues';
 
 // TODO 27Jun20: Handle DeadLetterQueues
 
@@ -127,10 +128,14 @@ export class LambdaApplication {
                     }
                 };
 
-                (resourceEnvironmentVariables ?? []).forEach((environmentVariable: any) => {
-                    const definitionEnvironmentVariables = (resourceDefinition.Properties.Environment.Variables as any);
-                    definitionEnvironmentVariables[environmentVariable.name] = environmentVariable.value;
-                });
+                const definitionEnvironmentVariables = (resourceDefinition.Properties.Environment.Variables as any);
+
+                definitionEnvironmentVariables['FUNCTION_NAME'] = JSON.parse(JSON.stringify(functionName));
+                
+                (resourceEnvironmentVariables ?? [])
+                    .forEach((environmentVariable: any) => {
+                        definitionEnvironmentVariables[environmentVariable.name] = environmentVariable.value;
+                    });
 
                 resources[resourceName] = resourceDefinition;
             };
@@ -201,10 +206,12 @@ export class LambdaApplication {
 
             let events = lambda.getEvents();
 
+            const requesterId = lambda.getRequesterId(this.functionNamePrefix);
+
             const handlers = getRequestHandlers(lambda.handlerType, this.handlerFactory, this.requestRouter);
 
             handlers.forEach(handler => {
-                const handlerEvents = getEvents(handler, lambda.parameters.requesterId?.evaluate());
+                const handlerEvents = getEvents(handler, requesterId);
                 events = events.concat(handlerEvents);
             });
 
@@ -294,6 +301,7 @@ export class LambdaApplication {
                     throw new Error(`The filter policy attributes ${event2AttributeName} cannot be merged, as they are not both arrays`);                    
                 }
 
+                // TODO 23Jul20: Do we need to deduplicate the merged attributes?
                 const mergedAttributes = (mergedAttribute as any[]).concat(event2Attribute);
 
                 mergedFilterPolicy[event2AttributeName] = mergedAttributes;
@@ -303,6 +311,7 @@ export class LambdaApplication {
                 mergedFilterPolicy[event2AttributeName] = event2Attribute;
             }
         }
+
         return mergedEvent;
     }
 

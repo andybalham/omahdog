@@ -50,6 +50,8 @@ Resources:
       Handler: lambdas.handleAddNumbersApiControllerRoutes
       Environment:
         Variables:
+          FUNCTION_NAME:
+            Fn::Sub: ${ApplicationName}-AddNumbersApiFunction
           SUM_NUMBERS_FUNCTION:
             Ref: SumNumbersFunction
           ADD_TWO_NUMBERS_FUNCTION:
@@ -117,7 +119,8 @@ Resources:
       Handler: lambdas.handleAddThreeNumbersRequest
       Environment:
         Variables:
-          REQUESTER_ID: AddThreeNumbersFunction
+          FUNCTION_NAME:
+            Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
           FLOW_INSTANCE_TABLE:
@@ -145,7 +148,7 @@ Resources:
             FilterPolicy:
               MessageType:
                 - AddThreeNumbersRequest:Handler
-                - AddThreeNumbersFunction:Response
+                - Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction:Response
   AddTwoNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -154,6 +157,8 @@ Resources:
       Handler: lambdas.handleAddTwoNumbersRequest
       Environment:
         Variables:
+          FUNCTION_NAME:
+            Fn::Sub: ${ApplicationName}-AddTwoNumbersFunction
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
           SUM_NUMBERS_FUNCTION:
@@ -183,7 +188,9 @@ Resources:
         Fn::Sub: ${ApplicationName}-SumNumbersFunction
       Handler: lambdas.handleSumNumbersRequest
       Environment:
-        Variables: {}
+        Variables:
+          FUNCTION_NAME:
+            Fn::Sub: ${ApplicationName}-SumNumbersFunction
       Policies: []
       Events: {}
   StoreTotalFunction:
@@ -194,6 +201,8 @@ Resources:
       Handler: lambdas.handleStoreTotalRequest
       Environment:
         Variables:
+          FUNCTION_NAME:
+            Fn::Sub: ${ApplicationName}-StoreTotalFunction
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
           FLOW_RESULT_TABLE:

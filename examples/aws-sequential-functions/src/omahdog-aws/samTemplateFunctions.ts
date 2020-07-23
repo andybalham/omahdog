@@ -96,7 +96,7 @@ export function getEnvironmentVariables(targetObject: any): any[] {
     return environmentVariables;
 }
 
-export function getEvents(targetObject: any, requesterId?: string): any[] {
+export function getEvents(targetObject: any, requesterId?: any): any[] {
         
     let events: any[] = [];
 

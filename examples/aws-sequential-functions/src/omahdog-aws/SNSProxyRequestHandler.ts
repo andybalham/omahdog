@@ -19,20 +19,24 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
 
     // TODO 05Jul20: We could change this to be getResponseEvents, this would indicate async nature
     
-    getEvents(requesterId: string): any[] {
+    getEvents(requesterId?: any): any[] {
+
+        if (requesterId === undefined) {
+            return [];
+        }
 
         const responseEvent = {
             Type: 'SNS',
             Properties: {
-                Topic: undefined,
+                Topic: {},
                 FilterPolicy: {
-                    MessageType: new Array<string>()
+                    MessageType: {}
                 }
             },
         };
 
-        responseEvent.Properties.Topic = this.services?.requestPublisher.services.exchangeTopic.parameters.topicArnValue?.getTemplateValue();
-        responseEvent.Properties.FilterPolicy.MessageType = [`${requesterId}:Response`];
+        responseEvent.Properties.Topic = this.services?.requestPublisher.services.exchangeTopic.parameters.topicArnValue?.getTemplateValue();        
+        responseEvent.Properties.FilterPolicy.MessageType = [requesterId];
 
         return [responseEvent];
     }

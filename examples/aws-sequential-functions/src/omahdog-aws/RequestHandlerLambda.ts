@@ -17,7 +17,6 @@ class RequestHandlerLambdaServices {
 }
 
 class RequestHandlerLambdaParameters {
-    requesterId?: EnvironmentVariable
     requestTopic?: TemplateReference
 }
 
@@ -33,6 +32,10 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
     abstract getEvents(): any[];
 
     abstract handle(event: SNSEvent | FlowRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<FlowResponseMessage | void>;
+
+    getFunctionName(): string {
+        return process.env['FUNCTION_NAME'] ?? 'undefined';
+    }
 }
 
 export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandler<TReq, TRes>> extends RequestHandlerLambdaBase {
@@ -88,7 +91,6 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         }
         
         if (this.hasAsyncHandler(requestRouter, handlerFactory)) {
-            if (this.parameters.requesterId === undefined) errorMessages.push('this.parameters.requesterId === undefined');
             if (this.services.functionInstanceRepository === undefined) errorMessages.push('this.services.functionInstanceRepository === undefined');
         }
 
@@ -210,7 +212,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
         const flowContext = 
             FlowContext.newResumeContext(
-                functionInstance.callContext, this.getRequesterId(), functionInstance.stackFrames, requestRouter, handlerFactory);
+                functionInstance.callContext, this.getFunctionName(), functionInstance.stackFrames, requestRouter, handlerFactory);
 
         let response: any;
 
@@ -247,7 +249,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
         const flowContext = 
             FlowContext.newRequestContext(
-                message.callContext, this.getRequesterId(), requestRouter, handlerFactory);
+                message.callContext, this.getFunctionName(), requestRouter, handlerFactory);
 
         try {
 
@@ -260,10 +262,6 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         }
 
         return { callContext: message.callContext, requesterId: message.requesterId, requestId: message.requestId, resumeCount: 0, response };
-    }
-
-    private getRequesterId(): string {
-        return this.parameters.requesterId?.evaluate() ?? 'undefined';
     }
 }
  
