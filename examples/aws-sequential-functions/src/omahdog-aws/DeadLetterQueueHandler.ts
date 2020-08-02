@@ -30,14 +30,14 @@ export class DeadLetterQueueHandler {
                 const logEntry = {
                     MessageAttributes: deadSnsMessage.MessageAttributes,
                     CallContext: deadMessage.callContext,
-                    RequesterId: deadMessage.requesterId,
+                    RequesterId: deadMessage.callbackId,
                     RequestId: deadMessage.requestId,
                     Request: deadMessage.request
                 };
         
                 console.log(JSON.stringify(logEntry));
     
-                if (deadMessage.requesterId !== undefined) {
+                if (deadMessage.callbackId !== undefined) {
                     
                     const response: ErrorResponse = {
                         ErrorResponse: true,
@@ -51,7 +51,7 @@ export class DeadLetterQueueHandler {
                             response: response
                         };
             
-                    await this._exchangeMessagePublisher.publishResponse(deadMessage.requesterId, responseMessage);
+                    await this._exchangeMessagePublisher.publishResponse(deadMessage.callbackId, responseMessage);
                 }
         
             } else if ('response' in deadMessage) {

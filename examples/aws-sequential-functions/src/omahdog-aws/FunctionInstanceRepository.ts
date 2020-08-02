@@ -9,7 +9,7 @@ export interface IFunctionInstanceRepository {
 
 export class FunctionInstance {
     readonly callContext: CallContext;
-    readonly requesterId: string;
+    readonly callbackId: string;
     readonly requestId: string;
     readonly stackFrames: FlowStackFrame[];
     readonly resumeCount: number;

@@ -92,7 +92,7 @@ describe('RequestHandlerLambda tests', () => {
             callContext: {
                 correlationId: 'correlationId'
             },
-            requesterId: 'requesterId',
+            callbackId: 'callbackId',
             requestId: 'requestId',            
             request: request
         };
@@ -111,7 +111,7 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -164,7 +164,7 @@ describe('RequestHandlerLambda tests', () => {
     
         const requestMessage: FlowRequestMessage = {
             callContext: callContext,
-            requesterId: 'requesterId',
+            callbackId: 'callbackId',
             requestId: 'requestId',            
             request: request
         };
@@ -196,7 +196,7 @@ describe('RequestHandlerLambda tests', () => {
         if (functionInstance !== undefined) {
             expect(functionInstanceKey).to.equal('asyncRequestId');
             expect(functionInstance.callContext.correlationId).to.equal(requestMessage.callContext.correlationId);
-            expect(functionInstance.requesterId).to.equal(requestMessage.requesterId);
+            expect(functionInstance.callbackId).to.equal(requestMessage.callbackId);
             expect(functionInstance.requestId).to.equal(requestMessage.requestId);
             expect(functionInstance.resumeCount).to.equal(0);
         }
@@ -250,7 +250,7 @@ describe('RequestHandlerLambda tests', () => {
 
         const functionInstance: FunctionInstance = {
             callContext: callContext,
-            requesterId: 'requesterId',
+            callbackId: 'callbackId',
             requestId: 'requestId',
             stackFrames: [],
             resumeCount: 0
@@ -274,7 +274,7 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -326,7 +326,7 @@ describe('RequestHandlerLambda tests', () => {
     
         const requestMessage: FlowRequestMessage = {
             callContext: callContext,
-            requesterId: 'requesterId',
+            callbackId: 'callbackId',
             requestId: 'requestId',            
             request: request
         };
@@ -345,7 +345,7 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -400,7 +400,7 @@ describe('RequestHandlerLambda tests', () => {
 
         const functionInstance: FunctionInstance = {
             callContext: callContext,
-            requesterId: 'requesterId',
+            callbackId: 'callbackId',
             requestId: 'requestId',
             stackFrames: [],
             resumeCount: 0
@@ -424,7 +424,7 @@ describe('RequestHandlerLambda tests', () => {
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
             expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('requesterId:Response');
+            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -478,24 +478,18 @@ describe('RequestHandlerLambda tests', () => {
         
         const requestMessage: FlowRequestMessage = {
             callContext: callContext,
-            requesterId: 'requesterId',
             requestId: 'requestId',            
             request: request
         };
             
         // Act
 
-        const responseMessage = await handlerLambdaSut.handle(requestMessage, requestRouter, handlerFactory);
+        const handlerResponse = await handlerLambdaSut.handle(requestMessage, requestRouter, handlerFactory);
         
         // Assert
         
         expect(actualPublishInput).to.be.undefined;
-
-        if (responseMessage !== undefined) {
-
-            expect((responseMessage as FlowResponseMessage).requestId).to.equal(requestMessage.requestId);
-            expect((responseMessage as FlowResponseMessage).response).to.deep.equal(response);
-        }
+        expect(handlerResponse).to.deep.equal(response);
     });    
 
     it('handles direct request with asynchronous handler response', async () => {
@@ -542,7 +536,6 @@ describe('RequestHandlerLambda tests', () => {
         
         const requestMessage: FlowRequestMessage = {
             callContext: callContext,
-            requesterId: 'requesterId',
             requestId: 'requestId',            
             request: request
         };
@@ -566,20 +559,17 @@ describe('RequestHandlerLambda tests', () => {
         const responseMessage = await handlerLambdaSut.handle(requestMessage, requestRouter, handlerFactory);
         
         // Assert
-        
-        expect(responseMessage).to.not.be.undefined;
 
-        if (responseMessage !== undefined) {
-            expect((responseMessage as FlowResponseMessage).requestId).to.equal(requestMessage.requestId);
-            expect((responseMessage as FlowResponseMessage).response.AsyncResponse).to.be.true;
-        }
+        // TODO 02Aug20: What should happen here? Should we expect an error response as we didn't supply a callbackId?
+
+        expect(responseMessage).to.not.be.undefined;
 
         expect(functionInstance).to.not.be.undefined;
 
         if (functionInstance !== undefined) {
             expect(functionInstanceKey).to.equal(response.requestId);
             expect(functionInstance.callContext).to.deep.equal(requestMessage.callContext);
-            expect(functionInstance.requesterId).to.equal(requestMessage.requesterId);
+            expect(functionInstance.callbackId).to.equal(requestMessage.callbackId);
             expect(functionInstance.requestId).to.equal(requestMessage.requestId);
             expect(functionInstance.resumeCount).to.equal(0);
         }

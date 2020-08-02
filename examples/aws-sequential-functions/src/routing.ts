@@ -19,7 +19,7 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
     constructor() {
         super(routes => {
             routes
-                .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler, route => {
+                .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy, route => {
                     route.getRequest =
                         (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                             return {
@@ -28,7 +28,7 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
                             };
                         };                    
                 })
-                .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy, route => {
+                .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy, route => {
                     route.getRequest =
                         (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                             return {

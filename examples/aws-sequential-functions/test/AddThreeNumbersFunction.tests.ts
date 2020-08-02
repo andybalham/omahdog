@@ -14,7 +14,7 @@ describe('handler tests', () => {
             callContext: {
                 correlationId: 'correlationId'
             },
-            requesterId: 'requesterId',
+            callbackId: 'callbackId',
             requestId: 'requestId',
             request: request
         };

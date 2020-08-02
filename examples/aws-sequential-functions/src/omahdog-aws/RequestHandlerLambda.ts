@@ -3,13 +3,11 @@ import { SNSEvent } from 'aws-lambda';
 import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler, getRequestHandlers, CallContext, AsyncResponse } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
-import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
+import { FlowRequestMessage, FlowResponseMessage, isAsyncFlowRequestMessage } from './FlowMessage';
 import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
-import { IConfigurationValue, ConstantValue, EnvironmentVariable } from './ConfigurationValues';
 import { Type } from '../omahdog/Type';
-import { Environment } from 'aws-sdk/clients/lambda';
 
 class RequestHandlerLambdaServices {
     responsePublisher?: IExchangeMessagePublisher
@@ -31,7 +29,7 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
 
     abstract getEvents(): any[];
 
-    abstract handle(event: SNSEvent | FlowRequestMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<FlowResponseMessage | void>;
+    abstract handle(event: SNSEvent | FlowRequestMessage | FlowResponseMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<any | void>;
 
     getFunctionName(): string {
         return process.env['FUNCTION_NAME'] ?? 'undefined';
@@ -104,92 +102,120 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         return hasAsyncHandler;
     }
 
-    async handle(event: SNSEvent | FlowRequestMessage | FlowResponseMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<FlowResponseMessage | void> {
+    async handle(event: SNSEvent | FlowRequestMessage | FlowResponseMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<TRes | ErrorResponse | void> {
 
         console.log(`event: ${JSON.stringify(event)}`);
 
-        let message: FlowRequestMessage | FlowResponseMessage;
-        let isQueuedRequest: boolean;
-
         if ('Records' in event) {
 
-            isQueuedRequest = true;
+            await this.handleSnsEventRecords(event, requestRouter, handlerFactory);
+            return;
+                
+        } else {
 
-            const snsMessage = event.Records[0].Sns;
-            message = JSON.parse(snsMessage.Message);
-        
+            return await this.handleFlowMessage(event, requestRouter, handlerFactory);
+
+        }
+    }
+
+    private async handleSnsEventRecords(event: SNSEvent, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<void> {
+
+        for (let index = 0; index < event.Records.length; index++) {
+
+            const snsMessage = event.Records[index].Sns;
+            const message = JSON.parse(snsMessage.Message);
+
             // TODO 02May20: Remove this temporary code
             if (snsMessage.Message.includes('6666') && (this.handlerType.name === 'SumNumbersHandler')) {
                 throw new Error('Non-handler error in LambdaActivityRequestHandler!');
             }
-                
-        } else {
 
-            isQueuedRequest = false;
-            message = event;
-
+            await this.handleFlowMessage(message, requestRouter, handlerFactory);
         }
+    }
 
-        console.log(`message: ${JSON.stringify(message)}`);
+    async handleFlowMessage(inboundMessage: FlowRequestMessage | FlowResponseMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<TRes | ErrorResponse | void> {
+
+        console.log(`message: ${JSON.stringify(inboundMessage)}`);
     
         let callContext: CallContext;
-        let requesterId: string;
+        let callbackId: string;
         let requestId: string;
         let resumeCount: number;
-        let response: any;
+        let response: any;        
     
-        if ('request' in message) {
+        if ('request' in inboundMessage) {
             
             // Handle request
 
-            ({ callContext, requesterId, requestId, resumeCount, response } = 
-                await this.handleRequestMessage(message, requestRouter, handlerFactory, response));
+            ({ callContext, callbackId: callbackId, requestId, resumeCount, response: response } = 
+                await this.handleRequestMessage(inboundMessage, requestRouter, handlerFactory, response));
     
         } else {
     
             // Handle response
             
-            const functionInstance = await this.getFunctionInstance(message);
+            const functionInstance = await this.getFunctionInstance(inboundMessage);
     
             if (functionInstance === undefined) {
-                console.warn(`An instance could not be found for the requestId: ${message.requestId}`);
+                console.warn(`An instance could not be found for the requestId: ${inboundMessage.requestId}`);
                 return;
             }
-    
-            ({ callContext, requesterId, requestId, resumeCount, response } = 
-                await this.handleResponseMessage(functionInstance, message, requestRouter, handlerFactory));
+
+            ({ callContext, callbackId: callbackId, requestId, resumeCount, response: response } = 
+                await this.handleResponseMessage(functionInstance, inboundMessage, requestRouter, handlerFactory));
         }
     
-        // If we got an async response, then we need to store an instance for when we get a real response
-
-        const isAsyncResponse = 'AsyncResponse' in response;
-
+        const isAsyncResponse = ('AsyncResponse' in response);
+        const isAsyncInboundRequest = (callbackId !== undefined);
+        
         if (isAsyncResponse) {
-            await this.storeFunctionInstance(callContext, requesterId, requestId, resumeCount, response);
-        }
+            
+            await this.storeFunctionInstance(callContext, callbackId, requestId, resumeCount, response);
 
-        // Send the response back, either directly or via a message if a message was received
+            if (isAsyncInboundRequest) {
+                return;
+            }
+
+            if (resumeCount === 0) {
+                console.error('Asynchronous response received, when function invoked synchronously');
+                return new ErrorResponse(new Error('Asynchronous response received, when function invoked synchronously'));
+            }
+
+        } else {
+            
+            if (isAsyncInboundRequest) {                
+                await this.publishFinalResponse(requestId, response, callbackId);    
+                return;
+            }
+
+            if (resumeCount === 0) {
+                console.log(`return: ${JSON.stringify(response)}`);
+                return response;
+            }
+        }
+    }
+
+    private async publishFinalResponse(requestId: string, response: any, callbackId: string): Promise<void> {
 
         const responseMessage: FlowResponseMessage = {
             requestId: requestId,
             response: response
         };
-    
-        console.log(`return: ${JSON.stringify(responseMessage)}`);
 
-        if (isQueuedRequest && !isAsyncResponse && (requesterId !== undefined)) {
-            if (this.services.responsePublisher === undefined) throw new Error('this.services.responsePublisher === undefined');        
-            await this.services.responsePublisher.publishResponse(requesterId, responseMessage);    
-        }
+        console.log(`publish: ${JSON.stringify(responseMessage)}`);
 
-        return responseMessage;
+        if (this.services.responsePublisher === undefined)
+            throw new Error('this.services.responsePublisher === undefined');
+
+        await this.services.responsePublisher.publishResponse(callbackId, responseMessage);
     }
 
-    private async storeFunctionInstance(callContext: CallContext, requesterId: string, requestId: string, resumeCount: number, response: any): Promise<void> {
+    private async storeFunctionInstance(callContext: CallContext, callbackId: string, requestId: string, resumeCount: number, response: any): Promise<void> {
 
         const functionInstance: FunctionInstance = {
             callContext: callContext,
-            requesterId: requesterId,
+            callbackId: callbackId,
             requestId: requestId,
             resumeCount: resumeCount,
             stackFrames: (response as AsyncResponse).stackFrames
@@ -228,7 +254,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
         return { 
             callContext: functionInstance.callContext, 
-            requesterId: functionInstance.requesterId, 
+            callbackId: functionInstance.callbackId, 
             requestId: functionInstance.requestId, 
             resumeCount, 
             response 
@@ -261,7 +287,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
             response = new ErrorResponse(error);
         }
 
-        return { callContext: message.callContext, requesterId: message.requesterId, requestId: message.requestId, resumeCount: 0, response };
+        return { callContext: message.callContext, callbackId: message.callbackId, requestId: message.requestId, resumeCount: 0, response };
     }
 }
  

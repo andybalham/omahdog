@@ -52,21 +52,11 @@ Resources:
         Variables:
           FUNCTION_NAME:
             Fn::Sub: ${ApplicationName}-AddNumbersApiFunction
-          SUM_NUMBERS_FUNCTION:
-            Ref: SumNumbersFunction
-          ADD_TWO_NUMBERS_FUNCTION:
-            Ref: AddTwoNumbersFunction
           FLOW_EXCHANGE_TOPIC:
             Ref: FlowExchangeTopic
           ADD_THREE_NUMBERS_FUNCTION:
             Ref: AddThreeNumbersFunction
       Policies:
-        - LambdaInvokePolicy:
-            FunctionName:
-              Ref: SumNumbersFunction
-        - LambdaInvokePolicy:
-            FunctionName:
-              Ref: AddTwoNumbersFunction
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:

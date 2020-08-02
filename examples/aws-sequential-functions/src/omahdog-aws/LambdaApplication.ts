@@ -206,12 +206,12 @@ export class LambdaApplication {
 
             let events = lambda.getEvents();
 
-            const requesterId = lambda.getRequesterId(this.functionNamePrefix);
+            const callbackId = lambda.getRequesterId(this.functionNamePrefix);
 
             const handlers = getRequestHandlers(lambda.handlerType, this.handlerFactory, this.requestRouter);
 
             handlers.forEach(handler => {
-                const handlerEvents = getEvents(handler, requesterId);
+                const handlerEvents = getEvents(handler, callbackId);
                 events = events.concat(handlerEvents);
             });
 

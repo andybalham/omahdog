@@ -1,5 +1,11 @@
 # TODO
 
+* Would it make sense to incorporate http://inversify.io/?
+  * Do we need to support  multiple implementations of the same interface, e.g. IExchangeMessagePublisher?
+  * The IoC container can handle named bindings
+  * What about the overhead?
+  * What about where we need references or constants?
+
 * Q. How can we ensure that handlers are in place for all requests?
   * I.e. can we do a sort of test traversal of all paths to see?
 
@@ -24,7 +30,7 @@
       * Flow Branch
       * Error
   * How could the ILogger be passed from one flow to the next?
-  * How can we do 'best practise' structured logging
+  * How can we do 'best practice' structured logging
     * (https://adrianhall.github.io/cloud/2019/06/30/building-an-efficient-logger-in-typescript/)
     * (https://github.com/structured-log/structured-log)
     * (https://www.npmjs.com/package/typescript-logging)

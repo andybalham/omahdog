@@ -22,7 +22,6 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
         const message: FlowRequestMessage = 
             {
                 callContext: flowContext.callContext,
-                requesterId: flowContext.requesterId,
                 requestId: requestId,
                 request: request
             };
@@ -30,7 +29,7 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
         const invocationRequest: Lambda.Types.InvocationRequest = {
             FunctionName: functionName ?? '<Unknown>',
             InvocationType: 'RequestResponse',
-            Payload: JSON.stringify(message)            
+            Payload: JSON.stringify(message)
         };
 
         let invokeResult;
@@ -54,17 +53,11 @@ export class LambdaProxyRequestHandler<TReq, TRes> implements IActivityRequestHa
             throw new Error(`Error invoking function ${functionName}`);
         }
 
-        if (typeof invokeResult?.Payload === undefined) {
-            return flowContext.getAsyncResponse(requestId);
-        }
-
         if (typeof invokeResult?.Payload !== 'string') {
             throw new Error('typeof invokeResult.Payload !== \'string\'');
         }
 
-        const responseMessage: FlowResponseMessage = JSON.parse(invokeResult.Payload);
-
-        const response: TRes | AsyncResponse | ErrorResponse = responseMessage.response;
+        const response: TRes | ErrorResponse = JSON.parse(invokeResult.Payload);
 
         if ('ErrorResponse' in response) {
             console.error(`ErrorResponse received from ${functionName}: ${JSON.stringify(response)}`);

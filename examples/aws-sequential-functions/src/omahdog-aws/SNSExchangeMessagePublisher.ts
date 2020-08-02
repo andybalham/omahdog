@@ -43,7 +43,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
         }
     }
 
-    async publishResponse(requesterId: string, message: FlowResponseMessage): Promise<void> {
+    async publishResponse(callbackId: string, message: FlowResponseMessage): Promise<void> {
 
         console.log(`message: ${JSON.stringify(message)}`);
 
@@ -51,7 +51,7 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
             Message: JSON.stringify(message),
             TopicArn: this.getExchangeTopicArn(),
             MessageAttributes: {
-                MessageType: { DataType: 'String', StringValue: `${requesterId}:Response` }
+                MessageType: { DataType: 'String', StringValue: `${callbackId}:Response` }
             }
         };
     
