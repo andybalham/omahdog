@@ -9,6 +9,8 @@ import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExc
 import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 
 // TODO 30Jun20: This could be changed to be FlowRequestRouter, with .route()
+// TODO 03Aug20: This only covers how requests are routed within a flow, not within a Lambda. No flows would mean no routes
+// TODO 03Aug20: How can we make this clear? How can we validate that all are routed?
 export const requestRouter = new RequestRouter()
     .register(SumNumbersRequest, SumNumbersResponse, SumNumbersLambdaProxy)
     .register(StoreTotalRequest, StoreTotalResponse, StoreTotalMessageProxy)

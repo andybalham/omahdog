@@ -3,7 +3,7 @@ import { SNSEvent } from 'aws-lambda';
 import { FlowContext, RequestRouter, HandlerFactory, IActivityRequestHandlerBase, IActivityRequestHandler, getRequestHandlers, CallContext, AsyncResponse } from '../omahdog/FlowContext';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
 import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanceRepository';
-import { FlowRequestMessage, FlowResponseMessage, isAsyncFlowRequestMessage } from './FlowMessage';
+import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
 import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
@@ -113,7 +113,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
                 
         } else {
 
-            return await this.handleFlowMessage(event, requestRouter, handlerFactory);
+            return await this.handleFlowMessage(event, false, requestRouter, handlerFactory);
 
         }
     }
@@ -130,11 +130,12 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
                 throw new Error('Non-handler error in LambdaActivityRequestHandler!');
             }
 
-            await this.handleFlowMessage(message, requestRouter, handlerFactory);
+            await this.handleFlowMessage(message, true, requestRouter, handlerFactory);
         }
     }
 
-    async handleFlowMessage(inboundMessage: FlowRequestMessage | FlowResponseMessage, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<TRes | ErrorResponse | void> {
+    async handleFlowMessage(inboundMessage: FlowRequestMessage | FlowResponseMessage, isAsyncInboundRequest: boolean,
+        requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<TRes | ErrorResponse | void> {
 
         console.log(`message: ${JSON.stringify(inboundMessage)}`);
     
@@ -167,7 +168,6 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         }
     
         const isAsyncResponse = ('AsyncResponse' in response);
-        const isAsyncInboundRequest = (callbackId !== undefined);
         
         if (isAsyncResponse) {
             

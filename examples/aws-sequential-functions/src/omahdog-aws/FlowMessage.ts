@@ -7,10 +7,6 @@ export class FlowRequestMessage {
     readonly request: any;
 }
 
-export function isAsyncFlowRequestMessage(message: FlowRequestMessage): boolean {
-    return message.callbackId !== undefined;
-}
-
 export class FlowResponseMessage {
     readonly requestId: string;
     readonly response: any;
