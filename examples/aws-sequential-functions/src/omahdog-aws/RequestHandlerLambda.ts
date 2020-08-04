@@ -9,13 +9,13 @@ import { TemplateReference } from './TemplateReferences';
 import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
 import { Type } from '../omahdog/Type';
 
+class RequestHandlerLambdaParameters {
+    requestTopic?: TemplateReference
+}
+
 class RequestHandlerLambdaServices {
     responsePublisher?: IExchangeMessagePublisher
     functionInstanceRepository?: IFunctionInstanceRepository
-}
-
-class RequestHandlerLambdaParameters {
-    requestTopic?: TemplateReference
 }
 
 export abstract class RequestHandlerLambdaBase extends LambdaBase {
@@ -23,7 +23,6 @@ export abstract class RequestHandlerLambdaBase extends LambdaBase {
     parameters = new RequestHandlerLambdaParameters
     services = new RequestHandlerLambdaServices
 
-    enableSNS: boolean;
     requestType: Type<any>;
     handlerType: Type<IActivityRequestHandlerBase>;
 
@@ -42,8 +41,6 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         requestType: Type<TReq>, responseType: Type<TRes>, handlerType: Type<THan>, 
         initialise?: (lambda: RequestHandlerLambda<TReq, TRes, THan>) => void) {
 
-        // TODO 20Jun20: How can we add instance-specific configuration for the handler? E.g. No triggering by message
-        
         super(functionReference.name ?? '<unknown>');
 
         this.requestType = requestType;
@@ -58,7 +55,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
         const events = [];
 
-        if (this.enableSNS) {
+        if (this.parameters.requestTopic !== undefined) {
 
             const requestEvent = {
                 Type: 'SNS',
@@ -70,7 +67,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
                 },
             };
     
-            requestEvent.Properties.Topic = this.parameters.requestTopic?.instance;
+            requestEvent.Properties.Topic = this.parameters.requestTopic.instance;
             requestEvent.Properties.FilterPolicy.MessageType = [`${this.requestType.name}:Handler`];
     
             events.push(requestEvent);                
@@ -83,8 +80,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
         const errorMessages = new Array<string>();
         
-        if (this.enableSNS) {
-            if (this.parameters.requestTopic === undefined) errorMessages.push('this.parameters.requestTopic === undefined');
+        if (this.parameters.requestTopic !== undefined) {
             if (this.services.responsePublisher === undefined) errorMessages.push('this.services.responsePublisher === undefined');
         }
         

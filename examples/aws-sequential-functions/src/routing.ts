@@ -1,12 +1,11 @@
 import { ApiControllerRoutes, StringParameters } from './omahdog-aws/ApiControllerLambda';
 
-import { AddTwoNumbersLambdaProxy, AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy, SumNumbersLambdaProxy, StoreTotalMessageProxy } from './handlerProxies';
+import { AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy, SumNumbersLambdaProxy, StoreTotalMessageProxy } from './handlerProxies';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 import { RequestRouter } from './omahdog/FlowContext';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { AddTwoNumbersHandler } from './handlers/AddTwoNumbersHandler';
 
 // TODO 30Jun20: This could be changed to be FlowRequestRouter, with .route()
 // TODO 03Aug20: This only covers how requests are routed within a flow, not within a Lambda. No flows would mean no routes

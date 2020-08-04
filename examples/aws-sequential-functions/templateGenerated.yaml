@@ -31,12 +31,30 @@ Resources:
     Properties:
       TableName:
         Fn::Sub: ${ApplicationName}-FlowResultTable
-  FlowExchangeTopic:
+  AddNumbersResponseTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName:
-        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
-      DisplayName: Topic for request & response messages
+        Fn::Sub: ${ApplicationName}-AddNumbersResponseTopic
+      DisplayName: Topic for publishing response messages
+  AddTwoNumbersRequestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub: ${ApplicationName}-AddTwoNumbersRequestTopic
+      DisplayName: Topic for sending async AddTwoNumbersRequest messages
+  AddThreeNumbersRequestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub: ${ApplicationName}-AddThreeNumbersRequestTopic
+      DisplayName: Topic for sending async AddThreeNumbersRequest messages
+  StoreTotalRequestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName:
+        Fn::Sub: ${ApplicationName}-StoreTotalRequestTopic
+      DisplayName: Topic for sending async StoreTotalRequest messages
   FlowInstanceTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
@@ -52,19 +70,26 @@ Resources:
         Variables:
           FUNCTION_NAME:
             Fn::Sub: ${ApplicationName}-AddNumbersApiFunction
-          FLOW_EXCHANGE_TOPIC:
-            Ref: FlowExchangeTopic
+          ADD_TWO_NUMBERS_REQUEST_TOPIC:
+            Ref: AddTwoNumbersRequestTopic
           ADD_THREE_NUMBERS_FUNCTION:
             Ref: AddThreeNumbersFunction
+          ADD_THREE_NUMBERS_REQUEST_TOPIC:
+            Ref: AddThreeNumbersRequestTopic
       Policies:
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:
-                - FlowExchangeTopic
+                - AddTwoNumbersRequestTopic
                 - TopicName
         - LambdaInvokePolicy:
             FunctionName:
               Ref: AddThreeNumbersFunction
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - AddThreeNumbersRequestTopic
+                - TopicName
       Events:
         ApiEvent001:
           Type: Api
@@ -111,17 +136,19 @@ Resources:
         Variables:
           FUNCTION_NAME:
             Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction
-          FLOW_EXCHANGE_TOPIC:
-            Ref: FlowExchangeTopic
+          ADD_NUMBERS_RESPONSE_TOPIC:
+            Ref: AddNumbersResponseTopic
           FLOW_INSTANCE_TABLE:
             Ref: FlowInstanceTable
           SUM_NUMBERS_FUNCTION:
             Ref: SumNumbersFunction
+          STORE_TOTAL_REQUEST_TOPIC:
+            Ref: StoreTotalRequestTopic
       Policies:
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:
-                - FlowExchangeTopic
+                - AddNumbersResponseTopic
                 - TopicName
         - DynamoDBCrudPolicy:
             TableName:
@@ -129,12 +156,17 @@ Resources:
         - LambdaInvokePolicy:
             FunctionName:
               Ref: SumNumbersFunction
+        - SNSPublishMessagePolicy:
+            TopicName:
+              Fn::GetAtt:
+                - StoreTotalRequestTopic
+                - TopicName
       Events:
         SNSEvent001:
           Type: SNS
           Properties:
             Topic:
-              Ref: FlowExchangeTopic
+              Ref: AddThreeNumbersRequestTopic
             FilterPolicy:
               MessageType:
                 - AddThreeNumbersRequest:Handler
@@ -149,15 +181,15 @@ Resources:
         Variables:
           FUNCTION_NAME:
             Fn::Sub: ${ApplicationName}-AddTwoNumbersFunction
-          FLOW_EXCHANGE_TOPIC:
-            Ref: FlowExchangeTopic
+          ADD_NUMBERS_RESPONSE_TOPIC:
+            Ref: AddNumbersResponseTopic
           SUM_NUMBERS_FUNCTION:
             Ref: SumNumbersFunction
       Policies:
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:
-                - FlowExchangeTopic
+                - AddNumbersResponseTopic
                 - TopicName
         - LambdaInvokePolicy:
             FunctionName:
@@ -167,7 +199,7 @@ Resources:
           Type: SNS
           Properties:
             Topic:
-              Ref: FlowExchangeTopic
+              Ref: AddTwoNumbersRequestTopic
             FilterPolicy:
               MessageType:
                 - AddTwoNumbersRequest:Handler
@@ -193,15 +225,15 @@ Resources:
         Variables:
           FUNCTION_NAME:
             Fn::Sub: ${ApplicationName}-StoreTotalFunction
-          FLOW_EXCHANGE_TOPIC:
-            Ref: FlowExchangeTopic
+          ADD_NUMBERS_RESPONSE_TOPIC:
+            Ref: AddNumbersResponseTopic
           FLOW_RESULT_TABLE:
             Ref: FlowResultTable
       Policies:
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:
-                - FlowExchangeTopic
+                - AddNumbersResponseTopic
                 - TopicName
         - DynamoDBCrudPolicy:
             TableName:
@@ -211,7 +243,7 @@ Resources:
           Type: SNS
           Properties:
             Topic:
-              Ref: FlowExchangeTopic
+              Ref: StoreTotalRequestTopic
             FilterPolicy:
               MessageType:
                 - StoreTotalRequest:Handler
@@ -220,3 +252,13 @@ Outputs:
     Description: API endpoint
     Value:
       Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/
+  AddTwoNumbersRequestTopicName:
+    Description: Name of the topic to which AddTwoNumbersRequest messages are published
+    Value:
+      Fn::GetAtt:
+        - AddTwoNumbersRequestTopic
+        - TopicName
+  AddNumbersResponseTopicName:
+    Description: ARN of the topic on which responses are published
+    Value:
+      Ref: AddNumbersResponseTopic

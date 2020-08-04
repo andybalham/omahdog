@@ -87,7 +87,7 @@ describe('Lambda application tests', () => {
         console.log(YAML.stringify(functionDefinitions));
     });
 
-    it('can return generate template', () => {
+    it.only('can return generate template', () => {
         
         // Arrange
 

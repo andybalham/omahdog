@@ -41,12 +41,33 @@ Resources:
       TableName: 
         Fn::Sub: ${ApplicationName}-FlowResultTable
 
-  FlowExchangeTopic:
+  AddNumbersResponseTopic:
     Type: AWS::SNS::Topic
     Properties:
       TopicName: 
-        Fn::Sub: ${ApplicationName}-FlowExchangeTopic
-      DisplayName: Topic for request & response messages
+        Fn::Sub: ${ApplicationName}-AddNumbersResponseTopic
+      DisplayName: Topic for publishing response messages
+
+  AddTwoNumbersRequestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 
+        Fn::Sub: ${ApplicationName}-AddTwoNumbersRequestTopic
+      DisplayName: Topic for sending async AddTwoNumbersRequest messages
+
+  AddThreeNumbersRequestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 
+        Fn::Sub: ${ApplicationName}-AddThreeNumbersRequestTopic
+      DisplayName: Topic for sending async AddThreeNumbersRequest messages
+
+  StoreTotalRequestTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: 
+        Fn::Sub: ${ApplicationName}-StoreTotalRequestTopic
+      DisplayName: Topic for sending async StoreTotalRequest messages
 
   FlowInstanceTable:
     Type: AWS::Serverless::SimpleTable
@@ -55,8 +76,19 @@ Resources:
         Fn::Sub: ${ApplicationName}-FlowInstanceTable
 
 Outputs:
+
   ApiEndpoint:
     Description: "API endpoint"
     Value: 
       Fn::Sub: "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStageName}/"
+
+  AddTwoNumbersRequestTopicName:
+    Description: "Name of the topic to which AddTwoNumbersRequest messages are published"
+    Value:
+      Fn::GetAtt: [ AddTwoNumbersRequestTopic, TopicName ]
+  # TODO: Add the other request topics
+  AddNumbersResponseTopicName:
+    Description: "ARN of the topic on which responses are published"
+    Value:
+      Ref: AddNumbersResponseTopic
   

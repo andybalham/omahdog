@@ -19,8 +19,6 @@ import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/Add
 import { AddTwoNumbersRequest, AddTwoNumbersResponse } from './exchanges/AddTwoNumbersExchange';
 import { SumNumbersRequest, SumNumbersResponse } from './exchanges/SumNumbersExchange';
 import { StoreTotalRequest, StoreTotalResponse } from './exchanges/StoreTotalExchange';
-import { RequestHandlerLambda } from './omahdog-aws/RequestHandlerLambda';
-import { constants } from 'zlib';
 
 const dynamoDbClient = new DynamoDB.DocumentClient();
 const lambdaClient = new Lambda();
@@ -30,7 +28,12 @@ const templateReferences = {
     applicationName: new ParameterReference('ApplicationName'),
 
     addNumbersApiGateway: ResourceReference.awsServerlessApi('ApiGateway'),
-    addNumbersExchangeTopic: ResourceReference.awsSNSTopic('FlowExchangeTopic'),
+    
+    addThreeNumbersRequestTopic: ResourceReference.awsSNSTopic('AddThreeNumbersRequestTopic'),
+    addTwoNumbersRequestTopic: ResourceReference.awsSNSTopic('AddTwoNumbersRequestTopic'),
+    storeTotalRequestTopic: ResourceReference.awsSNSTopic('StoreTotalRequestTopic'),
+    addNumbersResponseTopic: ResourceReference.awsSNSTopic('AddNumbersResponseTopic'),
+    
     addNumbersInstanceTable: ResourceReference.awsServerlessSimpleTable('FlowInstanceTable'),
     addNumbersResultTable: ResourceReference.awsServerlessSimpleTable('FlowResultTable'),
 
@@ -45,7 +48,7 @@ const templateReferences = {
 export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
     publisher.services.exchangeTopic = 
         new SNSPublishMessageService(
-            templateReferences.addNumbersExchangeTopic.attribute('TopicName'), snsClient);
+            templateReferences.addNumbersResponseTopic.attribute('TopicName'), snsClient);
 });
 
 const dynamoDbFunctionInstanceRepository = new DynamoDbFunctionInstanceRepository(repository => {
@@ -71,14 +74,18 @@ const handlerFactory = new HandlerFactory()
         handler.services.lambda = new LambdaInvokeService(templateReferences.addThreeNumbersFunction, lambdaClient);
     })
     
+    // TODO 04Aug20: These need to be configured with separate request and response topics
     .setInitialiser(AddTwoNumbersMessageProxy, handler => {
-        handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
+        handler.services.requestService = new SNSPublishMessageService(templateReferences.addTwoNumbersRequestTopic.attribute('TopicName'), snsClient);
+        handler.parameters.responseTopic = templateReferences.addNumbersResponseTopic;
     })
     .setInitialiser(AddThreeNumbersMessageProxy, handler => {
-        handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
+        handler.services.requestService = new SNSPublishMessageService(templateReferences.addThreeNumbersRequestTopic.attribute('TopicName'), snsClient);
+        handler.parameters.responseTopic = templateReferences.addNumbersResponseTopic;
     })
     .setInitialiser(StoreTotalMessageProxy, handler => {
-        handler.services.requestPublisher = addNumbersExchangeMessagePublisher;
+        handler.services.requestService = new SNSPublishMessageService(templateReferences.storeTotalRequestTopic.attribute('TopicName'), snsClient);
+        handler.parameters.responseTopic = templateReferences.addNumbersResponseTopic;
     })
     ;
 
@@ -89,7 +96,6 @@ export const addNumbersApplication =
 
         application.functionNamePrefix = new FunctionNamePrefix('-', templateReferences.applicationName);
 
-        application.defaultRequestTopic = templateReferences.addNumbersExchangeTopic;
         application.defaultResponsePublisher = addNumbersExchangeMessagePublisher;
         
         application.defaultFunctionInstanceRepository = dynamoDbFunctionInstanceRepository;
@@ -101,17 +107,18 @@ export const addNumbersApplication =
     
             .addRequestHandler(
                 templateReferences.addThreeNumbersFunction, AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersHandler, lambda => {
-                    lambda.enableSNS = true;
+                    lambda.parameters.requestTopic = templateReferences.addThreeNumbersRequestTopic;
                 })
             .addRequestHandler(
                 templateReferences.addTwoNumbersFunction, AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersHandler, lambda => {
-                    lambda.enableSNS = true;
+                    lambda.parameters.requestTopic = templateReferences.addTwoNumbersRequestTopic;
                 })
+
             .addRequestHandler(
                 templateReferences.sumNumbersFunction, SumNumbersRequest, SumNumbersResponse, SumNumbersHandler)
             .addRequestHandler(
                 templateReferences.storeTotalFunction, StoreTotalRequest, StoreTotalResponse, StoreTotalHandler, lambda => {
-                    lambda.enableSNS = true;
+                    lambda.parameters.requestTopic = templateReferences.storeTotalRequestTopic;
                 })
         ;
     });

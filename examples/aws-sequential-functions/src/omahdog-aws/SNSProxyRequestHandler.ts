@@ -2,19 +2,37 @@ import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { FlowRequestMessage } from './FlowMessage';
 import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
+import { TemplateReference } from './TemplateReferences';
+import { SNSPublishMessageService } from './AwsServices';
+
+class SNSProxyRequestHandlerParameters {
+    responseTopic?: TemplateReference
+}
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-    isAsync = true;
+    // TODO 04Aug20: Validate the following
+    parameters = new SNSProxyRequestHandlerParameters
 
     services = {
-        requestPublisher: new SNSExchangeMessagePublisher
+        requestService: new SNSPublishMessageService
     }
+
+    isAsync = true;
 
     private readonly requestTypeName: string;
 
     constructor(requestType: new() => TReq) {
         this.requestTypeName = requestType.name;
+    }
+
+    validate(): string[] {
+
+        const errorMessages = new Array<string>();
+        
+        if (this.parameters.responseTopic === undefined) errorMessages.push('this.parameters.responseTopic === undefined');
+
+        return errorMessages;
     }
 
     // TODO 05Jul20: We could change this to be getResponseEvents, this would indicate async nature
@@ -35,7 +53,7 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
             },
         };
 
-        responseEvent.Properties.Topic = this.services?.requestPublisher.services.exchangeTopic.parameters.topicArnValue?.getTemplateValue();        
+        responseEvent.Properties.Topic = this.parameters.responseTopic?.instance;
         responseEvent.Properties.FilterPolicy.MessageType = [callbackId];
 
         return [responseEvent];
@@ -53,7 +71,11 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
                 request: request
             };
 
-        await this.services.requestPublisher.publishRequest(this.requestTypeName, message);
+        const requestPublisher = new SNSExchangeMessagePublisher(p => {
+            p.services.exchangeTopic = this.services.requestService;
+        });
+
+        await requestPublisher.publishRequest(this.requestTypeName, message);
 
         return flowContext.getAsyncResponse(requestId);
     }

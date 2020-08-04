@@ -19,7 +19,6 @@ export class LambdaApplication {
 
     functionNamePrefix?: string | FunctionNamePrefix;
 
-    defaultRequestTopic: TemplateReference;
     defaultResponsePublisher: IExchangeMessagePublisher;    
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
     
@@ -363,8 +362,7 @@ export class LambdaApplication {
         const lambda = 
             new RequestHandlerLambda(functionReference, requestType, responseType, handlerType, initialise);
         
-        if (lambda.enableSNS) {
-            lambda.parameters.requestTopic = lambda.parameters.requestTopic ?? this.defaultRequestTopic;
+        if (lambda.parameters.requestTopic !== undefined) {
             lambda.services.responsePublisher = lambda.services.responsePublisher ?? this.defaultResponsePublisher;
         }
 
