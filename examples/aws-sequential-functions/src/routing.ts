@@ -1,6 +1,6 @@
 import { ApiControllerRoutes, StringParameters } from './omahdog-aws/ApiControllerLambda';
 
-import { AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy, SumNumbersLambdaProxy, StoreTotalMessageProxy } from './handlerProxies';
+import { AddThreeNumbersLambdaProxy, AddThreeNumbersMessageProxy, AddTwoNumbersMessageProxy, SumNumbersLambdaProxy, StoreTotalMessageProxy, AddTwoNumbersLambdaProxy } from './handlerProxies';
 import { AddThreeNumbersRequest, AddThreeNumbersResponse } from './exchanges/AddThreeNumbersExchange';
 import { AddTwoNumbersResponse, AddTwoNumbersRequest } from './exchanges/AddTwoNumbersExchange';
 import { RequestRouter } from './omahdog/FlowContext';
@@ -20,7 +20,7 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
     constructor() {
         super(routes => {
             routes
-                .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy, route => {
+                .addGet('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy, route => {
                     route.getRequest =
                         (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                             return {
@@ -29,7 +29,7 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
                             };
                         };                    
                 })
-                .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy, route => {
+                .addGet('/do/add-two-numbers/x/{x}/y/{y}', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersLambdaProxy, route => {
                     route.getRequest =
                         (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddTwoNumbersRequest => {
                             return {
@@ -40,7 +40,7 @@ export class AddNumbersApiControllerRoutes extends ApiControllerRoutes {
                 })
                 .addPost('/do/add-two-numbers', AddTwoNumbersRequest, AddTwoNumbersResponse, AddTwoNumbersMessageProxy)
                 
-                .addGet('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersLambdaProxy, route => {
+                .addGet('/do/add-three-numbers', AddThreeNumbersRequest, AddThreeNumbersResponse, AddThreeNumbersMessageProxy, route => {
                     route.getRequest =
                         (pathParameters: StringParameters | null, queryStringParameters: StringParameters | null): AddThreeNumbersRequest => {
                             return {

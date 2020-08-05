@@ -55,6 +55,8 @@ export class SNSExchangeMessagePublisher implements IExchangeMessagePublisher {
             }
         };
     
+        console.log(`publishResponse params: ${JSON.stringify(params)}`);
+
         if (this.services.exchangeTopic.client === undefined) throw new Error('this.services.exchangeTopic.client === undefined');
 
         const publishResponse = await this.services.exchangeTopic.client.publish(params).promise();

@@ -70,21 +70,21 @@ Resources:
         Variables:
           FUNCTION_NAME:
             Fn::Sub: ${ApplicationName}-AddNumbersApiFunction
+          ADD_TWO_NUMBERS_FUNCTION:
+            Ref: AddTwoNumbersFunction
           ADD_TWO_NUMBERS_REQUEST_TOPIC:
             Ref: AddTwoNumbersRequestTopic
-          ADD_THREE_NUMBERS_FUNCTION:
-            Ref: AddThreeNumbersFunction
           ADD_THREE_NUMBERS_REQUEST_TOPIC:
             Ref: AddThreeNumbersRequestTopic
       Policies:
+        - LambdaInvokePolicy:
+            FunctionName:
+              Ref: AddTwoNumbersFunction
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:
                 - AddTwoNumbersRequestTopic
                 - TopicName
-        - LambdaInvokePolicy:
-            FunctionName:
-              Ref: AddThreeNumbersFunction
         - SNSPublishMessagePolicy:
             TopicName:
               Fn::GetAtt:
@@ -170,6 +170,13 @@ Resources:
             FilterPolicy:
               MessageType:
                 - AddThreeNumbersRequest:Handler
+        SNSEvent002:
+          Type: SNS
+          Properties:
+            Topic:
+              Ref: AddNumbersResponseTopic
+            FilterPolicy:
+              MessageType:
                 - Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction:Response
   AddTwoNumbersFunction:
     Type: AWS::Serverless::Function

@@ -43,7 +43,6 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
         
         // TODO 20Jul20: Can the following be done in one transaction?
         const dynamoDbResult: any = await this.services.functionInstanceTable.client.get(params).promise();
-        await this.services.functionInstanceTable.client.delete(params).promise();
 
         if (dynamoDbResult === undefined) {
             return undefined;
@@ -51,7 +50,11 @@ export class DynamoDbFunctionInstanceRepository implements IFunctionInstanceRepo
 
         const functionInstanceItem = dynamoDbResult.Item;
 
-        console.log(`functionInstanceItem: ${JSON.stringify(functionInstanceItem)}`);
+        console.log(`Retrieved function instance: ${JSON.stringify(functionInstanceItem)}`);
+        
+        const deleteResult = await this.services.functionInstanceTable.client.delete(params).promise();
+
+        console.log(`Deleted function instance: ${JSON.stringify(deleteResult)}`);
 
         const functionInstance = JSON.parse(functionInstanceItem.instance);
 

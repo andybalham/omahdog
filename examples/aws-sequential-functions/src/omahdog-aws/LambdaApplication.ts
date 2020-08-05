@@ -226,6 +226,11 @@ export class LambdaApplication {
 
         const eventsObject: any = {};
 
+        // events.forEach((event, eventIndex) => {
+        //     const eventName = `${event.Type}Event${String(eventIndex + 1).padStart(3, '0')}`;
+        //     eventsObject[eventName] = event;
+        // });
+
         const mergedEvents = new Array<any>();
         
         events.forEach((event, eventIndex) => {
@@ -253,7 +258,7 @@ export class LambdaApplication {
 
         switch (targetEvent.Type) {
         case 'SNS':
-            matchingEventIndex = events.findIndex(e => deepEqual(e.Topic, targetEvent.Topic));                
+            matchingEventIndex = events.findIndex(e => deepEqual(e.Properties.Topic, targetEvent.Properties.Topic));
             break;
         
         default:

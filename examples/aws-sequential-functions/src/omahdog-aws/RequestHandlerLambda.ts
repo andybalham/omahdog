@@ -194,6 +194,11 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
 
     private async publishFinalResponse(requestId: string, response: any, callbackId: string): Promise<void> {
 
+        if (callbackId === undefined) {
+            console.log('callbackId === undefined, so no final response to publish');
+            return;
+        }
+
         const responseMessage: FlowResponseMessage = {
             requestId: requestId,
             response: response
