@@ -1,9 +1,10 @@
 import uuid = require('uuid');
 import { FlowContext, IActivityRequestHandler, AsyncResponse } from '../omahdog/FlowContext';
 import { FlowRequestMessage } from './FlowMessage';
-import { SNSExchangeMessagePublisher } from './SNSExchangeMessagePublisher';
+import { ResponseMessagePublisher } from './ResponseMessagePublisher';
 import { TemplateReference } from './TemplateReferences';
 import { SNSPublishMessageService } from './AwsServices';
+import { PublishInput } from 'aws-sdk/clients/sns';
 
 class SNSProxyRequestHandlerParameters {
     responseTopic?: TemplateReference
@@ -11,11 +12,10 @@ class SNSProxyRequestHandlerParameters {
 
 export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandler<TReq, TRes> {
 
-    // TODO 04Aug20: Validate the following
     parameters = new SNSProxyRequestHandlerParameters
 
     services = {
-        requestService: new SNSPublishMessageService
+        requestPublisher: new SNSPublishMessageService
     }
 
     isAsync = true;
@@ -35,26 +35,17 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
         return errorMessages;
     }
 
-    // TODO 05Jul20: We could change this to be getResponseEvents, this would indicate async nature
-    
     getEvents(callbackId?: any): any[] {
-
-        if (callbackId === undefined) {
-            return [];
-        }
 
         const responseEvent = {
             Type: 'SNS',
             Properties: {
-                Topic: {},
+                Topic: this.parameters.responseTopic?.instance,
                 FilterPolicy: {
-                    MessageType: {}
+                    CallbackId: [callbackId]
                 }
             },
         };
-
-        responseEvent.Properties.Topic = this.parameters.responseTopic?.instance;
-        responseEvent.Properties.FilterPolicy.MessageType = [callbackId];
 
         return [responseEvent];
     }
@@ -71,12 +62,37 @@ export class SNSProxyRequestHandler<TReq, TRes> implements IActivityRequestHandl
                 request: request
             };
 
-        const requestPublisher = new SNSExchangeMessagePublisher(p => {
-            p.services.exchangeTopic = this.services.requestService;
+        const requestPublisher = new ResponseMessagePublisher(p => {
+            p.services.exchangeTopic = this.services.requestPublisher;
         });
 
-        await requestPublisher.publishRequest(this.requestTypeName, message);
+        await this.publishRequest(this.requestTypeName, message);
 
         return flowContext.getAsyncResponse(requestId);
+    }
+
+    async publishRequest(requestTypeName: string, message: FlowRequestMessage): Promise<void> {
+
+        console.log(`message: ${JSON.stringify(message)}`);
+
+        const params: PublishInput = {
+            Message: JSON.stringify(message),
+            TopicArn: this.services.requestPublisher.topicArn
+        };
+
+        try {
+
+            console.log(`params: ${JSON.stringify(params)}`);
+            
+            if (this.services.requestPublisher.client === undefined) throw new Error('this.services.requestPublisher.client === undefined');
+            
+            const publishResponse = await this.services.requestPublisher.client.publish(params).promise();
+            
+            console.log(`publishResponse.MessageId: ${publishResponse?.MessageId}`);
+
+        } catch (error) {
+            console.error('Error calling this.sns.publish: ' + error.message);
+            throw new Error('Error calling this.sns.publish');
+        }
     }
 }

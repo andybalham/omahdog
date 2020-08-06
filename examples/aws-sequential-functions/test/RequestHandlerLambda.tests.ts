@@ -6,7 +6,7 @@ import { RequestHandlerLambda } from '../src/omahdog-aws/RequestHandlerLambda';
 import * as AWSMock from 'aws-sdk-mock';
 import AWS, { Request as AWSRequest } from 'aws-sdk';
 import { FunctionInstance, IFunctionInstanceRepository } from '../src/omahdog-aws/FunctionInstanceRepository';
-import { SNSExchangeMessagePublisher } from '../src/omahdog-aws/SNSExchangeMessagePublisher';
+import { ResponseMessagePublisher } from '../src/omahdog-aws/ResponseMessagePublisher';
 import { PublishInput } from 'aws-sdk/clients/sns';
 import { expect } from 'chai';
 import { Substitute, Arg } from '@fluffy-spoon/substitute';
@@ -77,7 +77,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher?
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
@@ -110,8 +110,8 @@ describe('RequestHandlerLambda tests', () => {
             actualPublishInput = actualPublishInput as PublishInput;
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
-            expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.DataType).to.equal('String');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.StringValue).to.equal('callbackId');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -151,7 +151,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
@@ -228,7 +228,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
@@ -273,8 +273,8 @@ describe('RequestHandlerLambda tests', () => {
             actualPublishInput = actualPublishInput as PublishInput;
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
-            expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.DataType).to.equal('String');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.StringValue).to.equal('callbackId');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -309,7 +309,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
@@ -344,8 +344,8 @@ describe('RequestHandlerLambda tests', () => {
             actualPublishInput = actualPublishInput as PublishInput;
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
-            expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.DataType).to.equal('String');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.StringValue).to.equal('callbackId');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -378,7 +378,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
@@ -423,8 +423,8 @@ describe('RequestHandlerLambda tests', () => {
             actualPublishInput = actualPublishInput as PublishInput;
 
             expect(actualPublishInput.TopicArn).to.equal(exchangeTopicArn);
-            expect(actualPublishInput.MessageAttributes?.MessageType?.DataType).to.equal('String');
-            expect(actualPublishInput.MessageAttributes?.MessageType?.StringValue).to.equal('callbackId:Response');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.DataType).to.equal('String');
+            expect(actualPublishInput.MessageAttributes?.CallbackId?.StringValue).to.equal('callbackId');
     
             const responseMessage = JSON.parse(actualPublishInput.Message) as FlowResponseMessage;
 
@@ -461,7 +461,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });
@@ -523,7 +523,7 @@ describe('RequestHandlerLambda tests', () => {
         const exchangeTopicArn = 'exchangeTopicArn';
         const flowInstanceRepository = Substitute.for<IFunctionInstanceRepository>();
         // TODO 03May20: Mock out the IExchangeMessagePublisher
-        const exchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {
+        const exchangeMessagePublisher = new ResponseMessagePublisher(publisher => {
             publisher.services.exchangeTopic = 
                 new SNSPublishMessageService(undefined, sns, new ConstantValue(exchangeTopicArn));
         });

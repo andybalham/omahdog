@@ -6,7 +6,7 @@ import { IActivityRequestHandlerBase, ICompositeRequestHandler, RequestRouter, H
 import { ApiControllerRoutes, ApiControllerLambda } from './ApiControllerLambda';
 import { RequestHandlerLambdaBase, RequestHandlerLambda } from './RequestHandlerLambda';
 import { FlowRequestMessage } from './FlowMessage';
-import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { IResponseMessagePublisher } from './IResponseMessagePublisher';
 import { IFunctionInstanceRepository } from './FunctionInstanceRepository';
 import { validateConfiguration, getRequiredPolicies, getEnvironmentVariables, getEvents } from './samTemplateFunctions';
 import { TemplateReference, ResourceReference, ParameterReference } from './TemplateReferences';
@@ -19,7 +19,7 @@ export class LambdaApplication {
 
     functionNamePrefix?: string | FunctionNamePrefix;
 
-    defaultResponsePublisher: IExchangeMessagePublisher;    
+    defaultResponsePublisher: IResponseMessagePublisher;    
     defaultFunctionInstanceRepository: IFunctionInstanceRepository;
     
     private readonly apiControllerLambdas = new Map<string, ApiControllerLambda>();

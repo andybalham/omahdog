@@ -1,14 +1,14 @@
 import { SNSEvent } from 'aws-lambda';
 import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
 import { ErrorResponse } from '../omahdog/FlowExchanges';
-import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { IResponseMessagePublisher } from './IResponseMessagePublisher';
 
 export class DeadLetterQueueHandler {
     
-    private readonly _exchangeMessagePublisher: IExchangeMessagePublisher;
+    private readonly _responseMessagePublisher: IResponseMessagePublisher;
 
-    constructor (exchangeMessagePublisher: IExchangeMessagePublisher) {
-        this._exchangeMessagePublisher = exchangeMessagePublisher;
+    constructor (responseMessagePublisher: IResponseMessagePublisher) {
+        this._responseMessagePublisher = responseMessagePublisher;
     }
 
     async handle(event: SNSEvent): Promise<void> {
@@ -51,7 +51,7 @@ export class DeadLetterQueueHandler {
                             response: response
                         };
             
-                    await this._exchangeMessagePublisher.publishResponse(deadMessage.callbackId, responseMessage);
+                    await this._responseMessagePublisher.publishResponse(deadMessage.callbackId, responseMessage);
                 }
         
             } else if ('response' in deadMessage) {

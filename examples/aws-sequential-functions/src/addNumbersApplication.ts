@@ -5,7 +5,7 @@ import { HandlerFactory } from './omahdog/FlowContext';
 import { LambdaApplication, FunctionNamePrefix } from './omahdog-aws/LambdaApplication';
 import { DynamoDBCrudService, LambdaInvokeService, SNSPublishMessageService } from './omahdog-aws/AwsServices';
 import { DynamoDbFunctionInstanceRepository } from './omahdog-aws/DynamoDbFunctionInstanceRepository';
-import { SNSExchangeMessagePublisher } from './omahdog-aws/SNSExchangeMessagePublisher';
+import { ResponseMessagePublisher } from './omahdog-aws/ResponseMessagePublisher';
 import { ResourceReference, ParameterReference, TemplateReference } from './omahdog-aws/TemplateReferences';
 import { ConstantValue, EnvironmentVariable } from './omahdog-aws/ConfigurationValues';
 
@@ -45,7 +45,7 @@ const templateReferences = {
 };
 
 // TODO 29Jun20: We are only exporting this for the dead letter queue and wiretap lambdas
-export const addNumbersExchangeMessagePublisher = new SNSExchangeMessagePublisher(publisher => {        
+export const addNumbersExchangeMessagePublisher = new ResponseMessagePublisher(publisher => {        
     publisher.services.exchangeTopic = 
         new SNSPublishMessageService(
             templateReferences.addNumbersResponseTopic.attribute('TopicName'), snsClient);
@@ -76,15 +76,15 @@ const handlerFactory = new HandlerFactory()
     
     // TODO 04Aug20: These need to be configured with separate request and response topics
     .setInitialiser(AddTwoNumbersMessageProxy, handler => {
-        handler.services.requestService = new SNSPublishMessageService(templateReferences.addTwoNumbersRequestTopic.attribute('TopicName'), snsClient);
+        handler.services.requestPublisher = new SNSPublishMessageService(templateReferences.addTwoNumbersRequestTopic.attribute('TopicName'), snsClient);
         handler.parameters.responseTopic = templateReferences.addNumbersResponseTopic;
     })
     .setInitialiser(AddThreeNumbersMessageProxy, handler => {
-        handler.services.requestService = new SNSPublishMessageService(templateReferences.addThreeNumbersRequestTopic.attribute('TopicName'), snsClient);
+        handler.services.requestPublisher = new SNSPublishMessageService(templateReferences.addThreeNumbersRequestTopic.attribute('TopicName'), snsClient);
         handler.parameters.responseTopic = templateReferences.addNumbersResponseTopic;
     })
     .setInitialiser(StoreTotalMessageProxy, handler => {
-        handler.services.requestService = new SNSPublishMessageService(templateReferences.storeTotalRequestTopic.attribute('TopicName'), snsClient);
+        handler.services.requestPublisher = new SNSPublishMessageService(templateReferences.storeTotalRequestTopic.attribute('TopicName'), snsClient);
         handler.parameters.responseTopic = templateReferences.addNumbersResponseTopic;
     })
     ;

@@ -167,17 +167,14 @@ Resources:
           Properties:
             Topic:
               Ref: AddThreeNumbersRequestTopic
-            FilterPolicy:
-              MessageType:
-                - AddThreeNumbersRequest:Handler
         SNSEvent002:
           Type: SNS
           Properties:
             Topic:
               Ref: AddNumbersResponseTopic
             FilterPolicy:
-              MessageType:
-                - Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction:Response
+              CallbackId:
+                - Fn::Sub: ${ApplicationName}-AddThreeNumbersFunction
   AddTwoNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -207,9 +204,6 @@ Resources:
           Properties:
             Topic:
               Ref: AddTwoNumbersRequestTopic
-            FilterPolicy:
-              MessageType:
-                - AddTwoNumbersRequest:Handler
   SumNumbersFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -251,9 +245,6 @@ Resources:
           Properties:
             Topic:
               Ref: StoreTotalRequestTopic
-            FilterPolicy:
-              MessageType:
-                - StoreTotalRequest:Handler
 Outputs:
   ApiEndpoint:
     Description: API endpoint

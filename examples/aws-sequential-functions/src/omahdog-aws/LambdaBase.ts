@@ -16,7 +16,7 @@ export abstract class LambdaBase {
                 : (typeof functionNamePrefix === 'string') 
                     ? `${functionNamePrefix}${this.resourceName}`
                     : {
-                        'Fn::Sub': `${functionNamePrefix.getTemplate()}${this.resourceName}:Response`
+                        'Fn::Sub': `${functionNamePrefix.getTemplate()}${this.resourceName}`
                     };
 
         return functionName;

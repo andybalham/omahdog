@@ -6,7 +6,7 @@ import { FunctionInstance, IFunctionInstanceRepository } from './FunctionInstanc
 import { FlowRequestMessage, FlowResponseMessage } from './FlowMessage';
 import { LambdaBase } from './LambdaBase';
 import { TemplateReference } from './TemplateReferences';
-import { IExchangeMessagePublisher } from './ExchangeMessagePublisher';
+import { IResponseMessagePublisher } from './IResponseMessagePublisher';
 import { Type } from '../omahdog/Type';
 
 class RequestHandlerLambdaParameters {
@@ -14,7 +14,7 @@ class RequestHandlerLambdaParameters {
 }
 
 class RequestHandlerLambdaServices {
-    responsePublisher?: IExchangeMessagePublisher
+    responsePublisher?: IResponseMessagePublisher
     functionInstanceRepository?: IFunctionInstanceRepository
 }
 
@@ -60,15 +60,9 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
             const requestEvent = {
                 Type: 'SNS',
                 Properties: {
-                    Topic: undefined,
-                    FilterPolicy: {
-                        MessageType: new Array<string>()
-                    }
+                    Topic: this.parameters.requestTopic.instance
                 },
             };
-    
-            requestEvent.Properties.Topic = this.parameters.requestTopic.instance;
-            requestEvent.Properties.FilterPolicy.MessageType = [`${this.requestType.name}:Handler`];
     
             events.push(requestEvent);                
         }
@@ -92,9 +86,14 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
     }
 
     hasAsyncHandler(requestRouter: RequestRouter, handlerFactory: HandlerFactory): boolean {
-        // TODO 21Jul20: This isn't going to be 100%, as a Lambda proxy could return an async response
+        
         const handlers = getRequestHandlers(this.handlerType, handlerFactory, requestRouter);
-        const hasAsyncHandler = Array.from(handlers.values()).some((h: any) => h.isAsync);
+        
+        const hasAsyncHandler = 
+            Array
+                .from(handlers.values())
+                .some((h: any) => ('getEvents' in h) && (h.getEvents(null).length > 0));
+
         return hasAsyncHandler;
     }
 
@@ -103,15 +102,11 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         console.log(`event: ${JSON.stringify(event)}`);
 
         if ('Records' in event) {
-
             await this.handleSnsEventRecords(event, requestRouter, handlerFactory);
-            return;
-                
-        } else {
-
-            return await this.handleFlowMessage(event, false, requestRouter, handlerFactory);
-
+            return;                
         }
+
+        return await this.handleFlowMessage(event, false, requestRouter, handlerFactory);
     }
 
     private async handleSnsEventRecords(event: SNSEvent, requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<void> {
@@ -130,7 +125,7 @@ export class RequestHandlerLambda<TReq, TRes, THan extends IActivityRequestHandl
         }
     }
 
-    async handleFlowMessage(inboundMessage: FlowRequestMessage | FlowResponseMessage, isAsyncInboundRequest: boolean,
+    private async handleFlowMessage(inboundMessage: FlowRequestMessage | FlowResponseMessage, isAsyncInboundRequest: boolean,
         requestRouter: RequestRouter, handlerFactory: HandlerFactory): Promise<TRes | ErrorResponse | void> {
 
         console.log(`message: ${JSON.stringify(inboundMessage)}`);
