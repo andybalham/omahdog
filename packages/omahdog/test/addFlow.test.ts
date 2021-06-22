@@ -64,7 +64,7 @@ export class SumFlowHandler extends FlowRequestHandler<SumFlowRequest, SumFlowRe
                 (req, state) => { req.values = [state.a, state.b]; },
                 (res, state) => { state.total = res.total; })
 
-            .label('This is a label!')
+            .label('This is a label')
             
             .goto('Sum_total_and_c')
 
